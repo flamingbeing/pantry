@@ -8,6 +8,8 @@ Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner
   item (amber within 3 days, red once past).
 - Freezer fixes (owner, 21 Oct 2026): Freeze 1 year (bread 1 month), Thaw 3 days, how many and which freezer, Not
   frozen, moving in or out of a freezer, place kinds. Detail: [docs/places-photos-names.md](docs/places-photos-names.md).
+- Install (23 Oct 2026): manifest `id` set to the id Chrome already computes (`./`, so installs carry on), maskable
+  icon and a 32 px PNG favicon from the shared app icon set (Home family; same design as before).
 - Nothing blocks the build. iPhone touch is untested (only real touch events in Chromium).
 
 ## Next (in this order)
