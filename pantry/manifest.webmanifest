@@ -3,6 +3,7 @@
   "short_name": "Pantry",
   "description": "Our family's pantry: what's at home, what to use first and what to buy.",
   "lang": "en-SG",
+  "id": "./",
   "start_url": "./#/",
   "scope": "./",
   "display": "standalone",
