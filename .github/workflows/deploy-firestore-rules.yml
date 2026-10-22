@@ -1,0 +1,47 @@
+# Deploys a changed pantry/firestore.rules to its Firebase project on merge to main (AGENTS.md, "Rules that bite").
+# The rules are compiled first, so a syntax error fails the run and leaves the live rules as they were.
+# Signs in without a key (Workload Identity Federation) as the rules-deployer service account (Firebase Rules Admin).
+# Needs repo variables FIREBASE_PROJECT, WIF_PROVIDER and RULES_DEPLOYER (pantry/SETUP.md step 9); until all three
+# are set, the run skips cleanly. A manual run (Run workflow) deploys the rules over the live ones: ask the owner.
+name: Deploy Firestore rules
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'pantry/firestore.rules'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Ready to deploy?
+        id: ready
+        env:
+          PROJECT: ${{ vars.FIREBASE_PROJECT }}
+          PROVIDER: ${{ vars.WIF_PROVIDER }}
+          ACCOUNT: ${{ vars.RULES_DEPLOYER }}
+        run: |
+          if [ -z "$PROJECT" ] || [ -z "$PROVIDER" ] || [ -z "$ACCOUNT" ]; then
+            echo "go=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Skipped. Set the repo variables FIREBASE_PROJECT, WIF_PROVIDER and RULES_DEPLOYER first (pantry/SETUP.md step 9)."
+          else
+            echo "go=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.ready.outputs.go == 'true'
+      - uses: google-github-actions/auth@v2
+        if: steps.ready.outputs.go == 'true'
+        with:
+          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
+          service_account: ${{ vars.RULES_DEPLOYER }}
+      - name: Deploy pantry/firestore.rules
+        if: steps.ready.outputs.go == 'true'
+        working-directory: pantry   # its firebase.json names firestore.rules
+        run: npx --yes firebase-tools@13 deploy --only firestore:rules --project "${{ vars.FIREBASE_PROJECT }}" --non-interactive

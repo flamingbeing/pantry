@@ -1,0 +1,24 @@
+# Repo checks on every PR and push to main (AGENTS.md, "Checks before merging"). The browser tests run in
+# kakihome-checks.yml.
+name: Checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node tools/check.mjs
+      - run: node tools/stamp-versions.mjs --check
+      - run: node tools/proofread.mjs
+      - name: Unit tests
+        run: |
+          shopt -s nullglob
+          for f in */test/*.test.mjs; do echo "== $f"; node "$f"; done

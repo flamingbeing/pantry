@@ -1,0 +1,77 @@
+# Pantry: notes
+
+Code facts, conventions and how to test. Now and next: [STATUS.md](STATUS.md). Setup steps: [SETUP.md](SETUP.md).
+Detail by topic is in [docs/](docs/); the owner's plans, the dated log and real-service results are in the owner's private notes.
+
+## Where the detail is
+
+| Topic | File |
+|---|---|
+| Stock as batches, photos, shops, barcode look-ups, the look, undo, demo mode, lessons from Kaki Home | [docs/design.md](docs/design.md) |
+| Welcome, guide screen, hints, hands-on first steps | [docs/onboarding.md](docs/onboarding.md) |
+| Hosting, sign-in on the app's own address, config, service worker, rules deploys, which pantry opens, email sign-in, merging pantries | [docs/sign-in-and-hosting.md](docs/sign-in-and-hosting.md) |
+| Thumbnails and photos, editable places, names, guessed best-before dates and the other research items | [docs/places-photos-names.md](docs/places-photos-names.md) |
+| Sync safety: instructions not copies, removal markers, one record per place, the listener watchdog, limits that remain | [docs/sync-safety.md](docs/sync-safety.md) |
+| The Items list: select mode, grip drag, My order, Bulk edit, Sync now | [docs/items-list.md](docs/items-list.md) |
+| Fixed bugs that still want a test | [docs/tests-to-add.md](docs/tests-to-add.md) |
+
+## Rules that bite
+
+- Plain HTML and JS modules, no build step. Data is on the phone (IndexedDB) until family sharing is set up; then in
+  Firestore: `households/{hid}` with `members` (lower-case emails) and `items`, `events`, `shop`, `places`, `settings`
+  under it. Rules: only members read or write; the person who started a pantry stays its owner. Real household data never
+  goes in this public repo.
+- Stock is batches (qty, best-before, opened date); taking out is first expiring first. Photos are small JPEG data URLs in
+  Firestore: a thumbnail on the item and the photo in its own document, read only when the item opens.
+- Every stock change is sent as instructions (`ops`: set, inc, del on dotted paths), never a copy of the whole item; Undo is
+  the inverse. Deleting is a `removedAt` marker that every list skips. Names are one field each, places one document each.
+  History is write-once. See [docs/sync-safety.md](docs/sync-safety.md) before touching `cloud.js` or `logic.js`.
+- Undo over confirm. A family member's change never wipes what someone is typing: while a form or sheet is open, changes
+  wait and are drawn afterwards.
+- Every screen and sheet is a history entry (swipe-back works). The app uses `https://design.flamingbeing.com/v1/` (`tokens.css`, `app.css`,
+  `app.js`) with the `pa-` prefix for its own CSS; no emoji; light only.
+- `?demo` shows made-up items in memory, with no Firebase and nothing saved (this makes PR previews useful).
+- Sign-in happens on the app's own address (`authDomain`), with Firebase's helper pages in `__/auth/` and `auth/firebase/`.
+  Never add `*.workers.dev` previews to Firebase or the OAuth client.
+- `config.js` stays `null` (on-phone only) until `node pantry/tools/set-config.mjs '<config>'` writes it.
+- `sw.js` has `VERSION = 'pantry-v1'`, stamped only at deploy (`tools/stamp-versions.mjs`); never stamp by hand. A new
+  version never takes over while someone is typing; delete only `pantry-` caches.
+- Rules deploy on merge (`.github/workflows/deploy-firestore-rules.yml`); run the rules tests first and never loosen a
+  rule to make a test pass.
+- The Firebase SDK loads once (one shared promise, reset on failure). Signing out waits up to 4 seconds for unsent changes.
+- `enableNetwork` while the network is already enabled crashes Firestore 10.14.1 in the tests: call it only after `disableNetwork`.
+
+## How to test
+
+```
+node pantry/test/logic.test.mjs        # logic, catalogue, backups (plain node; also in the repo Checks)
+node pantry/test/quick.test.mjs        # Say or type: dates, places, quantities, matching
+node pantry/test/tour.test.mjs         # first steps: quick-start list, checklist ticks
+node pantry/test/places.test.mjs       # places: defaults, one document each (normalizing, ids, midpoint order, merging by name), used-but-unlisted, Say or type matching
+node pantry/test/people.test.mjs       # names for the family: cleaning, one name as a keyed instruction, labels
+node pantry/test/cloud.test.mjs        # how a change becomes Firestore field updates (FieldPath, increment, deleteField) with a stand-in SDK
+node pantry/test/merge.test.mjs        # merging duplicate pantries: members, who may, settings
+node pantry/test/scan.test.mjs         # the barcode look-up chain with a stubbed fetch (plain node)
+node pantry/test/photo.test.mjs        # thumbnail and photo sizes, stepping down to fit the limits (plain node)
+node pantry/test/ops.test.mjs          # both shapes of batches, changes as instructions and their inverse, the chip text (plain node)
+node pantry/test/listen-watch.test.mjs # the listener watchdog's decision and the chip's use of freshness (plain node)
+node pantry/test/bulk-items.test.mjs   # Bulk edit's rules: each choice as ops, skips, warnings, Undo round trips (plain node)
+node pantry/test/order.test.mjs        # My order: midpoints, append, prepend, collisions, renumbering, tie-breaks, 200 random sequences (plain node)
+node pantry/test/select.test.mjs       # selecting: the selection state and the press and hold with a fake pointer (plain node)
+node pantry/test/syncnow.test.mjs      # Sync now: each waiting change in words, last heard, what it says (plain node)
+node pantry/test/removed.test.mjs      # removed markers, Restore, days left, the sweep's choice, backups and merging, every list skips removed (plain node)
+node pantry/test/live-guards.test.mjs  # the live-service harness's safety guards (plain node; the harness itself: pantry/test/LIVE-TEST.md)
+node pantry/test/config.test.mjs       # set-config, sign-in choice, plain-word errors, sw.js rules
+node pantry/test/e2e.mjs               # phone browser test with axe; SHOTS=<dir> saves screenshots
+node pantry/test/items.e2e.mjs         # the Items list with real touch (CDP): selecting, press and hold, the actions and their Undo, group by place, grip drags, My order, Bulk edit, axe
+pantry/test/run-sync.sh                # two phones and the stock rules (sync.e2e.mjs), the randomised three-phone run (multidevice.e2e.mjs), sign-in by email link and password (signin.e2e.mjs), family sharing, the rules (photo size caps, places and names too) and moving old-style photos in the
+                                       # local emulators (demo-pantry, fake accounts)
+node tools/check.mjs && node tools/stamp-versions.mjs --check
+```
+
+`e2e.mjs` needs Playwright (`PLAYWRIGHT_PATH`) and axe-core (`AXE_PATH`, or `npm install --no-save axe-core`);
+`run-sync.sh` needs Java 21 and fetches `firebase-tools` with npx. The "Pantry checks" workflow runs all of them on PRs (three parallel jobs: browser, items, sync)
+touching `pantry/` or `__/`; they load the design kit from its live address. Never point a test at the live Firebase project, with one exception: the
+live-service harness (`pantry/test/live-multidevice.mjs`, see `pantry/test/LIVE-TEST.md`), which the owner arranges separately
+and sessions run only with `--dry` (`pantry/test/run-live-dry.sh`, local emulators).
+

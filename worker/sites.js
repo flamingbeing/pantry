@@ -21,10 +21,17 @@ export default {
       // no such file, but a folder of that name: send the browser to the address with a "/" (as GitHub Pages does)
       const dir = await asset(env, url, file + '/index.html');
       if (dir.status === 200) return redirect(url, url.pathname + '/');
+      // Firebase's sign-in helper pages: /__/auth/handler is handler.html
+      if (file.startsWith('__/auth/')) {
+        const page = await asset(env, url, file + '.html');
+        if (page.status === 200) res = page;
+      }
     }
     if (res.status === 404) return notFound();
     res = new Response(res.body, res);
     res.headers.set('X-Robots-Tag', NOINDEX);
+    // service workers must always be checked fresh, or phones keep an old app for a day
+    if (/(^|\/)sw\.js$/.test(file)) res.headers.set('Cache-Control', 'no-cache');
     return res;
   },
 };
