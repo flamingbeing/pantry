@@ -1,8 +1,9 @@
 # Deploys a changed pantry/firestore.rules to its Firebase project on merge to main (AGENTS.md, "Rules that bite").
 # The rules are compiled first, so a syntax error fails the run and leaves the live rules as they were.
 # Signs in without a key (Workload Identity Federation) as the rules-deployer service account (Firebase Rules Admin).
-# Needs repo variables FIREBASE_PROJECT, WIF_PROVIDER and RULES_DEPLOYER (pantry/SETUP.md step 9); until all three
-# are set, the run skips cleanly. A manual run (Run workflow) deploys the rules over the live ones: ask the owner.
+# Uses repo variables FIREBASE_PROJECT, WIF_PROVIDER and RULES_DEPLOYER when set (pantry/SETUP.md step 9), else the
+# values below (not secrets: the WIF provider only accepts this repo's workflows). A manual run (Run workflow)
+# deploys the rules over the live ones: ask the owner.
 name: Deploy Firestore rules
 
 on:
@@ -16,6 +17,11 @@ permissions:
   contents: read
   id-token: write
 
+env:
+  FIREBASE_PROJECT: ${{ vars.FIREBASE_PROJECT || 'flamingbeing-pantry' }}
+  WIF_PROVIDER: ${{ vars.WIF_PROVIDER || 'projects/437604377012/locations/global/workloadIdentityPools/github/providers/pantry-repo' }}
+  RULES_DEPLOYER: ${{ vars.RULES_DEPLOYER || 'firebase-rules-deployer@flamingbeing-pantry.iam.gserviceaccount.com' }}
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -24,9 +30,9 @@ jobs:
       - name: Ready to deploy?
         id: ready
         env:
-          PROJECT: ${{ vars.FIREBASE_PROJECT }}
-          PROVIDER: ${{ vars.WIF_PROVIDER }}
-          ACCOUNT: ${{ vars.RULES_DEPLOYER }}
+          PROJECT: ${{ env.FIREBASE_PROJECT }}
+          PROVIDER: ${{ env.WIF_PROVIDER }}
+          ACCOUNT: ${{ env.RULES_DEPLOYER }}
         run: |
           if [ -z "$PROJECT" ] || [ -z "$PROVIDER" ] || [ -z "$ACCOUNT" ]; then
             echo "go=false" >> "$GITHUB_OUTPUT"
@@ -39,9 +45,9 @@ jobs:
       - uses: google-github-actions/auth@v2
         if: steps.ready.outputs.go == 'true'
         with:
-          workload_identity_provider: ${{ vars.WIF_PROVIDER }}
-          service_account: ${{ vars.RULES_DEPLOYER }}
+          workload_identity_provider: ${{ env.WIF_PROVIDER }}
+          service_account: ${{ env.RULES_DEPLOYER }}
       - name: Deploy pantry/firestore.rules
         if: steps.ready.outputs.go == 'true'
         working-directory: pantry   # its firebase.json names firestore.rules
-        run: npx --yes firebase-tools@13 deploy --only firestore:rules --project "${{ vars.FIREBASE_PROJECT }}" --non-interactive
+        run: npx --yes firebase-tools@13 deploy --only firestore:rules --project "$FIREBASE_PROJECT" --non-interactive

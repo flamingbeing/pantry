@@ -37,8 +37,8 @@ project id and who's in the pantry in the owner's private notes, not here.
 9. **Rules deploy on merge.** The workflow `.github/workflows/deploy-firestore-rules.yml` deploys
    `pantry/firestore.rules` whenever it changes on `main`. It signs in without a key (Workload Identity Federation)
    as a rules-deployer service account with **Firebase Rules Admin** on this project, set up once by the owner's admin
-   route (details in the owner's private notes), which also sets the repo variables `FIREBASE_PROJECT`,
-   `WIF_PROVIDER` and `RULES_DEPLOYER`. Until all three are set, the workflow skips with a notice instead of failing.
+   route (details in the owner's private notes). The workflow carries the project, provider and account names itself;
+   repo variables `FIREBASE_PROJECT`, `WIF_PROVIDER` and `RULES_DEPLOYER` override them (for a fork or a new project).
 10. **On your phone.** Open `https://pantry.flamingbeing.com` → Settings → **Continue with Google** (or **Use email instead**) → **Start our family
     pantry** → add each family member's Google (Gmail) address. If you had added items on that phone before, tap
     "Copy … from this phone". Family members open the same address and sign in; they see the pantry straight away.
