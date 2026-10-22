@@ -1,0 +1,232 @@
+/* Pantry: the app's own content styles, on top of the home app kit (https://design.flamingbeing.com/v1/app.css, DESIGN-APP.md).
+   Every class starts with pa-. Only tokens from https://design.flamingbeing.com/v1/tokens.css; no new colours. */
+
+.pa-wrap{white-space:normal;overflow-wrap:anywhere;text-align:right}
+
+/* a problem worth seeing (sync failed) */
+.pa-alert{display:flex;gap:var(--home-s2);align-items:flex-start;margin:0 0 var(--home-s4);background:var(--home-bad-bg);color:var(--home-bad)}
+.pa-alert .ha-icon{flex:none;width:20px;height:20px}
+
+/* a plain heads-up (a change of yours landed on an item another phone removed) */
+.pa-note{display:flex;gap:var(--home-s2);align-items:flex-start;margin:0 0 var(--home-s4);background:var(--home-fill);color:var(--home-ink-2);text-decoration:none}
+.pa-note .ha-icon{flex:none;width:20px;height:20px}
+.pa-removed{flex-wrap:wrap;row-gap:var(--home-s2)}
+
+/* item screen */
+.pa-hero{display:block;width:100%;max-height:240px;margin:0 0 var(--home-s5);border-radius:var(--home-r-lg);object-fit:cover;background:var(--home-fill)}
+.pa-batch{row-gap:var(--home-s2)}
+.pa-batch-acts{flex:1 0 100%;display:flex;flex-wrap:wrap;gap:var(--home-s2);margin:2px 0 4px}
+.pa-batch-acts .ha-btn--quiet{background:var(--home-fill);color:var(--home-ink-2)}
+.pa-actions{margin:calc(-1 * var(--home-s2)) 0 var(--home-s6)}
+.pa-cols-label{margin:var(--home-s4) 0 var(--home-s2);color:var(--home-muted);font-size:var(--home-t-small)}
+.pa-cols{height:120px}
+.pa-delete{margin:var(--home-s2) 0 0}
+
+/* add and edit */
+.pa-finder .ha-search{margin-bottom:var(--home-s2)}
+.pa-finder #pa-sugg{margin:0 0 var(--home-s2)}
+.pa-finder .ha-btn-row{margin:var(--home-s2) 0 0}
+.pa-finder .ha-btn-row>.ha-btn{flex:0 1 auto}
+.pa-photo-row{display:flex;gap:var(--home-s3);align-items:flex-start}
+.pa-photo-fields{flex:1;min-width:0}
+.pa-photo{position:relative;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:88px;height:88px;
+  margin-top:26px;border-radius:var(--home-r-md);background:var(--home-surface);box-shadow:inset 0 0 0 1px var(--home-control);
+  color:var(--home-accent);font-size:var(--home-t-label);font-weight:600;text-align:center;line-height:1.2;overflow:hidden;cursor:pointer}
+.pa-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pa-photo img+span{position:absolute;left:0;right:0;bottom:0;padding:3px 2px;background:var(--home-toast);color:var(--home-on-toast)}
+.pa-photo:active{background:var(--home-pressed)}
+.pa-photo:focus-within{outline:2px solid var(--home-focus);outline-offset:2px}
+.pa-photo-del{margin:calc(-1 * var(--home-s2)) 0 var(--home-s2)}
+.pa-file{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
+.pa-two{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,9em),1fr));column-gap:var(--home-s3)}
+.pa-gap{margin-top:var(--home-s4);margin-bottom:var(--home-s2)}
+.pa-dates{margin-top:0}
+label.ha-row:focus-within:has(.pa-file){outline:2px solid var(--home-focus);outline-offset:-3px;border-radius:var(--home-r-lg)}
+
+/* a one-line form: shopping list, family member */
+.pa-addline{display:flex;gap:var(--home-s2);align-items:center;margin:0 0 var(--home-s5)}
+.pa-addline .ha-input{flex:1;min-width:0;min-height:44px;padding-block:8px}
+.pa-addline .ha-btn{flex:none}
+.pa-member{margin:var(--home-s3) 0 0}
+
+/* the barcode scanner sheet */
+.pa-scan{overflow:hidden;border-radius:var(--home-r-md);background:var(--home-ink);aspect-ratio:4/3}
+.pa-scan video{display:block;width:100%;height:100%;object-fit:cover}
+.pa-scan-msg{margin:var(--home-s3) 0;color:var(--home-ink-2)}
+.pa-unk-text{color:var(--home-ink-2)}
+.pa-unk-code{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--home-ink)}
+#pa-unk-list{margin:0 0 var(--home-s3)}
+.pa-file-btn{position:relative}
+.pa-file-btn:focus-within{outline:2px solid var(--home-focus);outline-offset:2px}
+.pa-install .ha-card-text+.ha-card-text{margin-top:var(--home-s2)}
+
+/* home and lists: the three numbers stay in one row; a name keeps its words whole (the badge moves under it first) */
+.pa-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+.pa-item .ha-row-body{flex-basis:8em}
+.pa-item .ha-row-title{overflow-wrap:break-word}
+
+/* the welcome sheet (js/guide.js): an icon, a title and a line, then kit rows; dots and the buttons in the foot */
+.pa-welcome{touch-action:pan-y}
+.pa-wtop{display:flex;flex-direction:column;align-items:center;gap:var(--home-s2);padding:var(--home-s4) var(--home-s2) var(--home-s5);text-align:center}
+.pa-wicon{display:grid;place-items:center;width:64px;height:64px;margin-bottom:var(--home-s2);border-radius:50%;background:var(--home-accent-soft);color:var(--home-accent)}
+.pa-wicon .ha-icon{width:30px;height:30px}
+.pa-wtitle{margin:0;font-size:var(--home-t-title2);font-weight:700;line-height:1.25;letter-spacing:-.012em}
+.pa-wtitle:focus{outline:none}
+.pa-wtitle:focus-visible{outline:2px solid var(--home-focus);outline-offset:2px;border-radius:var(--home-r-xs)}
+.pa-wtext{margin:0;max-width:32ch;color:var(--home-muted);font-size:var(--home-t-small);line-height:1.5}
+.pa-dots{display:flex;justify-content:center;gap:6px;margin:0 0 var(--home-s3)}
+.pa-dot{width:7px;height:7px;border-radius:var(--home-r-full);background:var(--home-line-strong);transition:width var(--home-d-med) var(--home-ease),background-color var(--home-d-fast) linear}
+.pa-dot.is-current{width:20px;background:var(--home-accent)}
+.pa-wbtns{margin:0}
+
+/* the guide screen */
+.pa-gagain{margin:var(--home-s2) 0 var(--home-s6)}
+.pa-quick-text{width:100%;min-height:6.5em;resize:vertical}
+.pa-mic.is-on{background:var(--home-bad);color:#fff}
+/* first steps (js/tour.js): the Getting started checklist, the quick start chips, and the Show me ring */
+.pa-tour-mark{flex:none;display:grid;place-items:center;width:26px;height:26px;border:2px solid var(--home-line-strong);border-radius:50%;color:#fff}
+.pa-tour-row.is-done .pa-tour-mark{border-color:var(--home-ok);background:var(--home-ok)}
+.pa-tour-mark .ha-icon{width:16px;height:16px}
+.pa-tour-row.is-done .ha-row-title{color:var(--home-muted);text-decoration:line-through}
+.pa-tour-foot{margin:var(--home-s1) 0 0;text-align:right}
+.pa-start-intro{margin:0 0 var(--home-s3)}
+.pa-start-chips .ha-chip[disabled]{opacity:.6}
+.pa-spot{outline:3px solid var(--home-accent);outline-offset:3px;animation:pa-spot 1.2s ease-in-out 3}
+@keyframes pa-spot{50%{outline-offset:7px}}
+@media (prefers-reduced-motion:reduce){.pa-spot{animation:none}}
+
+/* Places (Settings → Places): the add line's error, and the place sheet */
+.pa-place-add{margin-bottom:var(--home-s2)}
+.pa-place-err{margin:0 0 var(--home-s2)}
+.pa-pl-count{margin:var(--home-s4) 0;color:var(--home-ink-2)}
+.pa-pl-move{flex-wrap:wrap}
+.pa-pl-move>.ha-btn{flex:1 1 9em;min-height:44px}
+.pa-up{transform:rotate(90deg)}
+.pa-down{transform:rotate(-90deg)}
+.pa-pl-add{margin:0 0 var(--home-s5)}
+.pa-pl-del{margin:var(--home-s2) 0 0}
+.pa-mv-text{color:var(--home-ink-2)}
+
+/* family names (Settings → Family sharing): the person rows and their contact sheet */
+.pa-break{white-space:normal;overflow-wrap:anywhere}
+.pa-person-form{margin:var(--home-s4) 0}
+.pa-person-acts{margin-top:var(--home-s3)}
+
+/* guessed best-before dates, freeze and thaw, leftovers and Home's quick buttons */
+.pa-guess-hint{margin:var(--home-s2) 0 0}
+.pa-finder .ha-btn-row{flex-wrap:wrap}
+.pa-quickrow{flex-wrap:wrap;margin:0 0 var(--home-s4)}
+.pa-quickrow>.ha-btn{flex:1 1 9em}
+/* Since you last looked, and the WhatsApp line under Use soon */
+.pa-since-ok{margin-left:calc(-1 * var(--home-s3))}
+.pa-share-line{margin:calc(-1 * var(--home-s3)) 0 var(--home-s6)}
+/* the shopping list: aisles, Buy again, the mic, Put away */
+.pa-aisle{margin:var(--home-s4) 0 var(--home-s2);padding:0 var(--home-s4);color:var(--home-muted);font-size:var(--home-t-small);font-weight:600}
+.pa-aisle:first-child{margin-top:0}
+.pa-again .ha-chip .ha-icon{width:16px;height:16px;margin-right:2px}
+.pa-addline .pa-mic{flex:none;width:44px;height:44px;min-height:44px}
+.pa-putaway-btn{margin:var(--home-s3) 0 0}
+.pa-going{margin:0 0 var(--home-s2)}
+.pa-going-foot{margin:0 0 var(--home-s6)}
+.pa-pa-intro{margin:0 0 var(--home-s3);color:var(--home-ink-2)}
+.pa-pa{padding-bottom:var(--home-s3)}
+.pa-pa-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8.5em),1fr));gap:0 var(--home-s3);padding:0 var(--home-s4)}
+.pa-pa-fields .ha-field{margin:0}
+.pa-pa>.ha-field-hint{padding:0 var(--home-s4)}
+.pa-pa-qty .ha-input{max-width:6em}
+/* scan many: the mode on top, a shorter camera, the tally under it */
+.pa-sm-mode{margin:0 0 var(--home-s3)}
+.pa-sm-video{aspect-ratio:16/9}
+
+/* sign in by email: the quiet link under Continue with Google, and the email sheet */
+.pa-quiet{margin:var(--home-s2) 0 0;text-align:center}
+.pa-em-second{margin-top:var(--home-s3)}
+.pa-em-hint{padding:0;margin:calc(var(--home-s2) * -1) 0 var(--home-s4)}
+.pa-em-links{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--home-s2);margin-top:var(--home-s3)}
+.pa-em-note{display:flex;gap:var(--home-s3);align-items:flex-start;margin:0 0 var(--home-s5)}
+.pa-em-note p{margin:0 0 var(--home-s3);line-height:1.45}
+.pa-em-title{font-weight:600}
+.pa-em-lead{margin:0 0 var(--home-s4);line-height:1.45}
+#pa-em-form .ha-field-error{margin:0 0 var(--home-s3)}
+
+/* saving to the family: the chip and the changes the server refused */
+.pa-sync{margin:0 0 var(--home-s4)}
+.pa-sync-link{display:inline-flex;align-items:center;gap:var(--home-s2);color:inherit;text-decoration:none}
+.pa-sync-more{color:var(--home-accent);font-size:var(--home-t-small)}
+.pa-refused{flex-wrap:wrap;row-gap:var(--home-s2)}
+/* Sync now: the result, what is waiting (each change in words), when the family last answered */
+.pa-syncnow{margin:0 0 var(--home-s3)}
+.pa-sync-detail{margin:0 0 var(--home-s3)}
+.pa-syncnow-result{margin:0 0 var(--home-s3);padding:var(--home-s3) var(--home-s4);border-radius:var(--home-r-md);background:var(--home-fill);color:var(--home-ink);font-size:var(--home-t-small)}
+.pa-syncnow-result--saved{background:var(--home-ok-bg);color:var(--home-ok)}
+.pa-syncnow-result--waiting{background:var(--home-warn-bg);color:var(--home-warn)}
+.pa-syncnow-result--attention{background:var(--home-bad-bg);color:var(--home-bad)}
+.pa-sync-h{margin:0 0 var(--home-s2);padding:0 var(--home-s4);color:var(--home-muted);font-size:var(--home-t-label);font-weight:600;letter-spacing:.05em;text-transform:uppercase}
+.pa-waiting{margin:0 0 var(--home-s3)}
+.pa-heard{margin:0 0 var(--home-s2);padding:0 var(--home-s4);color:var(--home-muted);font-size:var(--home-t-small)}
+/* your family pantry went away */
+.pa-lost .ha-btn{display:flex;margin-top:var(--home-s2)}
+
+/* Items: selecting (press and hold, checkboxes, the bar above the tab bar), place headings that fold */
+.pa-item{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.pa-item.is-holding{background:var(--home-pressed)}
+.pa-item--sel.is-selected{background:var(--home-accent-soft)}
+.pa-grouphead{justify-content:flex-start;align-items:center}
+.pa-grouphead .ha-num{margin-left:var(--home-s2)}
+.pa-grouphead .pa-fold{display:inline-flex;align-items:center;gap:2px;min-height:44px;margin-left:-6px;padding:0 6px;border-radius:var(--home-r-sm);color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
+.pa-fold-icon{flex:none;width:18px;height:18px;transform:rotate(0deg)}
+.pa-fold[aria-expanded="true"] .pa-fold-icon{transform:rotate(90deg)}
+@media (prefers-reduced-motion:no-preference){.pa-fold-icon{transition:transform var(--home-d-fast) var(--home-ease)}}
+.pa-grouphead .pa-selthese{margin-left:auto;min-height:44px;padding:0 var(--home-s2)}
+.pa-selbar{position:fixed;z-index:29;left:0;right:0;bottom:calc(var(--ha-tab-h) + var(--ha-safe-b));padding:var(--home-s1) calc(var(--home-gutter) + var(--ha-safe-r)) var(--home-s2) calc(var(--home-gutter) + var(--ha-safe-l));
+  background:var(--home-bar);box-shadow:0 -.5px 0 var(--home-line);-webkit-backdrop-filter:var(--ha-blur);backdrop-filter:var(--ha-blur)}
+.pa-selbar-inner{max-width:680px;margin:0 auto}
+.pa-selbar-row{display:flex;align-items:center;justify-content:space-between;gap:var(--home-s2);flex-wrap:wrap}
+.pa-selcount{font-weight:600;font-size:var(--home-t-small)}
+.pa-selbar-links{display:flex;gap:0;margin-right:calc(-1 * var(--home-s3))}
+.pa-selbar-links .ha-btn{padding-inline:var(--home-s3)}
+.pa-selbar-acts{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--home-s2)}
+.pa-selbar-acts .ha-btn{min-width:0;padding-inline:var(--home-s1);line-height:1.15}
+.pa-selecting .ha-main{padding-bottom:calc(var(--ha-tab-h) + var(--ha-safe-b) + 150px)}
+@media (min-width:1024px){.pa-selbar{left:var(--ha-rail,96px);bottom:0}.pa-selecting .ha-main{padding-bottom:180px}}
+.pa-moveto{margin:0;padding:0;border:0}
+
+/* Items: the grip (drag to a place, or reorder in My order; a tap opens its Move sheet), the ghost and the drop marks */
+.pa-li{display:flex;align-items:stretch}
+.pa-li>.ha-row{flex:1 1 auto;width:auto;min-width:0}
+.pa-grip{flex:none;display:grid;place-items:center;width:44px;min-height:50px;padding:0;border:0;background:transparent;color:var(--home-muted);cursor:grab;
+  touch-action:none;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.pa-grip:focus-visible{outline-offset:-3px;border-radius:var(--home-r-md)}
+.pa-grip:active{background:var(--home-pressed)}
+.pa-grip-icon{width:22px;height:22px;fill:currentColor}
+.pa-li>.pa-item{padding-right:var(--home-s1)}
+.pa-li.is-dragging{opacity:.4}
+.pa-ghost{position:fixed;z-index:70;left:0;top:0;pointer-events:none;border-radius:var(--home-r-lg);background:var(--home-surface);box-shadow:0 10px 28px rgb(0 0 0 / .22),0 0 0 2px var(--home-line-strong);overflow:hidden;will-change:transform}
+.pa-ghost.is-ready{box-shadow:0 10px 28px rgb(0 0 0 / .22),0 0 0 2px var(--home-accent)}
+.pa-ghost>li{list-style:none;display:flex}
+.pa-ghost-card{padding:var(--home-s4) var(--home-s6);font-weight:600;white-space:nowrap}
+.pa-ghost-tip{padding:6px var(--home-s3);background:var(--home-ink);color:var(--home-surface);font-size:var(--home-t-small);font-weight:600;line-height:1.3}
+.pa-ghost.is-ready .pa-ghost-tip{background:var(--home-accent);color:var(--home-on-accent)}
+.pa-dropline{position:fixed;z-index:69;left:0;top:0;height:3px;border-radius:2px;background:var(--home-accent);pointer-events:none}
+.pa-drop{outline:3px solid var(--home-accent);outline-offset:-3px;background-color:var(--home-accent-soft)}
+.ha-chip.pa-drop{outline-offset:2px}
+body.pa-dragging{cursor:grabbing;-webkit-user-select:none;user-select:none}
+body.pa-dragging *{cursor:grabbing!important}
+
+/* Bulk edit */
+.pa-bk-cat{margin:var(--home-s3) 0}
+.pa-bk-bar{display:flex;align-items:center;justify-content:space-between;gap:var(--home-s2);flex-wrap:wrap;margin:0 0 var(--home-s4)}
+.pa-bk-bar .pa-selbar-links{margin-right:calc(-1 * var(--home-s3))}
+.pa-bk-changes{padding:var(--home-s2) var(--home-s4) var(--home-s4)}
+.pa-bk-field{margin:var(--home-s3) 0 0}
+.pa-bk-field .ha-field{margin:0 0 var(--home-s2)}
+.pa-bk-shift{display:grid;grid-template-columns:1fr 1fr;gap:var(--home-s2)}
+.pa-warn{display:flex;gap:var(--home-s2);align-items:flex-start;background:var(--home-warn-bg);color:var(--home-warn)}
+.pa-warn .ha-icon{flex:none;width:20px;height:20px}
+
+/* Items: the Dates toggle sits at the right of the title row (no extra height) */
+.pa-titlerow{display:flex;align-items:center;justify-content:space-between;gap:var(--home-s3)}
+.pa-titlerow .ha-large-title{margin-right:0}
+.pa-datetoggle{flex:none;min-height:32px;padding:0 var(--home-s3)}
+.pa-fulldates .pa-item .ha-row-body{flex-basis:4em}
+.pa-fulldates .ha-badge{white-space:nowrap}
