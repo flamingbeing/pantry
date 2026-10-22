@@ -87,6 +87,8 @@ const toast = page => page.locator('.ha-toast.is-visible');
 const welcomeSheet = page => page.locator('dialog.ha-sheet.pa-wsheet[open]');
 const cardTitle = async page => (await welcomeSheet(page).locator('.pa-wtitle').textContent()).replace(/^Step \d+ of \d+: /, '');
 const waitWelcome = page => welcomeSheet(page).waitFor({ timeout: 3000 }).then(() => settle(page));
+// after a button that closes the welcome: wait until it has gone (a slow runner can take longer than settle())
+const welcomeGone = page => welcomeSheet(page).waitFor({ state: 'detached', timeout: 3000 }).catch(() => {});
 const ymdPlus = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE'); };
 
 try {
@@ -395,7 +397,7 @@ try {
     ok(await cardTitle(page) === 'Sign in to join', 'invite: ends at Sign in');
     await axe(page, 'welcome invite');
     await shot(page, 'w5-invite-signin');
-    await welcomeSheet(page).locator('[data-pa-w="signin"]').click(); await settle(page);
+    await welcomeSheet(page).locator('[data-pa-w="signin"]').click(); await welcomeGone(page); await settle(page);
     ok(hash(page) === '#/settings' && await welcomeSheet(page).count() === 0, 'Go to sign in leaves them on Settings');
     await ctx.close();
   }
@@ -408,7 +410,7 @@ try {
       if (w !== 390) await axe(page, `welcome ${w} card ${i}`);
       if (i < 2) { await welcomeSheet(page).locator('[data-pa-w="next"]').click(); await settle(page); }
     }
-    await welcomeSheet(page).locator('[data-pa-w="done"]').click(); await settle(page);
+    await welcomeSheet(page).locator('[data-pa-w="done"]').click(); await welcomeGone(page); await settle(page);
     ok(await welcomeSheet(page).count() === 0 && hash(page) === '#/', `welcome ${w}: Look around first closes it`);
     await go(page, '#/guide');
     await noSideways(page, `guide ${w}`);
