@@ -10,11 +10,17 @@ Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner
   frozen, moving in or out of a freezer, place kinds. Detail: [docs/places-photos-names.md](docs/places-photos-names.md).
 - Install (23 Oct 2026): manifest `id` set to the id Chrome already computes (`./`, so installs carry on), maskable
   icon and a 32 px PNG favicon from the shared app icon set (Home family; same design as before).
-- Tests (23 Oct 2026): moving the old scripts to Playwright Test specs (`pantry/test/specs`). Items list port is PR #6
-  (open: waiting on its `browser` re-run); service workers are blocked in those specs (a fresh origin reloads once).
+- Browser tests (23 Oct 2026): all old scripts are now Playwright Test specs in `pantry/test/specs` (app-*, items, sync-*,
+  multidevice, signin; PRs #5-#8 and #6). Specs block the service worker unless a test is about it (`sw: true`). CI retries
+  a failed test once for a Firestore emulator flake (pantry/NOTES.md, "How to test").
 - Nothing blocks the build. iPhone touch is untested (only real touch events in Chromium).
 
 ## Next (in this order)
+0. **Finish the move to Playwright Test:** `sync.e2e.mjs` still holds the second half of the old chained story (stock changes
+   as instructions and their rules, the Items list racing another phone, removing without losing, merging two pantries,
+   the chip / Sync now / listener watchdog with `stallProxy`, a pantry that goes away, no signal). Split it into
+   `specs/sync-*.spec.mjs` (own family per test, `fsAdmin` to seed), then delete it, `run-sync.sh` and the "sync" job in
+   `pantry-checks.yml`. The first half and the randomised run are done (`sync-*.spec.mjs`, `multidevice.spec.mjs`).
 1. **Safe counting (PR-E):** each use or add is its own entry keyed by a unique op id (`batches.<id>.d.<opId>`); stock
    is the base quantity plus the entries, so a resend changes nothing. Fold old entries into the base (online, per item);
    rules caps (at most 40 entries per batch, op id pattern, number range); `normalizeItem` reads `qty` plus the entries.

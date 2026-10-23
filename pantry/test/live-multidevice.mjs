@@ -771,7 +771,7 @@ async function randomRun(seed, sub) {
     const E = newExpected();
     const base = { category: 'Other', location: 'Fridge', brand: '', size: '', barcode: '', lowAt: 0, openDays: 7, createdAt: '2026-10-16T00:00:00.000Z', createdBy: 'robust' };
     const mk = (bid, qty, expiry) => ({ id: bid, qty, expiry, openedAt: null, addedAt: '2026-01-01' });
-    // two maps and one old array (converted by one change first, as in multidevice.e2e.mjs)
+    // two maps and one old array (converted by one change first, as in specs/multidevice.spec.mjs)
     await seedDocs(A, E, phones, [mkItem(ids[0], 'Rice', [['r1', 6], ['r2', 6], ['r3', 6, null]]), mkItem(ids[1], 'Milk', [['m1', 5, '2026-12-01'], ['m2', 5, '2027-02-01']])]);
     made('items', ids[2]);
     await A.call('rawWrite', { op: 'set', kind: 'items', id: ids[2], data: { id: ids[2], name: 'Eggs', ...base, batches: [mk('e1', 6, '2027-01-01'), mk('e2', 6, '2027-04-01')] } });

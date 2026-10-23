@@ -63,10 +63,10 @@ node pantry/test/removed.test.mjs      # removed markers, Restore, days left, th
 node pantry/test/live-guards.test.mjs  # the live-service harness's safety guards (plain node; the harness itself: pantry/test/LIVE-TEST.md)
 node pantry/test/config.test.mjs       # set-config, sign-in choice, plain-word errors, sw.js rules
 node pantry/test/items.e2e.mjs         # the Items list with real touch (CDP): selecting, press and hold, the actions and their Undo, group by place, grip drags, My order, Bulk edit, axe
-pantry/test/run-sync.sh                # two phones and the stock rules (sync.e2e.mjs), the randomised three-phone run (multidevice.e2e.mjs), family sharing, the rules (photo size caps, places and names too) and moving old-style photos in the
-                                       # local emulators (demo-pantry, fake accounts)
+pantry/test/run-sync.sh                # the rest of the old family-sharing story (sync.e2e.mjs: stock rules, removing, merging, the chip, no signal) in the local emulators
 npm ci && npx playwright test          # Playwright Test specs in pantry/test/specs (the phone app: app-*.spec.mjs, split by screen or feature,
-                                       # with axe; signing in by email: signin.spec.mjs): fully parallel, 4 workers, own server,
+                                       # with axe; signing in by email: signin.spec.mjs; family sharing, rules, photos, places and names: sync-*.spec.mjs;
+                                       # the randomised three-phone run: multidevice.spec.mjs, SEED=<n> re-runs a seed): fully parallel, 4 workers, own server,
                                        # accounts and ids per test; starts the emulators itself. One file: npx playwright test app-places;
                                        # the env var PW_NO_EMULATOR (set to 1) skips the emulators (the app-* specs don't need them); the env var SHOTS (a folder) saves screenshots
 node tools/check.mjs && node tools/stamp-versions.mjs --check
