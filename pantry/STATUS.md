@@ -10,6 +10,8 @@ Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner
   frozen, moving in or out of a freezer, place kinds. Detail: [docs/places-photos-names.md](docs/places-photos-names.md).
 - Install (23 Oct 2026): manifest `id` set to the id Chrome already computes (`./`, so installs carry on), maskable
   icon and a 32 px PNG favicon from the shared app icon set (Home family; same design as before).
+- Tests (23 Oct 2026): moving the old scripts to Playwright Test specs (`pantry/test/specs`). Items list port is PR #6
+  (open: waiting on its `browser` re-run); service workers are blocked in those specs (a fresh origin reloads once).
 - Nothing blocks the build. iPhone touch is untested (only real touch events in Chromium).
 
 ## Next (in this order)
