@@ -1,6 +1,6 @@
 # Pantry checks (pantry/NOTES.md, "How to test"): unit tests, the phone browser test (Playwright + axe) and family
 # sharing against the local Firebase emulators (demo-pantry project, fake accounts), on PRs touching the pantry, the
-# design kit it uses or Firebase's sign-in pages. Three jobs run side by side (was one 10-minute job).
+# design kit it uses or Firebase's sign-in pages. Three jobs run side by side (was one 10-minute job). Browsers and emulator jars are cached.
 name: Pantry checks
 on:
   pull_request:
@@ -9,6 +9,9 @@ on:
       - '__/**'
       - '.github/workflows/pantry-checks.yml'
   workflow_dispatch:
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   browser:
     # pinned: Playwright 1.56.1 can't install Chromium on Ubuntu 26.04 (what ubuntu-latest became on 22 Oct 2026)
@@ -34,6 +37,10 @@ jobs:
       - run: node pantry/test/bulk-items.test.mjs
       - run: node pantry/test/listen-watch.test.mjs
       - run: node pantry/test/live-guards.test.mjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-1.56.1
       - name: Install Playwright and axe-core
         run: |
           npm install --no-save playwright@1.56.1 axe-core
@@ -59,6 +66,10 @@ jobs:
         with:
           node-version: 22
       - run: node pantry/test/logic.test.mjs
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-1.56.1
       - name: Install Playwright and axe-core
         run: |
           npm install --no-save playwright@1.56.1 axe-core
@@ -87,10 +98,18 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-1.56.1
       - name: Install Playwright and axe-core
         run: |
           npm install --no-save playwright@1.56.1 axe-core
           npx playwright install --with-deps chromium
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-13.29.1
       - name: Family sharing (local emulators)
         env:
           PLAYWRIGHT_PATH: ${{ github.workspace }}/node_modules/playwright/index.mjs
