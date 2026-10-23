@@ -1,4 +1,4 @@
-# Pantry checks (pantry/NOTES.md, "How to test"): unit tests, the phone browser test (Playwright + axe) and family
+# Pantry checks (pantry/NOTES.md, "How to test"): unit tests, the phone browser specs (Playwright Test + axe) and family
 # sharing against the local Firebase emulators (demo-pantry project, fake accounts), on PRs touching the pantry, the
 # design kit it uses or Firebase's sign-in pages. Three jobs run side by side (was one 10-minute job). Browsers and emulator jars are cached.
 name: Pantry checks
@@ -39,25 +39,6 @@ jobs:
       - run: node pantry/test/bulk-items.test.mjs
       - run: node pantry/test/listen-watch.test.mjs
       - run: node pantry/test/live-guards.test.mjs
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-1.56.1
-      - name: Install Playwright and axe-core
-        run: |
-          npm install --no-save playwright@1.56.1 axe-core
-          npx playwright install chromium
-      - name: Browser test
-        env:
-          PLAYWRIGHT_PATH: ${{ github.workspace }}/node_modules/playwright/index.mjs
-          SHOTS: ${{ runner.temp }}/pantry-shots
-        run: node pantry/test/e2e.mjs
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: pantry-screenshots-browser
-          path: ${{ runner.temp }}/pantry-shots
-          if-no-files-found: ignore
   specs:
     # Playwright Test (playwright.config.mjs): fully parallel, 4 workers, each test with its own server, accounts and
     # household ids; the emulators start from the config. Specs replace the old scripts one by one.

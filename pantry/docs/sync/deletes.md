@@ -59,5 +59,5 @@ Dated design record, moved out of [../sync-safety.md](../sync-safety.md) (the in
     B deletes; both delete; Undo of a delete after the other phone changed it; tick vs remove both orders; two ticks; a new line
     while another is removed; Restore keeps the tick; the sweep deletes only the old ones, a second phone's sweep is harmless, a
     Restore elsewhere beats a stale copy; rules cases for the new fields and the shopping lines, outsiders); `multidevice.e2e.mjs`
-    now also deletes, restores, ticks and removes lines at random (see its header for the invariants); `e2e.mjs` has the
+    now also deletes, restores, ticks and removes lines at random (see its header for the invariants); `specs/app-removed.spec.mjs` has the
     Recently removed screen.
