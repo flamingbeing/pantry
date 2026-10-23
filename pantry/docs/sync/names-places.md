@@ -69,6 +69,6 @@ Dated design record, moved out of [../sync-safety.md](../sync-safety.md) (the in
     her; both add a place; a rename and a reorder of one place; a remove and a rename, both orders; a rename while the other
     phone, offline, adds an item under the old name, then moving it out of "Not in your list"; two phones migrating from the old
     list, one offline and behind, and two online; an old phone's write of `settings/places` accepted and ignored; the rules for
-    places and for names by field, outsiders included); `multidevice.e2e.mjs` (see its header: names, add, rename, move, remove,
+    places and for names by field, outsiders included); `specs/multidevice.spec.mjs` (see its header: names, add, rename, move, remove,
     restore, the default places once, every phone showing the server's list).
   - **Still whole-document, on purpose:** see "What stays whole-document, and why" in [../sync-safety.md](../sync-safety.md).

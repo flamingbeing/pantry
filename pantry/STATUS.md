@@ -13,6 +13,11 @@ Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner
 - Nothing blocks the build. iPhone touch is untested (only real touch events in Chromium).
 
 ## Next (in this order)
+0. **Finish the move to Playwright Test:** `sync.e2e.mjs` still holds the second half of the old chained story (stock changes
+   as instructions and their rules, the Items list racing another phone, removing without losing, merging two pantries,
+   the chip / Sync now / listener watchdog with `stallProxy`, a pantry that goes away, no signal). Split it into
+   `specs/sync-*.spec.mjs` (own family per test, `fsAdmin` to seed), then delete it, `run-sync.sh` and the "sync" job in
+   `pantry-checks.yml`. The first half and the randomised run are done (`sync-*.spec.mjs`, `multidevice.spec.mjs`).
 1. **Safe counting (PR-E):** each use or add is its own entry keyed by a unique op id (`batches.<id>.d.<opId>`); stock
    is the base quantity plus the entries, so a resend changes nothing. Fold old entries into the base (online, per item);
    rules caps (at most 40 entries per batch, op id pattern, number range); `normalizeItem` reads `qty` plus the entries.
