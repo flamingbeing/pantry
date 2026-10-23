@@ -64,9 +64,9 @@ node pantry/test/live-guards.test.mjs  # the live-service harness's safety guard
 node pantry/test/config.test.mjs       # set-config, sign-in choice, plain-word errors, sw.js rules
 node pantry/test/e2e.mjs               # phone browser test with axe; SHOTS=<dir> saves screenshots
 node pantry/test/items.e2e.mjs         # the Items list with real touch (CDP): selecting, press and hold, the actions and their Undo, group by place, grip drags, My order, Bulk edit, axe
-pantry/test/run-sync.sh                # two phones and the stock rules (sync.e2e.mjs), the randomised three-phone run (multidevice.e2e.mjs), family sharing, the rules (photo size caps, places and names too) and moving old-style photos in the
-                                       # local emulators (demo-pantry, fake accounts)
-npm ci && npx playwright test          # Playwright Test specs in pantry/test/specs (sign-in by email link and password so far):
+pantry/test/run-sync.sh                # the rest of the old family-sharing story (sync.e2e.mjs: stock rules, removing, merging, the chip, no signal) in the local emulators
+npm ci && npx playwright test          # Playwright Test specs in pantry/test/specs: sign-in by email link and password (signin), family sharing,
+                                       # rules, photos, places and names (sync-*.spec.mjs), the randomised three-phone run (multidevice; SEED=<n> re-runs a seed);
                                        # fully parallel, 4 workers, own server, accounts and ids per test; starts the emulators itself
 node tools/check.mjs && node tools/stamp-versions.mjs --check
 ```

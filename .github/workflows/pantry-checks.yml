@@ -144,7 +144,7 @@ jobs:
         with:
           path: ~/.cache/firebase/emulators
           key: firebase-emulators-${{ runner.os }}-13.29.1
-      - name: Family sharing (local emulators)
+      - name: Family sharing, the rest of the old story (local emulators)
         env:
           PLAYWRIGHT_PATH: ${{ github.workspace }}/node_modules/playwright/index.mjs
         run: pantry/test/run-sync.sh
