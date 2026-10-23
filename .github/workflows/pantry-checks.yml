@@ -44,7 +44,7 @@ jobs:
       - name: Install Playwright and axe-core
         run: |
           npm install --no-save playwright@1.56.1 axe-core
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Browser test
         env:
           PLAYWRIGHT_PATH: ${{ github.workspace }}/node_modules/playwright/index.mjs
@@ -73,7 +73,7 @@ jobs:
       - name: Install Playwright and axe-core
         run: |
           npm install --no-save playwright@1.56.1 axe-core
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Items list (touch)
         env:
           PLAYWRIGHT_PATH: ${{ github.workspace }}/node_modules/playwright/index.mjs
@@ -105,7 +105,7 @@ jobs:
       - name: Install Playwright and axe-core
         run: |
           npm install --no-save playwright@1.56.1 axe-core
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - uses: actions/cache@v4
         with:
           path: ~/.cache/firebase/emulators
