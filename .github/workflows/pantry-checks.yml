@@ -6,6 +6,8 @@ on:
   pull_request:
     paths:
       - 'pantry/**'
+      - 'playwright.config.mjs'
+      - 'package*.json'
       - '__/**'
       - '.github/workflows/pantry-checks.yml'
   workflow_dispatch:
@@ -84,6 +86,38 @@ jobs:
         with:
           name: pantry-screenshots-items
           path: ${{ runner.temp }}/pantry-shots
+          if-no-files-found: ignore
+  specs:
+    # Playwright Test (playwright.config.mjs): fully parallel, 4 workers, each test with its own server, accounts and
+    # household ids; the emulators start from the config. Specs replace the old scripts one by one.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npx playwright install chromium
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/firebase/emulators
+          key: firebase-emulators-${{ runner.os }}-13.29.1
+      - run: npx playwright test
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: pantry-specs-results
+          path: test-results
           if-no-files-found: ignore
   sync:
     # pinned: Playwright 1.56.1 can't install Chromium on Ubuntu 26.04 (what ubuntu-latest became on 22 Oct 2026)

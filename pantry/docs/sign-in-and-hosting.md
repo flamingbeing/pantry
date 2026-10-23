@@ -55,7 +55,7 @@ Where the app is served, how sign-in works, config, the service worker, rules de
     only ever sent to Firebase Auth; nothing is stored here.
   - **The owner must switch it on** ([SETUP.md](../SETUP.md) step 6): Authentication → Sign-in method → Email/Password, with "Email
     link (passwordless sign-in)" ticked. Until then the sheet says it isn't switched on yet.
-  - Tests: `test/signin.e2e.mjs` (run by `run-sync.sh`, reads the Auth emulator's `oobCodes`), helpers in
+  - Tests: `test/specs/signin.spec.mjs` (Playwright Test, `npx playwright test signin`; reads the Auth emulator's `oobCodes`), helpers in
     `test/config.test.mjs`.
 
 - **16 Oct 2026, never a second pantry from a bad signal** (owner: "can the app create a second pantry offline?"): yes,
