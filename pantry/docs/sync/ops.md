@@ -61,8 +61,8 @@ Dated design record, moved out of [../sync-safety.md](../sync-safety.md) (the in
   - **Tests.** `test/ops.test.mjs` (both shapes, deterministic ids, clamping, `applyOps`, inverse, chip text, refused list);
     `sync.e2e.mjs` (two phones: both use one, offline use then reconnect, add vs use, Edit after another phone's use, offline
     rename, Undo after another phone changed it, an old array read and converted, a refused write kept with Retry and
-    Discard, the rules for the map and the array, history write-once); `multidevice.e2e.mjs` (three phones, seeded random
+    Discard, the rules for the map and the array, history write-once); `specs/multidevice.spec.mjs` (three phones, seeded random
     use/add/open/rename/Undo with phones going offline and back; every batch on the server must equal start + adds - uses,
-    phones must show it, the history must match, nothing refused; `SEEDS=1,2 STEPS=60 node test/multidevice.e2e.mjs`
+    phones must show it, the history must match, nothing refused; `SEED=1 STEPS=60 npx playwright test multidevice`
     inside `firebase emulators:exec`; two seeds run in CI, twelve were run by hand). The tests drive the app's own code
     through `window.__pantry.act` (emulator only).

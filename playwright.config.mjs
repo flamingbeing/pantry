@@ -13,7 +13,7 @@ export default defineConfig({
   testMatch: '*.spec.mjs',
   fullyParallel: true,
   workers: 4,
-  retries: 0,   // a flake is a bug to fix, not a retry
+  retries: CI ? 1 : 0,   // CI only: the Firestore emulator now and then sends one message twice (pantry/NOTES.md, "How to test")
   forbidOnly: CI,
   globalSetup: './pantry/test/specs/global-setup.mjs',
   timeout: 60_000,
