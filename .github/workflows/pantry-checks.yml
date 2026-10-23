@@ -39,35 +39,6 @@ jobs:
       - run: node pantry/test/bulk-items.test.mjs
       - run: node pantry/test/listen-watch.test.mjs
       - run: node pantry/test/live-guards.test.mjs
-  items:
-    # pinned: Playwright 1.56.1 can't install Chromium on Ubuntu 26.04 (what ubuntu-latest became on 22 Oct 2026)
-    runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - run: node pantry/test/logic.test.mjs
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-1.56.1
-      - name: Install Playwright and axe-core
-        run: |
-          npm install --no-save playwright@1.56.1 axe-core
-          npx playwright install chromium
-      - name: Items list (touch)
-        env:
-          PLAYWRIGHT_PATH: ${{ github.workspace }}/node_modules/playwright/index.mjs
-          SHOTS: ${{ runner.temp }}/pantry-shots
-        run: node pantry/test/items.e2e.mjs
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: pantry-screenshots-items
-          path: ${{ runner.temp }}/pantry-shots
-          if-no-files-found: ignore
   specs:
     # Playwright Test (playwright.config.mjs): fully parallel, 4 workers, each test with its own server, accounts and
     # household ids; the emulators start from the config. Specs replace the old scripts one by one.
