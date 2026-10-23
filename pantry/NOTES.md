@@ -71,6 +71,12 @@ npm ci && npx playwright test          # Playwright Test specs in pantry/test/sp
 node tools/check.mjs && node tools/stamp-versions.mjs --check
 ```
 
+Known emulator flake (about 1 test in 200 under 4 workers): the Firestore emulator (v1.19.8, firebase-tools 13.29.1) sometimes
+writes one WebChannel message twice in the same response. The SDK (10.14.1) doesn't drop the repeat, takes a second write-stream
+handshake for a write result with no commitTime and stops with "INTERNAL ASSERTION FAILED: Unexpected state". Each denied write
+opens a new write stream, so the rules probes hit it most. The live service is not affected. CI retries a failed test once
+(`retries` in `playwright.config.mjs`); a newer emulator (v1.22.0, firebase-tools 15.32.1) is the untested proper fix.
+
 The older script (`run-sync.sh`) need Playwright (`PLAYWRIGHT_PATH`) and axe-core (`AXE_PATH`, or `npm install --no-save axe-core`);
 `run-sync.sh` and the specs need Java 21 and fetches `firebase-tools` with npx. The "Pantry checks" workflow runs all of them on PRs (three parallel jobs: browser (the plain-node tests), specs, sync)
 touching `pantry/` or `__/`; they load the design kit from its live address. Never point a test at the live Firebase project, with one exception: the
