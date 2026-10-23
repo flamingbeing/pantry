@@ -1,5 +1,5 @@
 // Photo sizes (plain node): the thumbnail and photo sizes, and the step-down until a picture fits its limit.
-// The canvas drawing itself is checked in the browser test (e2e.mjs), which also reports the real sizes.
+// The canvas drawing itself is checked in the browser specs (specs/app-photos.spec.mjs), which also report the real sizes.
 import assert from 'node:assert/strict';
 import { fitSize, steps, fit, THUMB, PHOTO } from '../js/photo.js';
 

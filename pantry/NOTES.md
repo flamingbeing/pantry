@@ -62,17 +62,18 @@ node pantry/test/syncnow.test.mjs      # Sync now: each waiting change in words,
 node pantry/test/removed.test.mjs      # removed markers, Restore, days left, the sweep's choice, backups and merging, every list skips removed (plain node)
 node pantry/test/live-guards.test.mjs  # the live-service harness's safety guards (plain node; the harness itself: pantry/test/LIVE-TEST.md)
 node pantry/test/config.test.mjs       # set-config, sign-in choice, plain-word errors, sw.js rules
-node pantry/test/e2e.mjs               # phone browser test with axe; SHOTS=<dir> saves screenshots
 node pantry/test/items.e2e.mjs         # the Items list with real touch (CDP): selecting, press and hold, the actions and their Undo, group by place, grip drags, My order, Bulk edit, axe
 pantry/test/run-sync.sh                # the rest of the old family-sharing story (sync.e2e.mjs: stock rules, removing, merging, the chip, no signal) in the local emulators
-npm ci && npx playwright test          # Playwright Test specs in pantry/test/specs: sign-in by email link and password (signin), family sharing,
-                                       # rules, photos, places and names (sync-*.spec.mjs), the randomised three-phone run (multidevice; SEED=<n> re-runs a seed);
-                                       # fully parallel, 4 workers, own server, accounts and ids per test; starts the emulators itself
+npm ci && npx playwright test          # Playwright Test specs in pantry/test/specs (the phone app: app-*.spec.mjs, split by screen or feature,
+                                       # with axe; signing in by email: signin.spec.mjs; family sharing, rules, photos, places and names: sync-*.spec.mjs;
+                                       # the randomised three-phone run: multidevice.spec.mjs, SEED=<n> re-runs a seed): fully parallel, 4 workers, own server,
+                                       # accounts and ids per test; starts the emulators itself. One file: npx playwright test app-places;
+                                       # the env var PW_NO_EMULATOR (set to 1) skips the emulators (the app-* specs don't need them); the env var SHOTS (a folder) saves screenshots
 node tools/check.mjs && node tools/stamp-versions.mjs --check
 ```
 
-`e2e.mjs` needs Playwright (`PLAYWRIGHT_PATH`) and axe-core (`AXE_PATH`, or `npm install --no-save axe-core`);
-`run-sync.sh` and the specs need Java 21 and fetches `firebase-tools` with npx. The "Pantry checks" workflow runs all of them on PRs (four parallel jobs: browser, items, specs, sync)
+The older scripts (`items.e2e.mjs`, `run-sync.sh`) need Playwright (`PLAYWRIGHT_PATH`) and axe-core (`AXE_PATH`, or `npm install --no-save axe-core`);
+`run-sync.sh` and the specs need Java 21 and fetches `firebase-tools` with npx. The "Pantry checks" workflow runs all of them on PRs (four parallel jobs: browser (the plain-node tests), items, specs, sync)
 touching `pantry/` or `__/`; they load the design kit from its live address. Never point a test at the live Firebase project, with one exception: the
 live-service harness (`pantry/test/live-multidevice.mjs`, see `pantry/test/LIVE-TEST.md`), which the owner arranges separately
 and sessions run only with `--dry` (`pantry/test/run-live-dry.sh`, local emulators).
