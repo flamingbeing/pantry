@@ -10,6 +10,9 @@ Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner
   frozen, moving in or out of a freezer, place kinds. Detail: [docs/places-photos-names.md](docs/places-photos-names.md).
 - Install (23 Oct 2026): manifest `id` set to the id Chrome already computes (`./`, so installs carry on), maskable
   icon and a 32 px PNG favicon from the shared app icon set (Home family; same design as before).
+- Browser tests (23 Oct 2026): the phone test is now Playwright Test specs, `pantry/test/specs/app-*.spec.mjs` (PR #7;
+  `e2e.mjs` is gone). The service worker's one-time reload on a first visit broke the old fixed waits: specs block the
+  worker unless a test is about it (`sw: true`). Ports of `items.e2e.mjs` and the sync scripts are in other PRs.
 - Nothing blocks the build. iPhone touch is untested (only real touch events in Chromium).
 
 ## Next (in this order)
