@@ -7,18 +7,19 @@
 // refused (a small list, on this phone) and says "Needs attention" until the person retries or discards it.
 
 export const MAX_REFUSED = 30;
+export const AT_RISK_MS = 10 * 60000;
 const MAX_BYTES = 200000;
 
 // The chip near the top of Home and Settings: Saved, Waiting for signal (N changes), or Needs attention.
 // `pending`: changes made here that the server hasn't confirmed; `cache`: the phone is showing its own copy (no
 // connection to the server); `recent`: the server was heard from within the last few seconds; `waited`: ms since the oldest unconfirmed change (a normal save is confirmed in well under
 // a second, which isn't worth a "waiting" chip).
-// `persisted`: false when the browser may clear this site's storage (app-sync persistGuard), so changes not sent yet are at
-// risk; `stale`: the listener watchdog says the server isn't being heard, so what shows may be old.
+// `persisted`: false when the browser may clear this site's storage (app-sync persistGuard), so changes still unsent after
+// AT_RISK_MS are at risk (most browsers say false to an ordinary site; the risk is changes left for days); `stale`: the listener watchdog says the server isn't being heard, so what shows may be old.
 export function syncState({ refused = 0, pending = 0, cache = false, offline = false, waited = 0, recent = false, persisted = true, stale = false } = {}) {
   const n = `${pending} ${pending === 1 ? 'change' : 'changes'}`;
   if (refused > 0) return { kind: 'attention', text: refused === 1 ? 'Needs attention' : `Needs attention (${refused})` };
-  if (pending > 0 && !persisted && (offline || waited >= 1500)) return { kind: 'waiting', text: `Only on this phone (${n})` };
+  if (pending > 0 && !persisted && waited >= AT_RISK_MS) return { kind: 'waiting', text: `Only on this phone (${n})` };
   // (`recent`: a snapshot came from the server a moment ago, so a listener that still says "my own copy" is behind, not the connection)
   if (pending > 0 && ((cache && !recent) || offline || waited >= 1500)) return { kind: 'waiting', text: `Waiting for signal (${n})` };
   if (pending === 0 && stale && !offline) return { kind: 'waiting', text: 'May be out of date' };
