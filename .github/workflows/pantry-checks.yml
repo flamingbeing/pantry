@@ -50,7 +50,7 @@ jobs:
       - uses: flamingbeing/app-devkit/setup-browser@v1.1.0
         with:
           devkit-dir: ''   # the project's own Playwright (npx playwright)
-      - uses: flamingbeing/app-devkit/setup-emulators@v1.1.0
+      - uses: flamingbeing/app-devkit/setup-emulators@v1.2.0
         with:
           firebase-tools-version: '13.29.1'   # same as playwright.config.mjs
           emulators: firestore
@@ -76,7 +76,7 @@ jobs:
         with:
           playwright-version: '1.56.1'
           devkit-dir: ''
-      - uses: flamingbeing/app-devkit/setup-emulators@v1.1.0
+      - uses: flamingbeing/app-devkit/setup-emulators@v1.2.0
         with:
           firebase-tools-version: '13.29.1'   # same as pantry/test/run-sync.sh
           emulators: firestore
