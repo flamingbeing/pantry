@@ -54,7 +54,7 @@ node pantry/test/merge.test.mjs        # merging duplicate pantries: members, wh
 node pantry/test/scan.test.mjs         # the barcode look-up chain with a stubbed fetch (plain node)
 node pantry/test/photo.test.mjs        # thumbnail and photo sizes, stepping down to fit the limits (plain node)
 node pantry/test/ops.test.mjs          # both shapes of batches, changes as instructions and their inverse, the chip text (plain node)
-node pantry/test/listen-watch.test.mjs # the listener watchdog's decision and the chip's use of freshness (plain node)
+node pantry/test/listen-watch.test.mjs # the chip's use of freshness, the watchdog's stale and storage at risk (plain node)
 node pantry/test/bulk-items.test.mjs   # Bulk edit's rules: each choice as ops, skips, warnings, Undo round trips (plain node)
 node pantry/test/order.test.mjs        # My order: midpoints, append, prepend, collisions, renumbering, tie-breaks, 200 random sequences (plain node)
 node pantry/test/select.test.mjs       # selecting: the selection state and the press and hold with a fake pointer (plain node)
@@ -83,3 +83,16 @@ touching `pantry/` or `__/`; they load the design kit from its live address. Nev
 live-service harness (`pantry/test/live-multidevice.mjs`, see `pantry/test/LIVE-TEST.md`), which the owner arranges separately
 and sessions run only with `--dry` (`pantry/test/run-live-dry.sh`, local emulators).
 
+
+## Sync engine: app-sync (24 Oct 2026)
+
+Saves and listeners go through app-sync `0.2.0` (`https://core.anawj.com/sync/0.2.0/`, exact pin, precached by `sw.js`):
+every save goes to an outbox on the phone (IndexedDB) and then to the server in a transaction, one document at a time;
+each kind keeps a copy on the phone and listens only for documents changed since the last sync (`updatedAt`, stamped by
+the adapter as the save reaches the server). Every kind is merged on the server's copy (`cloud.js mergeSaves`): a whole
+document replaces it (as setDoc did), a change as instructions is applied to it (as updateDoc did), and `_saves` keeps the
+last 20 save keys so a resent save counts once. The rules require a stamp on every write and a new one on every change;
+app versions from before refuse to update until the phone updates (their change is kept: Settings, Retry). Until the
+one-off backfill (`pantry/tools/backfill-updated-at.mjs`, dry run by default) has stamped old documents, the engine reads
+in full while any document has no stamp (`unstamped: 'full'`); drop that option once it has run. The SDK's network
+switch doesn't stop a transaction: tests go offline with the browser context as well (`test/specs/sync-lib.mjs net`).

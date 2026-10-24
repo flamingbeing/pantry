@@ -17,8 +17,8 @@ test('photo rules: sizes, extra fields, old-style photos kept but never changed,
     const db = F.getFirestore(), d = (...p) => F.doc(db, 'households', hid, ...p);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
-    const item = (id, extra = {}) => ({ id, name: 'Rules ' + id, batches: [], ...extra });
-    await tryIt('photo write', () => F.setDoc(d('photos', 'p1'), { id: 'p1', data: 'data:image/jpeg;base64,' + 'A'.repeat(100000), updatedAt: 'x' }));
+    const item = (id, extra = {}) => ({ id, name: 'Rules ' + id, batches: [], updatedAt: String(Math.random()), ...extra });
+    await tryIt('photo write', () => F.setDoc(d('photos', 'p1'), { id: 'p1', data: 'data:image/jpeg;base64,' + 'A'.repeat(100000), updatedAt: String(Math.random()) }));
     await tryIt('photo read', async () => { if (!(await F.getDoc(d('photos', 'p1'))).exists()) throw { code: 'missing' }; });
     await tryIt('photo over 150 KB', () => F.setDoc(d('photos', 'p2'), { id: 'p2', data: 'data:image/jpeg;base64,' + 'A'.repeat(153600) }));
     await tryIt('photo extra field', () => F.setDoc(d('photos', 'p3'), { id: 'p3', data: 'data:x', name: 'x' }));
@@ -45,7 +45,7 @@ test('photo rules: sizes, extra fields, old-style photos kept but never changed,
     const ref = F.doc(F.getFirestore(), 'households', hid, 'items', 'old1');
     const out = [];
     for (const data of [{ id: 'old1', name: 'Old one, renamed', batches: [], photo: OLD }, { id: 'old1', name: 'x', batches: [], photo: OLD + 'C' }, { id: 'old1', name: 'Old one, renamed', batches: [] }]) {
-      try { await F.setDoc(ref, data); out.push('ok'); } catch (e) { out.push(e.code); }
+      try { await F.setDoc(ref, { ...data, updatedAt: String(Math.random()) }); out.push('ok'); } catch (e) { out.push(e.code); }
     }
     return out;
   }, [hid, OLD]);

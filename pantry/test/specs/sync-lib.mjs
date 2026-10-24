@@ -32,8 +32,16 @@ export async function pair(phone, fsAdmin, uid, extraMembers = []) {
   await inFamily(mum, hid); await inFamily(dad, hid);
   return { mum, dad, mumE, dadE, hid };
 }
-export const net = (p, on) => p.evaluate(async ([on, u]) => { const F = await import(u); const db = F.getFirestore(); await (on ? F.enableNetwork(db) : F.disableNetwork(db)); }, [on, FSJS]);
-export const drain = p => p.evaluate(async u => { const F = await import(u); await F.waitForPendingWrites(F.getFirestore()); }, FSJS);
+// the SDK's network switch, and (saves go through app-sync's outbox) sending what waits at once when back, as 'online' does
+// (the phone's whole connection too: a transaction, which every save is now, doesn't wait for the SDK's network switch)
+export async function net(p, on) {
+  const sdk = on => p.evaluate(async ([on, u]) => { const F = await import(u); const db = F.getFirestore(); await (on ? F.enableNetwork(db) : F.disableNetwork(db)); if (on) window.__pantry.kick?.(); }, [on, FSJS]);
+  if (!on) await sdk(false);
+  await p.context().setOffline(!on);
+  if (on) await sdk(true);
+}
+// every save this phone made has reached the server (the outbox and the SDK's own queue)
+export const drain = p => p.evaluate(async () => { for (let i = 0; i < 30; i++) if (await window.__pantry.synced(1000)) return; throw new Error('saves still waiting'); });
 export const act = (p, name, ...args) => p.evaluate(([n, a]) => window.__pantry.act[n](...a), [name, args]);
 export const refused = p => p.evaluate(() => window.__pantry.S.refused.length);
 export const shownPlaces = p => p.evaluate(() => window.__pantry.places());
