@@ -99,6 +99,14 @@ assert.throws(() => updatePairs(F, null, L.mergeOps(PP.nameOps('a@b.c', 'A'), { 
   const renamed = { id: 'p1', name: 'Big fridge', order: 1, updatedAt: '2026-10-21T00:00:00.000Z' };
   assert.deepEqual(places(renamed, { id: 'p1', name: 'Fridge', order: 1, updatedAt: '1970-01-01T00:00:00.000Z' }, null, [{ put: true }]), renamed);
   assert.equal(places(null, { id: 'p1', name: 'Fridge', order: 1, updatedAt: '1970-01-01T00:00:00.000Z' }, null, [{ put: true }]).name, 'Fridge');
+  // a save's stamp always moves on from the server's, even in the same millisecond or behind it
+  const { stampAfter } = await import('../js/cloud.js');
+  const T = Date.parse('2026-10-24T01:00:00.000Z');
+  assert.equal(stampAfter({ updatedAt: '2026-10-24T01:00:00.000Z' }, T).updatedAt, '2026-10-24T01:00:00.001Z');
+  assert.equal(stampAfter({ updatedAt: '2026-10-24T02:00:00.000Z' }, T).updatedAt, '2026-10-24T02:00:00.001Z');
+  assert.equal(stampAfter({ updatedAt: '2026-10-24T00:00:00.000Z' }, T).updatedAt, '2026-10-24T01:00:00.000Z');
+  assert.equal(stampAfter({ id: 'x' }, T).updatedAt, '2026-10-24T01:00:00.000Z');
+  assert.equal(items(server, { id: 'i1', name: 'N', batches: [] }, null, [{ put: true }]).updatedAt, server.updatedAt, 'a whole document keeps the server stamp for stampAfter');
   // field updates as the server does them
   assert.deepEqual(applyPairs({ a: { b: 1 }, n: 'x' }, [[['a', 'b'], { __inc: 2 }], [['n'], { __inc: 1 }], [['a', 'c'], { __del: true }]]), { a: { b: 3 }, n: 1 });
 }

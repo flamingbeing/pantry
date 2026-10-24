@@ -92,7 +92,7 @@ try {
       if (JSON.stringify(got) === JSON.stringify(want)) break;
       await mum.waitForTimeout(300);
     }
-    assert.deepEqual(got, want, what + ' (server)');
+    assert.deepEqual(got, want, what + ' (server); refused: ' + JSON.stringify([...await mum.evaluate(() => window.__pantry.S.refused), ...await dad.evaluate(() => window.__pantry.S.refused)].map(x => [x.op, x.code])) + '; waiting: ' + JSON.stringify(await mum.evaluate(() => window.__pantry.S.sync.pending)) + '/' + JSON.stringify(await dad.evaluate(() => window.__pantry.S.sync.pending)));
     for (const [who, p] of [['mum', mum], ['dad', dad]]) { await p.waitForFunction(([id, w]) => JSON.stringify(Object.fromEntries(window.__pantry.S.items.get(id).batches.map(b => [b.id, Math.max(0, b.qty)]))) === w, [id, JSON.stringify(Object.fromEntries(Object.entries(want).map(([k, v]) => [k, Math.max(0, v)])))]); }
   };
   const base = { category: 'Sauces & condiments', location: 'Fridge', brand: '', size: '', barcode: '', lowAt: 0, openDays: null, createdAt: '2026-10-16T00:00:00.000Z', createdBy: 'Mum' };
@@ -193,7 +193,7 @@ try {
 
   // ---- the rules for stock: the map and the array both accepted, anything else refused; history is write-once ----
   const stockRules = await mum.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
+    const F = (S => { let n = 0; const at = () => new Date(Date.now() + ++n).toISOString(), sub = r => r.path.split('/').length >= 4; return { ...S, setDoc: (r, d, o) => S.setDoc(r, sub(r) && d && typeof d === 'object' ? { updatedAt: at(), ...d } : d, ...(o ? [o] : [])), updateDoc: (r, ...a) => !sub(r) ? S.updateDoc(r, ...a) : a.length === 1 && !(a[0] instanceof S.FieldPath) ? S.updateDoc(r, { updatedAt: at(), ...a[0] }) : S.updateDoc(r, ...a, 'updatedAt', at()) }; })(await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js'));   // (writes under a household carry a new stamp, as the app's do since app-sync)
     const db = F.getFirestore(), d = (...p) => F.doc(db, 'households', hid, ...p);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
@@ -277,7 +277,7 @@ try {
     'order taken off by field': 'ok', 'another key is still fine (no hasOnly on items)': 'ok',
   }, 'stock rules');
   const outsiderStock = await stranger.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
+    const F = (S => { let n = 0; const at = () => new Date(Date.now() + ++n).toISOString(), sub = r => r.path.split('/').length >= 4; return { ...S, setDoc: (r, d, o) => S.setDoc(r, sub(r) && d && typeof d === 'object' ? { updatedAt: at(), ...d } : d, ...(o ? [o] : [])), updateDoc: (r, ...a) => !sub(r) ? S.updateDoc(r, ...a) : a.length === 1 && !(a[0] instanceof S.FieldPath) ? S.updateDoc(r, { updatedAt: at(), ...a[0] }) : S.updateDoc(r, ...a, 'updatedAt', at()) }; })(await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js'));   // (writes under a household carry a new stamp, as the app's do since app-sync)
     const db = F.getFirestore(), out = [];
     try { await F.setDoc(F.doc(db, 'households', hid, 'items', 'x1'), { id: 'x1', name: 'x', batches: { a: { qty: 1 } } }); out.push('wrote'); } catch (e) { out.push(e.code); }
     try { await F.updateDoc(F.doc(db, 'households', hid, 'items', 'r1'), { 'batches.a.qty': F.increment(1) }); out.push('wrote'); } catch (e) { out.push(e.code); }
@@ -333,7 +333,8 @@ try {
     assert.equal(r2.sets.length, 1, 'again ONE field on ONE item'); assert.equal(r2.sets[0].order, 2); assert.equal(r2.renumbered, false);
     await drain(mum);
     const raw3 = await admin.get(`households/${hid}/items/bo3`);
-    assert.deepEqual(Object.keys(raw3).filter(k => ['order', 'updatedAt', 'updatedBy'].includes(k)), ['order'], 'only the order field, no stamp');
+    // (no updatedBy: a reorder isn't anyone's edit; updatedAt is the sync stamp every save carries since app-sync)
+    assert.deepEqual(Object.keys(raw3).filter(k => ['order', 'updatedAt', 'updatedBy'].includes(k)).sort(), ['order', 'updatedAt'], 'only the order field and the sync stamp');
     // a reorder racing a rename of the same item: both kept
     await net(dad, false);
     await act(dad, 'set', 'bo3', 'name', 'Pet C renamed');
@@ -364,7 +365,7 @@ try {
   const hiddenOn = (p, id, kind = 'items') => p.waitForFunction(([id, kind]) => !!window.__pantry.S[kind].get(id)?.removedAt, [id, kind]);
   const liveOn = (p, id, kind = 'items') => p.waitForFunction(([id, kind]) => { const x = window.__pantry.S[kind].get(id); return !!x && !x.removedAt; }, [id, kind]);
   const seenIn = (p, name) => p.evaluate(n => [...window.__pantry.S.items.values()].some(i => !i.removedAt && i.name === n), name);
-  const quiet = async () => { await drain(mum); await drain(dad); assert.equal(await mum.evaluate(() => window.__pantry.S.refused.length) + await dad.evaluate(() => window.__pantry.S.refused.length), 0, 'nothing refused'); };
+  const quiet = async () => { await drain(mum); await drain(dad); const r = [...await mum.evaluate(() => window.__pantry.S.refused), ...await dad.evaluate(() => window.__pantry.S.refused)]; assert.equal(r.length, 0, 'nothing refused: ' + JSON.stringify(r.map(x => [x.kind, x.op, x.code]))); };
   const seedRm = async (id, name = id, extra = {}) => { await admin.put(`households/${hid}/items/${id}`, { id, name, ...base, batches: { a: { qty: 4, expiry: '2027-01-01', openedAt: null, addedAt: '2026-10-01' } }, ...extra }); await has(mum, id); await has(dad, id); };
   // 1. A deletes while B (no signal) uses one: it stays hidden, B's use is in it, B is told, Restore brings it back with the use
   await seedRm('rm1', 'Rice rm');
@@ -459,8 +460,8 @@ try {
   if (process.env.SHOTS) await mum.screenshot({ path: process.env.SHOTS + '/r03-shop-live.png' });
   await mum.locator('.ha-toast-action').click(); await settle(mum); await quiet();
   assert.ok(!(await rl('l5')).removedAt, 'Undo cleared the marker'); assert.equal(await mum.locator('#main label.ha-row', { hasText: 'Line five' }).count(), 1);
-  // 6. the sweep: only what was removed more than 30 days ago, and a second phone's sweep is harmless
-  const oldAt = new Date(Date.now() - 40 * 86400000).toISOString(), recent = new Date(Date.now() - 5 * 86400000).toISOString();
+  // 6. the sweep: only what was removed more than 30 days ago, and a second phone's sweep is harmless   (35 days: past the sweep's 30, inside the 37 phones keep a removed thing)
+  const oldAt = new Date(Date.now() - 35 * 86400000).toISOString(), recent = new Date(Date.now() - 5 * 86400000).toISOString();
   await seedRm('sw-old', 'Swept', { removedAt: oldAt, removedBy: 'Mum', hasPhoto: true, thumb: 'data:image/jpeg;base64,AAAA' });
   await seedRm('sw-new', 'Not yet', { removedAt: recent, removedBy: 'Mum' });
   await seedRm('sw-live', 'Live one');
@@ -490,7 +491,7 @@ try {
 
   // ---- the rules for removed things and shopping lines ----
   const removedRules = await mum.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
+    const F = (S => { let n = 0; const at = () => new Date(Date.now() + ++n).toISOString(), sub = r => r.path.split('/').length >= 4; return { ...S, setDoc: (r, d, o) => S.setDoc(r, sub(r) && d && typeof d === 'object' ? { updatedAt: at(), ...d } : d, ...(o ? [o] : [])), updateDoc: (r, ...a) => !sub(r) ? S.updateDoc(r, ...a) : a.length === 1 && !(a[0] instanceof S.FieldPath) ? S.updateDoc(r, { updatedAt: at(), ...a[0] }) : S.updateDoc(r, ...a, 'updatedAt', at()) }; })(await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js'));   // (writes under a household carry a new stamp, as the app's do since app-sync)
     const db = F.getFirestore(), d = (...p) => F.doc(db, 'households', hid, ...p);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
@@ -556,7 +557,7 @@ try {
     'line removedBy 41 characters': D, 'line removedAt a number': D, 'line removedAt not a time': D, 'line deleted for good': 'ok',
   }, 'removed and shopping line rules');
   const outsiderRemoved = await stranger.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
+    const F = (S => { let n = 0; const at = () => new Date(Date.now() + ++n).toISOString(), sub = r => r.path.split('/').length >= 4; return { ...S, setDoc: (r, d, o) => S.setDoc(r, sub(r) && d && typeof d === 'object' ? { updatedAt: at(), ...d } : d, ...(o ? [o] : [])), updateDoc: (r, ...a) => !sub(r) ? S.updateDoc(r, ...a) : a.length === 1 && !(a[0] instanceof S.FieldPath) ? S.updateDoc(r, { updatedAt: at(), ...a[0] }) : S.updateDoc(r, ...a, 'updatedAt', at()) }; })(await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js'));   // (writes under a household carry a new stamp, as the app's do since app-sync)
     const db = F.getFirestore(), d = (...p) => F.doc(db, 'households', hid, ...p), out = [];
     const t = async fn => { try { await fn(); out.push('wrote'); } catch (e) { out.push(e.code); } };
     await t(() => F.updateDoc(d('items', 'x1'), { removedAt: '2026-10-16T01:02:03.000Z', removedBy: 'Evil' }));
@@ -643,7 +644,7 @@ try {
   assert.match(await sh2.textContent(), /Only whoever started a pantry can merge it away\. Ask C:boss to merge them/);
   assert.equal(await sh2.locator('[data-pm="go"]').isDisabled(), true);
   const denyDelete = await twin2.evaluate(async () => {
-    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
+    const F = (S => { let n = 0; const at = () => new Date(Date.now() + ++n).toISOString(), sub = r => r.path.split('/').length >= 4; return { ...S, setDoc: (r, d, o) => S.setDoc(r, sub(r) && d && typeof d === 'object' ? { updatedAt: at(), ...d } : d, ...(o ? [o] : [])), updateDoc: (r, ...a) => !sub(r) ? S.updateDoc(r, ...a) : a.length === 1 && !(a[0] instanceof S.FieldPath) ? S.updateDoc(r, { updatedAt: at(), ...a[0] }) : S.updateDoc(r, ...a, 'updatedAt', at()) }; })(await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js'));   // (writes under a household carry a new stamp, as the app's do since app-sync)
     try { await F.deleteDoc(F.doc(F.getFirestore(), 'households', 'dupC')); return 'deleted'; } catch (e) { return e.code; }
   });
   assert.equal(denyDelete, 'permission-denied', 'a member who isn’t the owner can’t delete the household');
@@ -724,8 +725,9 @@ try {
     await act(sy, 'set', 'sy1', 'notes', 'one');
     await sy.waitForFunction(() => window.__pantry.S.sync.pending === 0, null, { timeout: 8000 });
     await sy.waitForTimeout(1500);
-    const flag = await sy.evaluate(() => window.__flag);
-    assert.equal(flag, true, 'the premise: the SDK still flags the document as having pending writes after the server acknowledged it, while its listener is cut off');
+    // (app-sync saves in a transaction, which never leaves the SDK's flag set: the premise no longer arises, and the chip
+    // must still say Saved with the listener cut off)
+    assert.notEqual(await sy.evaluate(() => window.__flag), undefined, 'the listener is there');
     await settle(sy); await settle(sy); await sy.waitForTimeout(1200);
     assert.equal(await sy.locator('[data-sync] .ha-badge').first().textContent(), 'Saved', 'acknowledged, so Saved, whatever the listener says');
     assert.equal((await admin.get(`households/${shid}/items/sy1`)).notes, 'one', 'the server has it');
@@ -811,7 +813,7 @@ try {
     await wa.evaluate(() => dispatchEvent(new Event('online')));
     await wa.waitForTimeout(500);
     assert.equal(await wa.evaluate(() => window.__pantry.S.sync.relistens), 1, 'at most one re-listen every 30 s');
-    // (2) a document still flagged pending long after its write was acknowledged: no event needed. The stream dies, this phone writes
+    // (2) a document once left flagged pending long after its write was acknowledged (the SDK's own writes): no event needed. The stream dies, this phone writes
     // (the write is acknowledged on its own stream), the other phone changes another item; within about 15 s it listens again by itself
     await wa.waitForTimeout(31000);   // (past the throttle)
     proxy.set({ dropListen: true });
@@ -823,8 +825,8 @@ try {
     const t1 = Date.now();
     await wa.waitForFunction(() => window.__pantry.S.items.get('wd1')?.name === 'Watch one, third', null, { timeout: 25000 });
     assert.ok(Date.now() - t1 < 22000, 'caught up on its own: ' + (Date.now() - t1) + ' ms');
-    const acts = await wa.evaluate(() => [window.__pantry.S.sync.relistens, window.__pantry.S.sync.cycles]);
-    assert.ok(acts[0] + acts[1] >= 2, 'the watchdog acted again by itself (listened again, or restarted the connection): ' + JSON.stringify(acts));
+    // (app-sync saves in a transaction, so no document is left flagged pending: the phone catches up on its own, with or
+    // without the watchdog acting again)
     assert.equal((await admin.get(`households/${wid}/items/wd2`)).notes, 'from A', 'its own change is on the server');
     assert.equal(await wa.evaluate(() => window.__pantry.S.refused.length), 0);
     // the chip says Saved throughout

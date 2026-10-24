@@ -426,17 +426,24 @@ export function mergeSaves(kind) {
     for (const o of ops && ops.length ? ops : [{ put: true }]) {
       if (o.patch) doc = applyPairs(doc || { id: record.id }, updatePairs(OPS_F, kind === 'items' && doc && Array.isArray(doc.batches) ? normalizeItem(doc) : null, o.patch));
       else if (kind === 'places' && record.updatedAt === SEED_AT && doc) continue;
-      else doc = kind === 'items' ? toStored(normalizeItem(record)) : clean(record);
+      else doc = { ...(kind === 'items' ? toStored(normalizeItem(record)) : clean(record)), ...(current?.updatedAt ? { updatedAt: current.updatedAt } : {}) };
     }
-    return doc;
+    return doc;   // (updatedAt still the server's: stampAfter moves it on)
   };
 }
 const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
+// The stamp a save writes: now, or just after the server's own stamp when that is not earlier (two phones in the same
+// millisecond, or a clock behind), so a change always moves updatedAt on, as the rules require.
+export function stampAfter(doc, now = Date.now()) {
+  const prev = Date.parse(doc?.updatedAt || '');
+  return { ...doc, updatedAt: new Date(Number.isFinite(prev) && prev >= now ? prev + 1 : now).toISOString() };
+}
 const SYNC = 'https://core.anawj.com/sync/0.2.0/index.js';
 // A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
 // so the sweep still sees it here first.
 const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };
-const counts = kind => kind !== 'events' && kind !== 'photos';   // a history line or a photo belongs to a change that is counted
+const counts = x => x.kind !== 'events' && x.kind !== 'photos'   // a history line or a photo belongs to a change that is counted,
+  && !(x.kind === 'places' && x.record?.updatedAt === SEED_AT);      // and a place made from the old list is no one's change
 const strip = d => { if (!d || !('_saves' in d)) return d; const { _saves, ...rest } = d; return rest; };
 
 // The engine, once a page: the device copy, the outbox and the queue outlive a switch between households (owner: the
@@ -447,7 +454,7 @@ async function sync() {
   const { F, db } = await sdk(), AS = await import(SYNC);
   const meta = new Set(), codes = new Map();
   const fs = AS.createFirestoreBackend({
-    sdk: async () => ({ F, db }), path: (hid, kind) => ['households', hid, kind], time: 'iso', mark: '_saves',
+    sdk: async () => ({ F, db }), path: (hid, kind) => ['households', hid, kind], time: 'iso', mark: '_saves', stamp: doc => stampAfter(doc),
     merge: Object.fromEntries(ALL_KINDS.map(k => [k, mergeSaves(k)])),
     onSnapshotMeta: (kind, m) => { for (const fn of meta) fn(kind, m); },
   });
@@ -457,7 +464,14 @@ async function sync() {
   // (the queue keeps a failed save's message only: its code, for the plain words, is kept here)
   const queue = AS.createWriteQueue({
     store: AS.createOutbox({ name: 'pantry-outbox' }), getOwner: () => owner, online: () => globalThis.navigator?.onLine !== false,
-    backend: async (hid, kind, record, base, extra) => { try { return await fs.commit(hid, kind, record, base, extra); } catch (e) { codes.set(extra.key, e?.code || ''); throw e; } },
+    // ('aborted': two phones' transactions on one document at once, after the SDK's own retries; sent again later.
+    // 'permission-denied' is tried once more on a fresh read: the server judges the rules before it notices the copy read
+    // was stale, so a write racing another phone's in the same millisecond can be refused for the same stamp.)
+    backend: async (hid, kind, record, base, extra) => {
+      const once = () => fs.commit(hid, kind, record, base, extra);
+      try { return await once().catch(async e => { if (e?.code !== 'permission-denied') throw e; await new Promise(r => setTimeout(r, 50 + Math.random() * 100)); return once(); }); }
+      catch (e) { if (e?.code === 'aborted') { const t = new Error(e.message); t.code = 'unavailable'; throw t; } codes.set(extra.key, e?.code || ''); throw e; }
+    },
   });
   globalThis.addEventListener?.('online', () => queue.kick());
   engine = { AS, fs, stores, hub, queue, meta, codes, persisted: true, saving: new Set() };
@@ -485,13 +499,13 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
   const ofQueue = kind => queue.entries().filter(x => x.owner === hid && x.kind === kind && x.state === 'pending').map(x => x.record.id);
   const tell = () => {
     if (closed) return;
-    const mine = queue.entries().filter(x => x.owner === hid && x.state === 'pending' && counts(x.kind));
+    const mine = queue.entries().filter(x => x.owner === hid && x.state === 'pending' && counts(x));
     const list = mine.map(x => {
       const patch = (x.ops || []).filter(o => o.patch).at(-1);
       return { kind: x.kind, id: x.record.id, op: x.record._deleted ? 'del' : patch && !(x.ops || []).some(o => o.put) ? 'patch' : 'put', ...(patch ? { ops: patch.patch } : {}), name: x.record.name || '' };
     });
     onSync({
-      pending: mine.length + (leftover ? 1 : 0), cache: KINDS.some(k => seen[k].cache), list: [...list, ...(leftover ? [{ kind: 'items', id: '', op: 'before' }] : [])],
+      pending: mine.length + (leftover ? 1 : 0), cache: !cb || KINDS.some(k => seen[k].cache), list: [...list, ...(leftover ? [{ kind: 'items', id: '', op: 'before' }] : [])],
       heard, lastServerAt, relistens, cycles, stale: dog.stale(), persisted: E.persisted,
     });
   };
@@ -551,7 +565,10 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
   let cycling = false;
   async function cycleNet() {
     if (cycling) return; cycling = true;
-    try { await F.disableNetwork(db); await new Promise(r => setTimeout(r, 300)); await F.enableNetwork(db); } catch (e) { console.warn('network restart', e?.code || e?.message); } finally { cycling = false; }
+    // (capped: the SDK's switch waits its turn behind a save whose answer is held up)
+    const turn = (async () => { await F.disableNetwork(db); await new Promise(r => setTimeout(r, 300)); await F.enableNetwork(db); })();
+    try { await Promise.race([turn, new Promise(r => setTimeout(r, 4000))]); } catch (e) { console.warn('network restart', e?.code || e?.message); } finally { cycling = false; }
+    turn.catch(() => {});
   }
   startListening();
   dog.opened();
@@ -618,7 +635,7 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     // Write many at once (copying the phone's pantry up, restoring a backup): at most 400 documents or about 4 MB to a
     // batch, stamped now. Places go through the outbox instead (a place made from the old list must never overwrite one).
     putMany: (kind, list) => kind === 'places' ? Promise.all(list.map(o => enqueue(kind, clean(o), null, { put: true }, { op: 'put', kind, id: o.id, obj: clean(o) }))) : writeAll(F, db, hid, kind, list),
-    listen(fn) { cb = fn; startListening(); },
+    listen(fn) { cb = fn; startListening(); tell(); },   // (until the app has the lists, it hears `cache`: nothing is decided from half a copy)
     // The listener watchdog: `nudge('resume')` at a moment the phone came back (online, visible, pageshow, Sync now); a timer
     // also looks every few seconds for the signs that need no event. Resolves true when it listened again or restarted.
     nudge(event = '') { if (!offs.length) return false; const a = event ? dog.event() : dog.check(); return !!(a.relisten || a.cycle); },
