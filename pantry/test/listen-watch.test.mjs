@@ -13,7 +13,8 @@ assert.deepEqual(syncState({ pending: 0, stale: true }), { kind: 'waiting', text
 assert.equal(syncState({ pending: 0, stale: true, offline: true }).kind, 'saved', 'offline with nothing unsent: nothing to say');
 assert.equal(syncState({ pending: 1, stale: true, offline: true }).text, 'Waiting for signal (1 change)');
 // B3: changes waiting while the browser may clear the site's storage
-assert.deepEqual(syncState({ pending: 2, offline: true, persisted: false }), { kind: 'waiting', text: 'Only on this phone (2 changes)' });
+assert.deepEqual(syncState({ pending: 2, offline: true, persisted: false, waited: 10 * 60000 }), { kind: 'waiting', text: 'Only on this phone (2 changes)' });
+assert.equal(syncState({ pending: 1, offline: true, persisted: false, waited: 5000 }).text, 'Waiting for signal (1 change)', 'a moment offline: just waiting');
 assert.equal(syncState({ pending: 0, persisted: false }).kind, 'saved', 'nothing waiting: nothing at risk');
 assert.equal(syncState({ refused: 1, pending: 2, offline: true, persisted: false }).kind, 'attention');
 console.log('pantry listen-watch: ok');

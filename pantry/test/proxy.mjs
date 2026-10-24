@@ -1,7 +1,7 @@
 // A small pass-through proxy in front of the Firestore emulator that can hold back what the server says, so a test can make a phone
 // whose connection is flaky in one direction (a VPN that buffers one of the two streams):
 //   set({ write: true })   the server still gets and applies every write, but its acknowledgements never reach the phone
-//                          (the phone thinks its change is waiting; the server already has it)
+//                          (the phone thinks its change is waiting; the server already has it); a transaction's commit too
 //   set({ listen: true })  the server's changes (and the confirmation that the phone's own write is now part of what it
 //                          listens to) never reach the phone, while writes are acknowledged normally
 //   set({ dropListen: true })  what the server says on the listen stream is thrown away (a dead stream: the phone never hears again on
@@ -14,7 +14,7 @@ export function stallProxy(target = Number((process.env.FIRESTORE_EMULATOR_HOST 
   const state = { write: false, listen: false, dropListen: false };
   const flushers = new Set(), sockets = new Set();
   const srv = http.createServer((req, res) => {
-    const kind = /\/Write\//.test(req.url) ? 'write' : /\/Listen\//.test(req.url) ? 'listen' : 'other';
+    const kind = /\/Write\/|:commit\b/.test(req.url) ? 'write' : /\/Listen\//.test(req.url) ? 'listen' : 'other';
     const up = http.request({ host: '127.0.0.1', port: target, method: req.method, path: req.url, headers: req.headers, agent: false }, ur => {
       res.writeHead(ur.statusCode, ur.headers);
       const q = [];
