@@ -81,7 +81,7 @@ service cloud.firestore {
     // (when added), by and doneBy (names), and the two removal fields. Nothing else. Old phones still write the whole line;
     // that stays allowed, and so does a change by field (ticking, renaming, removing): the rules see the line as it will be.
     function shopOk(d, id) {
-      return d.keys().hasOnly(['id', 'name', 'itemId', 'done', 'at', 'by', 'doneBy', 'removedAt', 'removedBy', 'updatedAt', '_saves'])
+      return d.keys().hasOnly(['id', 'name', 'itemId', 'done', 'at', 'by', 'doneBy', 'removedAt', 'removedBy', 'updatedAt', 'serverAt', '_saves'])
         && d.keys().hasAll(['id', 'name', 'done'])
         && d.id == id
         && d.name is string && d.name.size() <= 80
@@ -102,7 +102,7 @@ service cloud.firestore {
     // They can't count the place documents (no 40-place cap here; the app keeps to it): each document is small and members-only.
     // `kind` (21 Oct 2026): optional, 'fridge', 'freezer' or 'other' (none: the app guesses from the name).
     function placeOk(d, id) {
-      return d.keys().hasOnly(['id', 'name', 'order', 'updatedAt', 'removedAt', 'removedBy', 'kind', '_saves'])
+      return d.keys().hasOnly(['id', 'name', 'order', 'updatedAt', 'removedAt', 'removedBy', 'kind', 'serverAt', '_saves'])
         && (!('kind' in d) || d.kind in ['fridge', 'freezer', 'other'])
         && d.keys().hasAll(['id', 'name', 'order', 'updatedAt'])
         && d.id == id
@@ -121,8 +121,17 @@ service cloud.firestore {
       return d.get('updatedAt', null) is string && d.updatedAt.size() >= 1 && d.updatedAt.size() <= 40;
     }
     function stampOk() {
-      return resource == null ? stamped(request.resource.data)
-        : (request.resource.data == resource.data || (stamped(request.resource.data) && request.resource.data.updatedAt != resource.data.get('updatedAt', null)));
+      return serverOk(request.resource.data) && (resource == null ? stamped(request.resource.data)
+        : (request.resource.data == resource.data || (stamped(request.resource.data) && request.resource.data.updatedAt != resource.data.get('updatedAt', null))));
+    }
+    // The server's stamp (24 Oct 2026, app-sync 0.3.0 stampMode 'server'): `serverAt`, set by the app to the server's time
+    // (serverTimestamp()) on every save, beside `updatedAt`. Optional until the one-off backfill has stamped every document
+    // (tools/backfill-server-at.mjs); a timestamp must be the time of this very write, so no phone can set one ahead or
+    // behind. Older app versions write back a stamp they read as a plain map (their JSON copy of it): taken, since nothing
+    // reads it as a stamp yet and the backfill replaces it. Once no older version is left, a second rules change requires
+    // `serverAt == request.time` on every write, and the phones then read by it.
+    function serverOk(d) {
+      return !('serverAt' in d) || d.serverAt == request.time || d.serverAt is map;
     }
     // `_saves`: the keys of the last saves applied (at most 20 strings), so a save sent twice counts once (app-sync's mark).
     function savesOk(d) {
@@ -161,7 +170,7 @@ service cloud.firestore {
       match /events/{id} {
         allow create: if member(hid) && stampOk() && savesOk(request.resource.data);
         allow update: if member(hid) && (request.resource.data == resource.data
-          || (stampOk() && savesOk(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt', '_saves'])));
+          || (stampOk() && savesOk(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt', 'serverAt', '_saves'])));
       }
       // An item carries only a small thumbnail (`thumb`, at most 12 KB); its photo is in photos/{id}. Items from
       // before 16 Oct 2026 may still hold a whole photo as `photo`: it may stay as it was or be removed (moved to
@@ -189,13 +198,13 @@ service cloud.firestore {
       match /settings/{id} {
         allow create, update: if member(hid) && stampOk() && savesOk(request.resource.data) && (
           (id == 'places'
-            && request.resource.data.keys().hasOnly(['id', 'list', 'updatedAt', '_saves'])
+            && request.resource.data.keys().hasOnly(['id', 'list', 'updatedAt', 'serverAt', '_saves'])
             && request.resource.data.id == 'places'
             && request.resource.data.list is list
             && placeNames(request.resource.data.list))
           || (id == 'people'
             && request.resource.data.keys().hasAll(['id', 'names', 'updatedAt'])
-            && request.resource.data.keys().hasOnly(['id', 'names', 'updatedAt', '_saves'])
+            && request.resource.data.keys().hasOnly(['id', 'names', 'updatedAt', 'serverAt', '_saves'])
             && request.resource.data.id == 'people'
             && request.resource.data.updatedAt is string
             && request.resource.data.names is map
@@ -204,7 +213,7 @@ service cloud.firestore {
       // One photo per item (same id), at most 150 KB, read only when the item is opened.
       match /photos/{id} {
         allow create, update: if member(hid) && stampOk() && savesOk(request.resource.data)
-          && request.resource.data.keys().hasOnly(['id', 'data', 'updatedAt', '_saves'])
+          && request.resource.data.keys().hasOnly(['id', 'data', 'updatedAt', 'serverAt', '_saves'])
           && request.resource.data.data is string
           && request.resource.data.data.size() <= 153600;
       }

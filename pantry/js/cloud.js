@@ -329,8 +329,9 @@ async function writeAll(F, db, hid, kind, list) {
   let b = null, n = 0, bytes = 0;
   const at = new Date().toISOString();
   for (const o of list) {
-    const { _saves, ...c } = clean(kind === 'items' ? toStored(normalizeItem(o)) : o), size = JSON.stringify(c).length;
+    const { _saves, serverAt, ...c } = clean(kind === 'items' ? toStored(normalizeItem(o)) : o), size = JSON.stringify(c).length;
     c.updatedAt = at;   // stamped now, so every phone's delta listener hears it
+    c.serverAt = F.serverTimestamp();   // and the server's own stamp (a copied one is another pantry's, or a backup's)
     if (b && (n >= 400 || bytes + size > 4e6)) { await b.commit(); b = null; }
     if (!b) { b = F.writeBatch(db); n = 0; bytes = 0; }
     b.set(F.doc(F.collection(db, 'households', hid, kind), o.id), c); n++; bytes += size;
@@ -438,13 +439,14 @@ export function stampAfter(doc, now = Date.now()) {
   const prev = Date.parse(doc?.updatedAt || '');
   return { ...doc, updatedAt: new Date(Number.isFinite(prev) && prev >= now ? prev + 1 : now).toISOString() };
 }
-const SYNC = 'https://core.anawj.com/sync/0.2.0/index.js';
+const SYNC = 'https://core.anawj.com/sync/0.3.0/index.js';
 // A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
 // so the sweep still sees it here first.
 const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };
 const counts = x => x.kind !== 'events' && x.kind !== 'photos'   // a history line or a photo belongs to a change that is counted,
   && !(x.kind === 'places' && x.record?.updatedAt === SEED_AT);      // and a place made from the old list is no one's change
-const strip = d => { if (!d || !('_saves' in d)) return d; const { _saves, ...rest } = d; return rest; };
+// (`_saves` and the server's stamp `serverAt` are the engine's, never the app's: a record the app writes back never carries them)
+const strip = d => { if (!d || !('_saves' in d || 'serverAt' in d)) return d; const { _saves, serverAt, ...rest } = d; return rest; };
 
 // The engine, once a page: the device copy, the outbox and the queue outlive a switch between households (owner: the
 // household's id), and signing out wipes them.
@@ -454,7 +456,9 @@ async function sync() {
   const { F, db } = await sdk(), AS = await import(SYNC);
   const meta = new Set(), codes = new Map();
   const fs = AS.createFirestoreBackend({
-    sdk: async () => ({ F, db }), path: (hid, kind) => ['households', hid, kind], time: 'iso', mark: '_saves', stamp: doc => stampAfter(doc),
+    // stampMode 'server' (app-sync 0.3.0): every save also sets `serverAt` to the server's time, beside `updatedAt`. The
+    // hub still reads by `updatedAt` until the backfill (tools/backfill-server-at.mjs) and the rules require the stamp.
+    sdk: async () => ({ F, db }), path: (hid, kind) => ['households', hid, kind], time: 'iso', mark: '_saves', stamp: doc => stampAfter(doc), stampMode: 'server',
     merge: Object.fromEntries(ALL_KINDS.map(k => [k, mergeSaves(k)])),
     onSnapshotMeta: (kind, m) => { for (const fn of meta) fn(kind, m); },
   });
