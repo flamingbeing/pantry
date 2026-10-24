@@ -131,7 +131,7 @@ test('a rename moves the items in the place; an item added offline under the old
   await expect.poll(async () => (await fsAdmin.list(`households/${hid}/items`)).find(i => i.name === 'Late ice cream').location).toBe('Cellar freezer');
   // the old phones keep writing the single list: the rules take it; new phones ignore it
   const oldPhone = await dad.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     try { await F.setDoc(F.doc(F.getFirestore(), 'households', hid, 'settings', 'places'), { id: 'places', list: ['Old phone fridge', 'Old phone shed'], updatedAt: 'x' }); return 'ok'; } catch (e) { return e.code; }
   }, hid);
   expect(oldPhone, 'an older phone’s write of settings/places is accepted by the rules').toBe('ok');
@@ -139,7 +139,7 @@ test('a rename moves the items in the place; an item added offline under the old
   await dad.waitForFunction(() => window.__pantry.S.settings.get('places')?.list?.includes('Old phone shed'));
   expect(await shownPlaces(mum)).not.toContain('Old phone fridge'); expect(await shownPlaces(dad)).not.toContain('Old phone shed');
   await same(fsAdmin, hid, [mum, dad], 'after the old phone wrote', after);
-  await mum.evaluate(async hid => { const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js'); await F.deleteDoc(F.doc(F.getFirestore(), 'households', hid, 'settings', 'places')); }, hid);
+  await mum.evaluate(async hid => { const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js'); await F.deleteDoc(F.doc(F.getFirestore(), 'households', hid, 'settings', 'places')); }, hid);
   expect(await refused(mum) + await refused(dad), 'nothing refused').toBe(0);
 });
 

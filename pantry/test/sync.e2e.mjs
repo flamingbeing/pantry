@@ -72,7 +72,7 @@ try {
   const hid = await mum.evaluate(() => window.__pantry.S.household.id);
   const stranger = await person('stranger@example.com');
   await stranger.locator('[data-act="hh-create"]').waitFor();
-  const FSJS = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+  const FSJS = 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
   const net = (p, on) => p.evaluate(async ([on, u]) => { const F = await import(u); const db = F.getFirestore(); await (on ? F.enableNetwork(db) : F.disableNetwork(db)); }, [on, FSJS]);
   const drain = p => p.evaluate(async u => { const F = await import(u); await F.waitForPendingWrites(F.getFirestore()); }, FSJS);
   const act = (p, name, ...args) => p.evaluate(([n, a]) => window.__pantry.act[n](...a), [name, args]);
@@ -191,7 +191,7 @@ try {
 
   // ---- the rules for stock: the map and the array both accepted, anything else refused; history is write-once ----
   const stockRules = await mum.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), d = (...p) => F.doc(db, 'households', hid, ...p);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
@@ -275,7 +275,7 @@ try {
     'order taken off by field': 'ok', 'another key is still fine (no hasOnly on items)': 'ok',
   }, 'stock rules');
   const outsiderStock = await stranger.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), out = [];
     try { await F.setDoc(F.doc(db, 'households', hid, 'items', 'x1'), { id: 'x1', name: 'x', batches: { a: { qty: 1 } } }); out.push('wrote'); } catch (e) { out.push(e.code); }
     try { await F.updateDoc(F.doc(db, 'households', hid, 'items', 'r1'), { 'batches.a.qty': F.increment(1) }); out.push('wrote'); } catch (e) { out.push(e.code); }
@@ -488,7 +488,7 @@ try {
 
   // ---- the rules for removed things and shopping lines ----
   const removedRules = await mum.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), d = (...p) => F.doc(db, 'households', hid, ...p);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
@@ -554,7 +554,7 @@ try {
     'line removedBy 41 characters': D, 'line removedAt a number': D, 'line removedAt not a time': D, 'line deleted for good': 'ok',
   }, 'removed and shopping line rules');
   const outsiderRemoved = await stranger.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), d = (...p) => F.doc(db, 'households', hid, ...p), out = [];
     const t = async fn => { try { await fn(); out.push('wrote'); } catch (e) { out.push(e.code); } };
     await t(() => F.updateDoc(d('items', 'x1'), { removedAt: '2026-10-16T01:02:03.000Z', removedBy: 'Evil' }));
@@ -641,7 +641,7 @@ try {
   assert.match(await sh2.textContent(), /Only whoever started a pantry can merge it away\. Ask C:boss to merge them/);
   assert.equal(await sh2.locator('[data-pm="go"]').isDisabled(), true);
   const denyDelete = await twin2.evaluate(async () => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     try { await F.deleteDoc(F.doc(F.getFirestore(), 'households', 'dupC')); return 'deleted'; } catch (e) { return e.code; }
   });
   assert.equal(denyDelete, 'permission-denied', 'a member who isn’t the owner can’t delete the household');

@@ -25,7 +25,7 @@ import { KINDS, prefs } from './store.js';
 import { applyOps, batchMap, normalizeItem, toStored, opsValid } from './logic.js';
 import { decide } from './listen-watch.js';
 
-const SDK = 'https://www.gstatic.com/firebasejs/10.14.1/';
+const SDK = 'https://www.gstatic.com/firebasejs/12.19.0/';
 export const APP_HOST = 'pantry.flamingbeing.com';
 
 const emulator = (() => {

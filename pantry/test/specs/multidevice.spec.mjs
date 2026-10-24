@@ -40,7 +40,7 @@ const rng = seed => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>
 // (a short random pause between steps, so the phones' traffic interleaves differently from run to run: not a wait for anything)
 const jitter = (p, R) => p.evaluate(ms => new Promise(r => setTimeout(r, ms)), Math.floor(R() * 60));
 
-const FSJS = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+const FSJS = 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 const net = async (p, on) => { try { await p.evaluate(async ([on, u]) => { const F = await import(u); const db = F.getFirestore(); await (on ? F.enableNetwork(db) : F.disableNetwork(db)); }, [on, FSJS]); } catch (e) { console.error('network switch failed on', p.who, on, e.message); throw e; } };
 const drain = async p => { try { await p.evaluate(async u => { const F = await import(u); await F.waitForPendingWrites(F.getFirestore()); }, FSJS); } catch (e) { console.error('drain failed on', p.who, e.message); throw e; } };
 const act = (p, name, ...args) => p.evaluate(([n, a]) => window.__pantry.act[n](...a), [name, args]);

@@ -10,7 +10,7 @@
 //   and the barcode reader (jsDelivr) are kept
 //   once fetched, so sharing and scanning keep working with no signal. Firebase's sign-in pages (/__/), sw.js itself
 //   and everything else (Firestore, Google, Open Food Facts) always go to the network.
-const VERSION = 'pantry-v2';
+const VERSION = 'pantry-v3';
 const SHELL = [
   './',
   'index.html',

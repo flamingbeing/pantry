@@ -13,7 +13,7 @@ test('photo rules: sizes, extra fields, old-style photos kept but never changed,
   await inFamily(mum, hid);
   await expect(stranger.locator('[data-act="hh-create"]')).toBeVisible();   // (signed in and settled before it probes)
   const rules = await mum.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), d = (...p) => F.doc(db, 'households', hid, ...p);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
@@ -41,7 +41,7 @@ test('photo rules: sizes, extra fields, old-style photos kept but never changed,
   await fsAdmin.put(`households/${hid}/items/old1`, { id: 'old1', name: 'Old one', batches: [], photo: OLD });
   await mum.waitForFunction(() => window.__pantry.S.items.has('old1'));
   const old = await mum.evaluate(async ([hid, OLD]) => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const ref = F.doc(F.getFirestore(), 'households', hid, 'items', 'old1');
     const out = [];
     for (const data of [{ id: 'old1', name: 'Old one, renamed', batches: [], photo: OLD }, { id: 'old1', name: 'x', batches: [], photo: OLD + 'C' }, { id: 'old1', name: 'Old one, renamed', batches: [] }]) {
@@ -52,7 +52,7 @@ test('photo rules: sizes, extra fields, old-style photos kept but never changed,
   expect(old, 'old-style photo: kept, changed, removed').toEqual(['ok', 'permission-denied', 'ok']);
   // an outsider can't read, list or write photos
   const outsider = await stranger.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), out = [];
     try { await F.getDoc(F.doc(db, 'households', hid, 'photos', 'p1')); out.push('read'); } catch (e) { out.push(e.code); }
     try { await F.getDocs(F.collection(db, 'households', hid, 'photos')); out.push('listed'); } catch (e) { out.push(e.code); }

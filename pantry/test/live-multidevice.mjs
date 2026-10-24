@@ -88,7 +88,7 @@ const allPhones = new Set();
 let browser = null;
 let useCredsKey = OPT.key === 'creds' || (!DRY && PROJECT !== realConfig.projectId);
 
-const FIREBASE_BASE = 'https://www.gstatic.com/firebasejs/10.14.1/';
+const FIREBASE_BASE = 'https://www.gstatic.com/firebasejs/12.19.0/';
 // --dry only: send the SDK to the emulators without touching app code. The two Firebase modules the app imports are replaced
 // by thin wrappers around the real ones (fetched with ?real): Firestore gets host/ssl settings, Auth connects to the emulator.
 const shimFirestore = `import * as R from '${FIREBASE_BASE}firebase-firestore.js?real';

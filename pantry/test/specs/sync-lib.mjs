@@ -2,7 +2,7 @@
 // network switch, send queue and field-level actions (window.__pantry.act: the functions the buttons call).
 import { expect } from './fixtures.mjs';
 
-export const FSJS = 'https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js';
+export const FSJS = 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 export const OK = 'ok', NO = 'permission-denied';
 export const BASE_ITEM = { category: 'Sauces & condiments', location: 'Fridge', brand: '', size: '', barcode: '', lowAt: 0, openDays: null, createdAt: '2026-10-16T00:00:00.000Z', createdBy: 'Mum' };
 
