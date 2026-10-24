@@ -10,15 +10,15 @@ concurrency:
   cancel-in-progress: true
 jobs:
   checks:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: flamingbeing/app-devkit/setup-node@v1.1.0
         with:
-          node-version: 22
+          install: 'false'   # no npm ci here: these tests need no packages
       - run: node tools/check.mjs
       - run: node tools/stamp-versions.mjs --check
       - run: node tools/proofread.mjs
