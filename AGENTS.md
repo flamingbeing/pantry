@@ -20,7 +20,9 @@ pointers like "ask the owner" are fine).
   change would come as `/v2/`.
 - **Apps stay unlisted:** every page has `<meta name="robots" content="noindex, nofollow">`; never link the app publicly.
 - **Service workers:** `sw.js` has `const VERSION = 'pantry-v<N>'`; never stamp it by hand (the deploy runs
-  `tools/stamp-versions.mjs`). Change `<N>` only when the worker's own logic changes. Delete only `pantry-` caches.
+  `tools/stamp-versions.mjs`, which also fills `MANIFEST`). Change `<N>` only when the worker's own logic changes. The
+  logic lives in the shared update module (`importScripts` of one exact `core.anawj.com/update/<x.y.z>/` version; the
+  page's `js/app-update.js` loads the same version); never copy it here. Delete only `pantry-` caches.
   The kit's four files are in its `SHELL` list by full address, so the app works offline.
 - **Google sign-in** happens on the app's own address (`authDomain` is `pantry.flamingbeing.com`; Firebase's helper
   pages in `__/auth/`, `init.json` in `pantry/auth/firebase/`). Never add `*.workers.dev` previews to Firebase.

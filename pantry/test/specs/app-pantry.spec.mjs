@@ -279,7 +279,10 @@ test('the version lines; no signal says so and keeps the caches', async ({ phone
   await expect(page.locator('.ha-large-title')).toBeVisible();
   const text = page.locator('#pa-version .ha-version-text');
   await expect(text).toBeVisible();
-  await expect(text, 'version line from the cache name').toHaveText(/^App version (v\d+|\d{4}-\d{2}-\d{2} \([0-9a-f]{8}\))$/);
+  await expect(text, 'version line from the running worker').toHaveText(/^App version (v\d+|\d{4}-\d{2}-\d{2} \([0-9a-f]{8}\))$/);
+  // runtime caches (pantry-rt-*) sit beside the shell cache: the line still names the version, never one of them
+  expect((await page.evaluate(() => caches.keys())).some(k => k.startsWith('pantry-rt-')), 'a runtime cache exists').toBe(true);
+  await expect(text).not.toHaveText(/rt-/);
   await expect(page.locator('#pa-version .ha-version-btn'), 'get-latest button').toHaveText('Not updating? Get the latest version');
   expect(await page.evaluate(() => document.querySelector('#main').lastElementChild.id), 'version lines come last').toBe('pa-version');
   await axe(page, 'settings');

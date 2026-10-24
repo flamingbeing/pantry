@@ -43,11 +43,18 @@ assert.match(explain({ code: 'auth/network-request-failed' }), /No signal/);
 assert.match(explain({ code: 'permission-denied' }), /isn’t in that family pantry/);
 assert.equal(explain({ code: 'auth/internal-error', message: 'INTERNAL ASSERTION FAILED' }, 'Sign-in'), 'Sign-in didn’t work. Try again in a moment.');
 
-// the service worker: plain VERSION, waits to take over, kit files offline
+// the service worker: plain VERSION and MANIFEST, on the update module (one exact version, also in SHELL for the
+// page), sw.js never cached, kit files offline
 const sw = fs.readFileSync(new URL('../sw.js', import.meta.url), 'utf8');
 assert.match(sw, /const VERSION = 'pantry-v\d+'/);
-assert.ok(!/addEventListener\('install'[\s\S]*?skipWaiting[\s\S]*?\}\);/.test(sw.split("addEventListener('activate'")[0]), 'no skipWaiting on install');
-assert.match(sw, /'take-over'\) self\.skipWaiting\(\)/);
+assert.match(sw, /^const MANIFEST = \{\};$/m);
+assert.match(sw, /importScripts\('https:\/\/core\.anawj\.com\/update\/\d+\.\d+\.\d+\/sw-core\.js'\)/);
+const core = sw.match(/update\/(\d+\.\d+\.\d+)\/sw-core/)[1];
+assert.ok(sw.includes(`'https://core.anawj.com/update/${core}/register.js'`), 'register.js in SHELL at the same version');
+assert.ok(fs.readFileSync(new URL('../js/app-update.js', import.meta.url), 'utf8').includes(`/update/${core}/register.js`), 'the page loads the same version');
+assert.ok(!/'index\.html'/.test(sw.match(/const SHELL = \[([\s\S]*?)\];/)[1]), 'no index.html in SHELL (pages come from ./)');
+assert.ok(sw.includes("never: [/\\/sw\\.js$/]"), 'sw.js never cached');
+assert.ok(!/take-over|Update ready/.test(fs.readFileSync(new URL('../js/app.js', import.meta.url), 'utf8')), 'no update toast');
 for (const f of ['tokens.css', 'app.css', 'app.js', 'icons.svg'].map(f => 'https://design.flamingbeing.com/v1/' + f)) assert.ok(sw.includes(`'${f}'`), f);
 console.log('pantry config: ok');
 
