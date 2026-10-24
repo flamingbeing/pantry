@@ -21,7 +21,7 @@ test('an outsider can’t read or write a family’s pantry, and Dad can’t rem
   await inFamily(dad, hid);
   await expect(stranger.locator('[data-act="hh-create"]')).toBeVisible();
   const denied = await stranger.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore();
     const out = [];
     for (const p of [['households', hid], ['households', hid, 'items', 'x']]) {
@@ -38,7 +38,7 @@ test('an outsider can’t read or write a family’s pantry, and Dad can’t rem
   }, hid);
   expect(denied, 'outsider denied: ' + denied.join(', ')).toEqual(Array(9).fill('permission-denied'));
   const ownerKept = await dad.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const out = [];
     try { await F.updateDoc(F.doc(F.getFirestore(), 'households', hid), { members: ['dad@example.com'] }); out.push('wrote'); } catch (e) { out.push(e.code); }
     try { await F.updateDoc(F.doc(F.getFirestore(), 'households', hid), { owner: 'dad@example.com' }); out.push('wrote'); } catch (e) { out.push(e.code); }
@@ -52,7 +52,7 @@ test('names (settings/people): the rules for the whole document', async ({ phone
   const dad = await person(phone, dadE, 'dad');
   await inFamily(dad, hid);
   const peopleRules = await dad.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), d = id => F.doc(db, 'households', hid, 'settings', id);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
@@ -88,7 +88,7 @@ test('names by field: the rules judge the names as they will be', async ({ phone
   const mum = await person(phone, mumE, 'mum');
   await inFamily(mum, hid);
   const nameRules2 = await mum.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), ref = F.doc(db, 'households', hid, 'settings', 'people'), FP = (...s) => new F.FieldPath(...s);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
@@ -136,7 +136,7 @@ test('places, the old single list (settings/places): members only, at most 40 na
   await inFamily(mum, hid);
   await expect(stranger.locator('[data-act=\"hh-create\"]')).toBeVisible();   // (signed in and settled before it probes)
   const placeRules = await mum.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), d = id => F.doc(db, 'households', hid, 'settings', id);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
@@ -163,7 +163,7 @@ test('places, the old single list (settings/places): members only, at most 40 na
     'another id': 'permission-denied', 'a mismatched id field': 'permission-denied',
   });
   const outsiderPlaces = await stranger.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), out = [];
     try { await F.getDoc(F.doc(db, 'households', hid, 'settings', 'places')); out.push('read'); } catch (e) { out.push(e.code); }
     try { await F.setDoc(F.doc(db, 'households', hid, 'settings', 'places'), { id: 'places', list: ['Mine'], updatedAt: 'x' }); out.push('wrote'); } catch (e) { out.push(e.code); }
@@ -180,7 +180,7 @@ test('places (one document each): the rules for fields, ids, removal, migration 
   await inFamily(mum, hid);
   await expect(stranger.locator('[data-act=\"hh-create\"]')).toBeVisible();   // (signed in and settled before it probes)
   const placeRules2 = await mum.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), d = id => F.doc(db, 'households', hid, 'places', id);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
@@ -244,7 +244,7 @@ test('places (one document each): the rules for fields, ids, removal, migration 
     'a late migration copy over the rename': NO, 'a late migration copy over a removal': NO, delete: OK,
   });
   const outsiderP = await stranger.evaluate(async hid => {
-    const F = await import('https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js');
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), d = id => F.doc(db, 'households', hid, 'places', id), out = [];
     try { await F.getDoc(d('r1')); out.push('read'); } catch (e) { out.push(e.code); }
     try { await F.getDocs(F.collection(db, 'households', hid, 'places')); out.push('listed'); } catch (e) { out.push(e.code); }
