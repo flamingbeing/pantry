@@ -36,7 +36,6 @@ const SHELL = [
   'js/order.js',
   'js/drag.js',
   'js/bulk-items.js',
-  'js/listen-watch.js',
   'icons/icon.svg',
   'icons/apple-touch-icon.png',
   'icons/icon-192.png',
@@ -46,9 +45,20 @@ const SHELL = [
   'https://design.flamingbeing.com/v1/app.css',
   'https://design.flamingbeing.com/v1/app.js',
   'https://design.flamingbeing.com/v1/icons.svg',
+  // the sync engine (app-sync), one exact version: the app works offline only with it
+  'https://core.anawj.com/sync/0.2.0/index.js',
+  'https://core.anawj.com/sync/0.2.0/src/sync.js',
+  'https://core.anawj.com/sync/0.2.0/src/writes.js',
+  'https://core.anawj.com/sync/0.2.0/src/conflict.js',
+  'https://core.anawj.com/sync/0.2.0/src/store.js',
+  'https://core.anawj.com/sync/0.2.0/src/outbox.js',
+  'https://core.anawj.com/sync/0.2.0/src/watchdog.js',
+  'https://core.anawj.com/sync/0.2.0/src/persist.js',
+  'https://core.anawj.com/sync/0.2.0/src/status.js',
+  'https://core.anawj.com/sync/0.2.0/src/firestore.js',
 ];
 // the design kit (its own versioned address, listed in SHELL) is kept like the CDN files
-const CDN = ['https://design.flamingbeing.com/v1/', 'https://www.gstatic.com/firebasejs/', 'https://cdn.jsdelivr.net/npm/barcode-detector@', 'https://fastly.jsdelivr.net/npm/'];
+const CDN = ['https://design.flamingbeing.com/v1/', 'https://core.anawj.com/sync/', 'https://www.gstatic.com/firebasejs/', 'https://cdn.jsdelivr.net/npm/barcode-detector@', 'https://fastly.jsdelivr.net/npm/'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(c => c.addAll(SHELL.map(u => new Request(u, { cache: 'reload' })))));

@@ -81,7 +81,7 @@ service cloud.firestore {
     // (when added), by and doneBy (names), and the two removal fields. Nothing else. Old phones still write the whole line;
     // that stays allowed, and so does a change by field (ticking, renaming, removing): the rules see the line as it will be.
     function shopOk(d, id) {
-      return d.keys().hasOnly(['id', 'name', 'itemId', 'done', 'at', 'by', 'doneBy', 'removedAt', 'removedBy'])
+      return d.keys().hasOnly(['id', 'name', 'itemId', 'done', 'at', 'by', 'doneBy', 'removedAt', 'removedBy', 'updatedAt', '_saves'])
         && d.keys().hasAll(['id', 'name', 'done'])
         && d.id == id
         && d.name is string && d.name.size() <= 80
@@ -90,7 +90,7 @@ service cloud.firestore {
         && (!('at' in d) || (d.at is string && d.at.size() <= 40))
         && (!('by' in d) || (d.by is string && d.by.size() <= 200))
         && (!('doneBy' in d) || (d.doneBy is string && d.doneBy.size() <= 200))
-        && removedOk(d);
+        && removedOk(d) && savesOk(d);
     }
     // A place (16 Oct 2026, PR-C): one document each, { id, name, order, updatedAt } and, as removed items, removedAt / removedBy.
     // `id` is the document id (1 to 40 letters, digits, - or _), `name` one line of 1 to 40 characters (one pattern), `order`
@@ -102,7 +102,7 @@ service cloud.firestore {
     // They can't count the place documents (no 40-place cap here; the app keeps to it): each document is small and members-only.
     // `kind` (21 Oct 2026): optional, 'fridge', 'freezer' or 'other' (none: the app guesses from the name).
     function placeOk(d, id) {
-      return d.keys().hasOnly(['id', 'name', 'order', 'updatedAt', 'removedAt', 'removedBy', 'kind'])
+      return d.keys().hasOnly(['id', 'name', 'order', 'updatedAt', 'removedAt', 'removedBy', 'kind', '_saves'])
         && (!('kind' in d) || d.kind in ['fridge', 'freezer', 'other'])
         && d.keys().hasAll(['id', 'name', 'order', 'updatedAt'])
         && d.id == id
@@ -110,7 +110,23 @@ service cloud.firestore {
         && d.name is string && d.name.matches('[^\\n\\r]{1,40}')
         && d.order is number && d.order > -1000000 && d.order < 1000000
         && d.updatedAt is string && d.updatedAt.size() <= 40
-        && removedOk(d);
+        && removedOk(d) && savesOk(d);
+    }
+    // Stamps (24 Oct 2026, app-sync): every write carries `updatedAt` (the app writes an ISO time), and a change moves it on (any new
+    // value: phones' clocks differ, so it isn't required to grow), because the phones listen only for documents changed
+    // since they last synced (updatedAt > then): a change without a new stamp would never reach them. Writing a document
+    // again exactly as it is stays allowed (a re-run, a restore). App versions from before this refuse to update until the
+    // phone updates (their refused change is kept on the phone, Settings: Retry).
+    function stamped(d) {
+      return d.get('updatedAt', null) is string && d.updatedAt.size() >= 1 && d.updatedAt.size() <= 40;
+    }
+    function stampOk() {
+      return resource == null ? stamped(request.resource.data)
+        : (request.resource.data == resource.data || (stamped(request.resource.data) && request.resource.data.updatedAt != resource.data.get('updatedAt', null)));
+    }
+    // `_saves`: the keys of the last saves applied (at most 20 strings), so a save sent twice counts once (app-sync's mark).
+    function savesOk(d) {
+      return !('_saves' in d) || (d._saves is list && d._saves.size() <= 20 && (d._saves.size() == 0 || d._saves[0] is string));
     }
     function member(hid) {
       return signedIn() && email() in get(/databases/$(database)/documents/households/$(hid)).data.members;
@@ -137,19 +153,22 @@ service cloud.firestore {
       }
       // Shopping lines: see shopOk. Created whole or changed by field.
       match /shop/{id} {
-        allow create, update: if member(hid) && shopOk(request.resource.data, id);
+        allow create, update: if member(hid) && shopOk(request.resource.data, id) && stampOk();
       }
       // History is write-once (16 Oct 2026): a line is created, and may be deleted (Undo, deleting an item, merging);
-      // nothing edits one. Writing a line again exactly as it is (restoring a backup, re-running a merge) is allowed.
+      // nothing edits one. Writing a line again as it is (restoring a backup, re-running a merge) is allowed, with a new
+      // stamp or the same.
       match /events/{id} {
-        allow create: if member(hid);
-        allow update: if member(hid) && request.resource.data == resource.data;
+        allow create: if member(hid) && stampOk() && savesOk(request.resource.data);
+        allow update: if member(hid) && (request.resource.data == resource.data
+          || (stampOk() && savesOk(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt', '_saves'])));
       }
       // An item carries only a small thumbnail (`thumb`, at most 12 KB); its photo is in photos/{id}. Items from
       // before 16 Oct 2026 may still hold a whole photo as `photo`: it may stay as it was or be removed (moved to
       // photos/{id}), but no item may gain or change one (an empty `photo`, from older app versions, is fine).
       match /items/{id} {
         allow create, update: if member(hid)
+          && stampOk() && savesOk(request.resource.data)
           && stockOk(request.resource.data)
           && removedOk(request.resource.data)
           && orderOk(request.resource.data)
@@ -159,8 +178,8 @@ service cloud.firestore {
             || (resource != null && request.resource.data.photo == resource.data.get('photo', null)));
       }
       match /places/{id} {
-        allow create: if member(hid) && placeOk(request.resource.data, id);
-        allow update: if member(hid) && placeOk(request.resource.data, id)
+        allow create: if member(hid) && placeOk(request.resource.data, id) && stampOk();
+        allow update: if member(hid) && placeOk(request.resource.data, id) && stampOk()
           && (request.resource.data.updatedAt != '1970-01-01T00:00:00.000Z' || request.resource.data == resource.data);
       }
       // Shared settings, one document each (no others): the family's OLD single list of places (16 Oct 2026; phones from
@@ -168,15 +187,15 @@ service cloud.firestore {
       // { id, list, updatedAt }, the list 1 to 40 names of 1 to 40 characters; and the names members give each other
       // (16 Oct 2026), settings/people = { id, names: { email: name }, updatedAt }, exactly those three fields.
       match /settings/{id} {
-        allow create, update: if member(hid) && (
+        allow create, update: if member(hid) && stampOk() && savesOk(request.resource.data) && (
           (id == 'places'
-            && request.resource.data.keys().hasOnly(['id', 'list', 'updatedAt'])
+            && request.resource.data.keys().hasOnly(['id', 'list', 'updatedAt', '_saves'])
             && request.resource.data.id == 'places'
             && request.resource.data.list is list
             && placeNames(request.resource.data.list))
           || (id == 'people'
             && request.resource.data.keys().hasAll(['id', 'names', 'updatedAt'])
-            && request.resource.data.keys().hasOnly(['id', 'names', 'updatedAt'])
+            && request.resource.data.keys().hasOnly(['id', 'names', 'updatedAt', '_saves'])
             && request.resource.data.id == 'people'
             && request.resource.data.updatedAt is string
             && request.resource.data.names is map
@@ -184,8 +203,8 @@ service cloud.firestore {
       }
       // One photo per item (same id), at most 150 KB, read only when the item is opened.
       match /photos/{id} {
-        allow create, update: if member(hid)
-          && request.resource.data.keys().hasOnly(['id', 'data', 'updatedAt'])
+        allow create, update: if member(hid) && stampOk() && savesOk(request.resource.data)
+          && request.resource.data.keys().hasOnly(['id', 'data', 'updatedAt', '_saves'])
           && request.resource.data.data is string
           && request.resource.data.data.size() <= 153600;
       }

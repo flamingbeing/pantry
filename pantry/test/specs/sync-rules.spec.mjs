@@ -32,7 +32,7 @@ test('an outsider can’t read or write a family’s pantry, and Dad can’t rem
     try { await F.setDoc(F.doc(db, 'households', 'fake'), { name: 'x', owner: 'mum@example.com', members: ['mum@example.com', 'stranger@example.com'] }); out.push('wrote'); } catch (e) { out.push(e.code); }
     try { await F.setDoc(F.doc(db, 'households', hid, 'items', 'evil'), { id: 'evil', name: 'x' }); out.push('wrote'); } catch (e) { out.push(e.code); }
     try { await F.getDoc(F.doc(db, 'households', hid, 'settings', 'people')); out.push('read'); } catch (e) { out.push(e.code); }
-    try { await F.setDoc(F.doc(db, 'households', hid, 'settings', 'people'), { id: 'people', names: { 'stranger@example.com': 'x' }, updatedAt: 'x' }); out.push('wrote'); } catch (e) { out.push(e.code); }
+    try { await F.setDoc(F.doc(db, 'households', hid, 'settings', 'people'), { id: 'people', names: { 'stranger@example.com': 'x' }, updatedAt: String(Math.random()) }); out.push('wrote'); } catch (e) { out.push(e.code); }
     try { await F.deleteDoc(F.doc(db, 'households', hid, 'settings', 'people')); out.push('deleted'); } catch (e) { out.push(e.code); }
     return out;
   }, hid);
@@ -56,7 +56,7 @@ test('names (settings/people): the rules for the whole document', async ({ phone
     const db = F.getFirestore(), d = id => F.doc(db, 'households', hid, 'settings', id);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
-    const doc = names => ({ id: 'people', names, updatedAt: 'x' });
+    const doc = names => ({ id: 'people', names, updatedAt: String(Math.random()) });
     const many = n => Object.fromEntries(Array.from({ length: n }, (_, i) => [`p${i}@example.com`, String(i).padEnd(40, 'x')]));
     await tryIt('20 names of 40 characters', () => F.setDoc(d('people'), doc(many(20))));
     await tryIt('read', async () => { if (!(await F.getDoc(d('people'))).exists()) throw { code: 'missing' }; });
@@ -70,8 +70,8 @@ test('names (settings/people): the rules for the whole document', async ({ phone
     await tryIt('not a map', () => F.setDoc(d('people'), doc(['Mum'])));
     await tryIt('another field', () => F.setDoc(d('people'), { ...doc({ 'a@example.com': 'A' }), colour: 'red' }));
     await tryIt('no updatedAt', () => F.setDoc(d('people'), { id: 'people', names: { 'a@example.com': 'A' } }));
-    await tryIt('a mismatched id field', () => F.setDoc(d('people'), { id: 'places', names: {}, updatedAt: 'x' }));
-    await tryIt('another id', () => F.setDoc(d('theme'), { id: 'people', names: {}, updatedAt: 'x' }));
+    await tryIt('a mismatched id field', () => F.setDoc(d('people'), { id: 'places', names: {}, updatedAt: String(Math.random()) }));
+    await tryIt('another id', () => F.setDoc(d('theme'), { id: 'people', names: {}, updatedAt: String(Math.random()) }));
     await tryIt('back to Dad', () => F.setDoc(d('people'), doc({ 'dad@example.com': 'Dad' })));
     return out;
   }, hid);
@@ -92,30 +92,30 @@ test('names by field: the rules judge the names as they will be', async ({ phone
     const db = F.getFirestore(), ref = F.doc(db, 'households', hid, 'settings', 'people'), FP = (...s) => new F.FieldPath(...s);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
-    const reset = names => F.setDoc(ref, { id: 'people', names, updatedAt: 'x' });
+    const reset = names => F.setDoc(ref, { id: 'people', names, updatedAt: String(Math.random()) });
     await reset({ 'mum@example.com': 'Jun' });
-    await tryIt('a name by field', () => F.updateDoc(ref, FP('names', 'new.person@example.com'), 'Newbie', 'updatedAt', 'y'));
-    await tryIt('a name cleared by field', () => F.updateDoc(ref, FP('names', 'new.person@example.com'), F.deleteField(), 'updatedAt', 'z'));
-    await tryIt('the last name cleared', () => F.updateDoc(ref, FP('names', 'mum@example.com'), F.deleteField(), 'updatedAt', 'z'));
-    await tryIt('a name by field again (an empty map is fine)', () => F.updateDoc(ref, FP('names', 'mum@example.com'), 'Jun', 'updatedAt', 'z'));
-    await tryIt('a 41-character name', () => F.updateDoc(ref, FP('names', 'a@example.com'), 'x'.repeat(41), 'updatedAt', 'y'));
-    await tryIt('an empty name', () => F.updateDoc(ref, FP('names', 'a@example.com'), '', 'updatedAt', 'y'));
-    await tryIt('a name with a new line', () => F.updateDoc(ref, FP('names', 'a@example.com'), 'Ah\nMei', 'updatedAt', 'y'));
-    await tryIt('a number', () => F.updateDoc(ref, FP('names', 'a@example.com'), 3, 'updatedAt', 'y'));
-    await tryIt('a key that is not an email', () => F.updateDoc(ref, FP('names', 'Mum'), 'Mum', 'updatedAt', 'y'));
+    await tryIt('a name by field', () => F.updateDoc(ref, FP('names', 'new.person@example.com'), 'Newbie', 'updatedAt', String(Math.random())));
+    await tryIt('a name cleared by field', () => F.updateDoc(ref, FP('names', 'new.person@example.com'), F.deleteField(), 'updatedAt', String(Math.random())));
+    await tryIt('the last name cleared', () => F.updateDoc(ref, FP('names', 'mum@example.com'), F.deleteField(), 'updatedAt', String(Math.random())));
+    await tryIt('a name by field again (an empty map is fine)', () => F.updateDoc(ref, FP('names', 'mum@example.com'), 'Jun', 'updatedAt', String(Math.random())));
+    await tryIt('a 41-character name', () => F.updateDoc(ref, FP('names', 'a@example.com'), 'x'.repeat(41), 'updatedAt', String(Math.random())));
+    await tryIt('an empty name', () => F.updateDoc(ref, FP('names', 'a@example.com'), '', 'updatedAt', String(Math.random())));
+    await tryIt('a name with a new line', () => F.updateDoc(ref, FP('names', 'a@example.com'), 'Ah\nMei', 'updatedAt', String(Math.random())));
+    await tryIt('a number', () => F.updateDoc(ref, FP('names', 'a@example.com'), 3, 'updatedAt', String(Math.random())));
+    await tryIt('a key that is not an email', () => F.updateDoc(ref, FP('names', 'Mum'), 'Mum', 'updatedAt', String(Math.random())));
     await tryIt('an unknown field', () => F.updateDoc(ref, { colour: 'red' }));
     await tryIt('the id changed', () => F.updateDoc(ref, { id: 'places' }));
     await tryIt('updatedAt removed', () => F.updateDoc(ref, { updatedAt: F.deleteField() }));
     await tryIt('names removed', () => F.updateDoc(ref, { names: F.deleteField() }));
     await reset(Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`p${i}@example.com`, 'n'])));
-    await tryIt('the 21st name by field', () => F.updateDoc(ref, FP('names', 'p20@example.com'), 'n', 'updatedAt', 'y'));
-    await tryIt('the 20th renamed by field', () => F.updateDoc(ref, FP('names', 'p19@example.com'), 'renamed', 'updatedAt', 'y'));
-    await tryIt('one cleared and one added in one write', () => F.updateDoc(ref, FP('names', 'p0@example.com'), F.deleteField(), FP('names', 'p20@example.com'), 'n', 'updatedAt', 'y'));
+    await tryIt('the 21st name by field', () => F.updateDoc(ref, FP('names', 'p20@example.com'), 'n', 'updatedAt', String(Math.random())));
+    await tryIt('the 20th renamed by field', () => F.updateDoc(ref, FP('names', 'p19@example.com'), 'renamed', 'updatedAt', String(Math.random())));
+    await tryIt('one cleared and one added in one write', () => F.updateDoc(ref, FP('names', 'p0@example.com'), F.deleteField(), FP('names', 'p20@example.com'), 'n', 'updatedAt', String(Math.random())));
     await F.deleteDoc(ref);
-    await tryIt('the first name, by a merge (no document yet)', () => F.setDoc(ref, { id: 'people', updatedAt: 'y', names: { 'a.b@example.com': 'Ann' } }, { merge: true }));
-    await tryIt('a name by merge on top', () => F.setDoc(ref, { updatedAt: 'z', names: { 'c@example.com': 'Cee' } }, { merge: true }));
-    await tryIt('a bad name by merge', () => F.setDoc(ref, { updatedAt: 'z', names: { 'c@example.com': 'x'.repeat(41) } }, { merge: true }));
-    await tryIt('a field change with no document', async () => { await F.deleteDoc(ref); await F.updateDoc(ref, FP('names', 'a@example.com'), 'x', 'updatedAt', 'y'); });
+    await tryIt('the first name, by a merge (no document yet)', () => F.setDoc(ref, { id: 'people', updatedAt: String(Math.random()), names: { 'a.b@example.com': 'Ann' } }, { merge: true }));
+    await tryIt('a name by merge on top', () => F.setDoc(ref, { updatedAt: String(Math.random()), names: { 'c@example.com': 'Cee' } }, { merge: true }));
+    await tryIt('a bad name by merge', () => F.setDoc(ref, { updatedAt: String(Math.random()), names: { 'c@example.com': 'x'.repeat(41) } }, { merge: true }));
+    await tryIt('a field change with no document', async () => { await F.deleteDoc(ref); await F.updateDoc(ref, FP('names', 'a@example.com'), 'x', 'updatedAt', String(Math.random())); });
     await reset({ 'mum@example.com': 'Jun', 'dad@example.com': 'Dad' });
     return out;
   }, hid);
@@ -140,7 +140,7 @@ test('places, the old single list (settings/places): members only, at most 40 na
     const db = F.getFirestore(), d = id => F.doc(db, 'households', hid, 'settings', id);
     const out = {};
     const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
-    const doc = list => ({ id: 'places', list, updatedAt: 'x' });
+    const doc = list => ({ id: 'places', list, updatedAt: String(Math.random()) });
     await tryIt('40 places of 40 characters', () => F.setDoc(d('places'), doc(Array.from({ length: 40 }, (_, i) => String(i).padEnd(40, 'x')))));
     await tryIt('read', async () => { if (!(await F.getDoc(d('places'))).exists()) throw { code: 'missing' }; });
     await tryIt('41 places', () => F.setDoc(d('places'), doc(Array.from({ length: 41 }, (_, i) => 'P' + i))));
@@ -152,8 +152,8 @@ test('places, the old single list (settings/places): members only, at most 40 na
     await tryIt('no places', () => F.setDoc(d('places'), doc([])));
     await tryIt('not a list', () => F.setDoc(d('places'), doc('Fridge')));
     await tryIt('another field', () => F.setDoc(d('places'), { ...doc(['Fridge']), colour: 'red' }));
-    await tryIt('another id', () => F.setDoc(d('theme'), { id: 'places', list: ['Fridge'], updatedAt: 'x' }));
-    await tryIt('a mismatched id field', () => F.setDoc(d('places'), { id: 'theme', list: ['Fridge'], updatedAt: 'x' }));
+    await tryIt('another id', () => F.setDoc(d('theme'), { id: 'places', list: ['Fridge'], updatedAt: String(Math.random()) }));
+    await tryIt('a mismatched id field', () => F.setDoc(d('places'), { id: 'theme', list: ['Fridge'], updatedAt: String(Math.random()) }));
     return out;
   }, hid);
   expect(placeRules).toEqual({
@@ -166,7 +166,7 @@ test('places, the old single list (settings/places): members only, at most 40 na
     const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
     const db = F.getFirestore(), out = [];
     try { await F.getDoc(F.doc(db, 'households', hid, 'settings', 'places')); out.push('read'); } catch (e) { out.push(e.code); }
-    try { await F.setDoc(F.doc(db, 'households', hid, 'settings', 'places'), { id: 'places', list: ['Mine'], updatedAt: 'x' }); out.push('wrote'); } catch (e) { out.push(e.code); }
+    try { await F.setDoc(F.doc(db, 'households', hid, 'settings', 'places'), { id: 'places', list: ['Mine'], updatedAt: String(Math.random()) }); out.push('wrote'); } catch (e) { out.push(e.code); }
     try { await F.deleteDoc(F.doc(db, 'households', hid, 'settings', 'places')); out.push('deleted'); } catch (e) { out.push(e.code); }
     return out;
   }, hid);
@@ -212,7 +212,8 @@ test('places (one document each): the rules for fields, ids, removal, migration 
     await tryIt('an unknown kind', () => F.setDoc(d('r20'), P('r20', { kind: 'garage' })));
     // changes by field: the rules judge the place as it will be
     await tryIt('a rename by field', () => F.updateDoc(d('r1'), { name: 'Renamed', updatedAt: '2026-10-16T02:00:00.000Z' }));
-    await tryIt('a move by field', () => F.updateDoc(d('r1'), { order: 0.75, updatedAt: '2026-10-16T02:00:00.000Z' }));
+    await tryIt('a move by field', () => F.updateDoc(d('r1'), { order: 0.75, updatedAt: '2026-10-16T02:30:00.000Z' }));
+    await tryIt('a move with the stamp unchanged', () => F.updateDoc(d('r1'), { order: 0.5 }));
     await tryIt('a removal by field', () => F.updateDoc(d('r1'), { removedAt: '2026-10-16T03:00:00.000Z', removedBy: 'Mum', updatedAt: '2026-10-16T03:00:00.000Z' }));
     await tryIt('a restore by field', () => F.updateDoc(d('r1'), { removedAt: F.deleteField(), removedBy: F.deleteField(), updatedAt: '2026-10-16T04:00:00.000Z' }));
     await tryIt('an empty name by field', () => F.updateDoc(d('r1'), { name: '' }));
@@ -237,7 +238,7 @@ test('places (one document each): the rules for fields, ids, removal, migration 
     'an id that is not the document id': NO, 'a document id with a dot': NO, 'a document id of 40 characters': OK, 'a document id of 41 characters': NO,
     'removedAt and removedBy': OK, 'a removedAt that is not a time': NO, 'a removedAt of null': NO, 'a removedBy over 40 characters': NO,
     'a freezer kind': OK, 'an unknown kind': NO, 'a kind by field': OK, 'the kind removed by field': OK,
-    'a rename by field': OK, 'a move by field': OK, 'a removal by field': OK, 'a restore by field': OK, 'an empty name by field': NO, 'an unknown field by field': NO,
+    'a rename by field': OK, 'a move by field': OK, 'a move with the stamp unchanged': NO, 'a removal by field': OK, 'a restore by field': OK, 'an empty name by field': NO, 'an unknown field by field': NO,
     'the name field removed': NO, 'a field change of a place that isn’t there': NO,   // (an update has no document to build on: refused, not "not found")
    
     'a migration document, new': OK, 'the same again (another phone migrating)': OK, 'the migration time with another name': NO, 'a rename of it by field': OK,
@@ -248,11 +249,54 @@ test('places (one document each): the rules for fields, ids, removal, migration 
     const db = F.getFirestore(), d = id => F.doc(db, 'households', hid, 'places', id), out = [];
     try { await F.getDoc(d('r1')); out.push('read'); } catch (e) { out.push(e.code); }
     try { await F.getDocs(F.collection(db, 'households', hid, 'places')); out.push('listed'); } catch (e) { out.push(e.code); }
-    try { await F.setDoc(d('evil'), { id: 'evil', name: 'x', order: 1, updatedAt: 'x' }); out.push('wrote'); } catch (e) { out.push(e.code); }
+    try { await F.setDoc(d('evil'), { id: 'evil', name: 'x', order: 1, updatedAt: String(Math.random()) }); out.push('wrote'); } catch (e) { out.push(e.code); }
     try { await F.updateDoc(d('r1'), { name: 'x' }); out.push('updated'); } catch (e) { out.push(e.code); }
     try { await F.deleteDoc(d('r1')); out.push('deleted'); } catch (e) { out.push(e.code); }
-    try { await F.updateDoc(F.doc(db, 'households', hid, 'settings', 'people'), new F.FieldPath('names', 'stranger@example.com'), 'x', 'updatedAt', 'x'); out.push('named'); } catch (e) { out.push(e.code); }
+    try { await F.updateDoc(F.doc(db, 'households', hid, 'settings', 'people'), new F.FieldPath('names', 'stranger@example.com'), 'x', 'updatedAt', String(Math.random())); out.push('named'); } catch (e) { out.push(e.code); }
     return out;
   }, hid);
   expect(outsiderP, 'outsider and places and names: ' + outsiderP.join(', ')).toEqual(Array(6).fill(NO));
+});
+
+// Stamps (app-sync, 24 Oct 2026): phones listen only for documents changed since they last synced, so every write carries
+// updatedAt and a change gives it a new value; a document written again exactly as it is stays allowed. `_saves` (the
+// keys of the last saves applied) is at most 20 strings.
+test('stamps: every write carries updatedAt, a change moves it on; history stays write-once; _saves is a short list', async ({ phone, fsAdmin, uid }) => {
+  const { mumE, hid } = await members(phone, fsAdmin, uid);
+  const mum = await person(phone, mumE, 'mum');
+  await inFamily(mum, hid);
+  const stampRules = await mum.evaluate(async hid => {
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
+    const db = F.getFirestore(), d = (k, id) => F.doc(db, 'households', hid, k, id);
+    const out = {};
+    const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
+    const it = { id: 's1', name: 'Stamped', batches: {} };
+    await tryIt('an item with no updatedAt', () => F.setDoc(d('items', 's0'), it));
+    await tryIt('an item with an empty updatedAt', () => F.setDoc(d('items', 's0'), { ...it, updatedAt: '' }));
+    await tryIt('an item with a stamp', () => F.setDoc(d('items', 's1'), { ...it, updatedAt: '2026-10-24T01:00:00.000Z' }));
+    await tryIt('the same item again, as it is', () => F.setDoc(d('items', 's1'), { ...it, updatedAt: '2026-10-24T01:00:00.000Z' }));
+    await tryIt('a change with the old stamp (an older app version)', () => F.updateDoc(d('items', 's1'), { name: 'Old phone' }));
+    await tryIt('a change with a new stamp', () => F.updateDoc(d('items', 's1'), { name: 'New phone', updatedAt: '2026-10-24T02:00:00.000Z' }));
+    await tryIt('a change with an earlier stamp (a slow clock)', () => F.updateDoc(d('items', 's1'), { name: 'Slow clock', updatedAt: '2026-10-24T00:30:00.000Z' }));
+    await tryIt('the stamp removed', () => F.updateDoc(d('items', 's1'), { updatedAt: F.deleteField() }));
+    await tryIt('_saves of 20 keys', () => F.updateDoc(d('items', 's1'), { _saves: Array.from({ length: 20 }, (_, i) => 'k' + i), updatedAt: '2026-10-24T03:00:00.000Z' }));
+    await tryIt('_saves of 21 keys', () => F.updateDoc(d('items', 's1'), { _saves: Array.from({ length: 21 }, (_, i) => 'k' + i), updatedAt: '2026-10-24T04:00:00.000Z' }));
+    await tryIt('_saves not a list', () => F.updateDoc(d('items', 's1'), { _saves: 'k1', updatedAt: '2026-10-24T05:00:00.000Z' }));
+    const ev = { id: 'e1', itemId: 's1', type: 'bought', at: '2026-10-24T01:00:00.000Z' };
+    await tryIt('a history line with no updatedAt', () => F.setDoc(d('events', 'e0'), { ...ev, id: 'e0' }));
+    await tryIt('a history line', () => F.setDoc(d('events', 'e1'), { ...ev, updatedAt: '2026-10-24T01:00:00.000Z' }));
+    await tryIt('the history line again with a new stamp', () => F.setDoc(d('events', 'e1'), { ...ev, updatedAt: '2026-10-24T02:00:00.000Z', _saves: ['k1'] }));
+    await tryIt('the history line changed', () => F.setDoc(d('events', 'e1'), { ...ev, type: 'used', updatedAt: '2026-10-24T03:00:00.000Z' }));
+    await tryIt('a shopping line with no updatedAt', () => F.setDoc(d('shop', 'l0'), { id: 'l0', name: 'Milk', done: false }));
+    await tryIt('a shopping line', () => F.setDoc(d('shop', 'l1'), { id: 'l1', name: 'Milk', done: false, updatedAt: '2026-10-24T01:00:00.000Z', _saves: ['k1'] }));
+    await tryIt('a photo with no updatedAt', () => F.setDoc(d('photos', 'p0'), { id: 'p0', data: 'data:x' }));
+    return out;
+  }, hid);
+  expect(stampRules).toEqual({
+    'an item with no updatedAt': NO, 'an item with an empty updatedAt': NO, 'an item with a stamp': OK, 'the same item again, as it is': OK,
+    'a change with the old stamp (an older app version)': NO, 'a change with a new stamp': OK, 'a change with an earlier stamp (a slow clock)': OK,
+    'the stamp removed': NO, '_saves of 20 keys': OK, '_saves of 21 keys': NO, '_saves not a list': NO,
+    'a history line with no updatedAt': NO, 'a history line': OK, 'the history line again with a new stamp': OK, 'the history line changed': NO,
+    'a shopping line with no updatedAt': NO, 'a shopping line': OK, 'a photo with no updatedAt': NO,
+  });
 });

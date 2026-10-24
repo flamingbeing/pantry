@@ -39,8 +39,10 @@ test('a rename on one phone shows on the other: the list, the items in it, and t
   const docs = await placeDocs(fsAdmin, hid);
   expect(docs.map(d => d.name).slice(0, 3), 'the defaults became place documents, the rename kept its position').toEqual(['Kitchen cabinet', 'Kitchen fridge', 'Level 1 fridge']);
   expect(docs.length, 'one document each, none twice').toBe(11);
-  expect(Object.keys(docs[1]).sort()).toEqual(['id', 'name', 'order', 'updatedAt']);
-  expect(docs[0].updatedAt, 'an untouched one still carries the migration time').toBe('1970-01-01T00:00:00.000Z');
+  expect(Object.keys(docs[1]).sort()).toEqual(['_saves', 'id', 'name', 'order', 'updatedAt']);
+  // (app-sync stamps every save as it reaches the server, the migration's too, so other phones' delta listeners hear it;
+  // the server still never lets a copy made from the old list overwrite a place: cloud.js mergeSaves)
+  expect(docs[0].updatedAt, 'an untouched one has a real time too').not.toBe('1970-01-01T00:00:00.000Z');
   expect(docs[1].updatedAt, 'the renamed one has a real time').not.toBe('1970-01-01T00:00:00.000Z');
   expect(await fsAdmin.get(`households/${hid}/settings/places`), 'the app no longer writes the old single list').toBeNull();
 });
@@ -69,7 +71,7 @@ test('a rename on one phone while the other reorders the same place (offline): b
   const docs = await placeDocs(fsAdmin, hid);
   const bDoc = docs.find(d => d.id === idB);
   expect(bDoc.name).toBe('Shelf Bee'); expect(bDoc.order, 'renamed and moved').toBeLessThan(docs.find(d => d.id === idA).order);
-  expect(Object.keys(bDoc).sort()).toEqual(['id', 'name', 'order', 'updatedAt']);
+  expect(Object.keys(bDoc).sort()).toEqual(['_saves', 'id', 'name', 'order', 'updatedAt']);
 });
 
 test('one phone removes a place while the other, offline, renames it: it stays hidden, Restore shows the new name, and a removed one never comes back', async ({ phone, fsAdmin, uid }) => {
@@ -132,7 +134,7 @@ test('a rename moves the items in the place; an item added offline under the old
   // the old phones keep writing the single list: the rules take it; new phones ignore it
   const oldPhone = await dad.evaluate(async hid => {
     const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
-    try { await F.setDoc(F.doc(F.getFirestore(), 'households', hid, 'settings', 'places'), { id: 'places', list: ['Old phone fridge', 'Old phone shed'], updatedAt: 'x' }); return 'ok'; } catch (e) { return e.code; }
+    try { await F.setDoc(F.doc(F.getFirestore(), 'households', hid, 'settings', 'places'), { id: 'places', list: ['Old phone fridge', 'Old phone shed'], updatedAt: String(Math.random()) }); return 'ok'; } catch (e) { return e.code; }
   }, hid);
   expect(oldPhone, 'an older phone’s write of settings/places is accepted by the rules').toBe('ok');
   await mum.waitForFunction(() => window.__pantry.S.settings.get('places')?.list?.includes('Old phone fridge'));   // (heard, and ignored)
@@ -148,7 +150,7 @@ test('a rename moves the items in the place; an item added offline under the old
 test('two phones migrate from the old single list, one offline and behind: both changes kept, no duplicates, nothing overwritten', async ({ phone, fsAdmin, uid }) => {
   const e1 = `mig1-${uid}@example.com`, e2 = `mig2-${uid}@example.com`, hid = 'migH-' + uid;
   await seedFamily(fsAdmin, hid, [e1, e2]);
-  await fsAdmin.put(`households/${hid}/settings/places`, { id: 'places', list: ['Fridge', 'Freezer', 'Store room'], updatedAt: 'x' });
+  await fsAdmin.put(`households/${hid}/settings/places`, { id: 'places', list: ['Fridge', 'Freezer', 'Store room'], updatedAt: String(Math.random()) });
   const mig1 = await person(phone, e1, 'mig1'), mig2 = await person(phone, e2, 'mig2');
   await inFamily(mig1, hid); await inFamily(mig2, hid);
   for (const p of [mig1, mig2]) await expect.poll(() => shownPlaces(p), { message: 'an old list is shown as it is' }).toEqual(['Fridge', 'Freezer', 'Store room']);

@@ -22,8 +22,7 @@
 
 import { firebaseConfig } from '../config.js';
 import { KINDS, prefs } from './store.js';
-import { applyOps, batchMap, normalizeItem, toStored, opsValid } from './logic.js';
-import { decide } from './listen-watch.js';
+import { applyOps, applyFieldOps, batchMap, normalizeItem, toStored, opsValid } from './logic.js';
 
 const SDK = 'https://www.gstatic.com/firebasejs/12.19.0/';
 export const APP_HOST = 'pantry.flamingbeing.com';
@@ -57,7 +56,7 @@ async function load() {
   const cfg = emulator
     ? { apiKey: 'demo-key', projectId: 'demo-pantry', authDomain: 'localhost', appId: 'demo' }
     : { ...firebaseConfig, authDomain: firebaseConfig.authDomain || APP_HOST };
-  const a = app.initializeApp(cfg);
+  const a = app.getApps()[0] || app.initializeApp(cfg);
   const auth = A.getAuth(a);
   let db;
   if (emulator) {
@@ -212,15 +211,34 @@ export async function emulatorSignIn(email) {
   const { A, auth } = await sdk();
   await A.signInWithCredential(auth, A.GoogleAuthProvider.credential(JSON.stringify({ sub: lc(email).replace(/\W/g, ''), email: lc(email), email_verified: true })));
 }
-// True when every change made on this phone has reached the family within ms (false offline or on a timeout), so
-// signing out doesn't silently drop changes still waiting for signal.
+// True when every change made on this phone has reached the family within ms (false offline, on a timeout, or while
+// a save waits in another tab), so signing out doesn't silently drop changes still waiting for signal.
 export async function synced(ms = 4000) {
   const { F, db } = await sdk();
-  return Promise.race([F.waitForPendingWrites(db).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), ms))]);
+  const sdkDone = Promise.race([F.waitForPendingWrites(db).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), ms))]);
+  if (engine) await Promise.race([Promise.allSettled([...engine.saving]), new Promise(r => setTimeout(r, ms))]);   // (saves still being stored)
+  return (engine ? await engine.queue.flush(ms) : true) && await sdkDone;
 }
+// Send what waits in the outbox now (tests: after the SDK's network is switched back on).
+export function kick() { engine?.queue.kick(); }
+// Signing out wipes this phone's family copy: the outbox (the sign-out check came first: synced), the copy of every
+// kind, in every tab, and the SDK's own cache (it can't be cleared while in use, so that instance is closed and the
+// next use starts a new one).
 export async function signOut() {
-  const { A, auth } = await sdk();
+  const { A, F, auth, db } = await sdk();
+  if (engine) {
+    const { hub, stores, queue } = engine;
+    owner = '';
+    await hub.stopAll();
+    await queue.forget().catch(e => console.warn('outbox', e?.message));
+    await stores.wipeStores().catch(e => console.warn('device copy', e?.message));
+  }
   await A.signOut(auth);
+  if (!emulator) {
+    engine = null;
+    try { await F.terminate(db); await F.clearIndexedDbPersistence(db); } catch (e) { console.warn('cache', e?.code || e?.message); }
+    fb = null;
+  }
 }
 
 // The household this account belongs to (the owner adds family members by their Google email). An account can end up
@@ -309,8 +327,10 @@ export function nest(pairs) {
 // 10 MB a request).
 async function writeAll(F, db, hid, kind, list) {
   let b = null, n = 0, bytes = 0;
+  const at = new Date().toISOString();
   for (const o of list) {
-    const c = clean(kind === 'items' ? toStored(normalizeItem(o)) : o), size = JSON.stringify(c).length;
+    const { _saves, ...c } = clean(kind === 'items' ? toStored(normalizeItem(o)) : o), size = JSON.stringify(c).length;
+    c.updatedAt = at;   // stamped now, so every phone's delta listener hears it
     if (b && (n >= 400 || bytes + size > 4e6)) { await b.commit(); b = null; }
     if (!b) { b = F.writeBatch(db); n = 0; bytes = 0; }
     b.set(F.doc(F.collection(db, 'households', hid, kind), o.id), c); n++; bytes += size;
@@ -370,215 +390,254 @@ export async function removeHousehold(hid) {
   await F.deleteDoc(F.doc(db, 'households', hid));
 }
 
+// ---- saving and listening through app-sync (core.anawj.com/sync/) ----------------------------------------------------
+// Every save goes to an outbox on this phone first (IndexedDB), then to the server in a transaction, one document at a
+// time and in order (app-sync's write queue): nothing waits in the SDK's own offline queue, so a refused save is kept
+// and a save made offline survives a reload. Each kind has a copy on this phone and listens only for documents changed
+// since the last sync (`updatedAt`, stamped by the adapter at commit), so a quiet reopen reads about one document a kind.
+// Every kind is merged by field on the server's copy (no conflict screen): a whole document (`put`) replaces it, as
+// setDoc did; a change as instructions (`patch`) is applied to the server's copy inside the transaction, as updateDoc did,
+// and `_saves` keeps the keys of the last saves applied, so a save sent twice (its answer lost) counts once.
+
+// One change in a queued save: { put: true } (the record replaces the document) or { patch: ops } (logic.js ops).
+const INC = '__inc', DEL = { __del: true };
+const OPS_F = { increment: n => ({ [INC]: n }), deleteField: () => DEL };
+// updatePairs' field updates done to a plain document, as the server does them: a set replaces that field, an
+// increment adds to a number (a missing or non-number field counts as 0), a delete removes it; maps on the way are made.
+export function applyPairs(doc, pairs) {
+  const out = clean(doc || {});
+  for (const [path, v] of pairs) {
+    let o = out;
+    for (const k of path.slice(0, -1)) o = o[k] = o[k] && typeof o[k] === 'object' && !Array.isArray(o[k]) ? o[k] : {};
+    const k = path[path.length - 1];
+    if (v && typeof v === 'object' && v.__del === true) delete o[k];
+    else if (v && typeof v === 'object' && Object.hasOwn(v, INC)) o[k] = (typeof o[k] === 'number' ? o[k] : 0) + v[INC];
+    else o[k] = v === undefined ? v : clean(v);
+  }
+  return out;
+}
+// The document a kind's queued saves make of the server's copy (`current`, null when there is none): app-sync's merge
+// function, run inside the transaction. An old-style array item is converted from the server's copy, so a stale copy
+// on this phone can no longer overwrite another phone's change. A place made from the old single list (SEED_AT) is
+// written only when the place isn't there yet, as the rules have it.
+export function mergeSaves(kind) {
+  return (current, record, _base, ops) => {
+    let doc = current ? clean(current) : null;
+    for (const o of ops && ops.length ? ops : [{ put: true }]) {
+      if (o.patch) doc = applyPairs(doc || { id: record.id }, updatePairs(OPS_F, kind === 'items' && doc && Array.isArray(doc.batches) ? normalizeItem(doc) : null, o.patch));
+      else if (kind === 'places' && record.updatedAt === SEED_AT && doc) continue;
+      else doc = kind === 'items' ? toStored(normalizeItem(record)) : clean(record);
+    }
+    return doc;
+  };
+}
+const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
+const SYNC = 'https://core.anawj.com/sync/0.2.0/index.js';
+// A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
+// so the sweep still sees it here first.
+const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };
+const counts = kind => kind !== 'events' && kind !== 'photos';   // a history line or a photo belongs to a change that is counted
+const strip = d => { if (!d || !('_saves' in d)) return d; const { _saves, ...rest } = d; return rest; };
+
+// The engine, once a page: the device copy, the outbox and the queue outlive a switch between households (owner: the
+// household's id), and signing out wipes them.
+let engine = null, owner = '';
+async function sync() {
+  if (engine) return engine;
+  const { F, db } = await sdk(), AS = await import(SYNC);
+  const meta = new Set(), codes = new Map();
+  const fs = AS.createFirestoreBackend({
+    sdk: async () => ({ F, db }), path: (hid, kind) => ['households', hid, kind], time: 'iso', mark: '_saves',
+    merge: Object.fromEntries(ALL_KINDS.map(k => [k, mergeSaves(k)])),
+    onSnapshotMeta: (kind, m) => { for (const fn of meta) fn(kind, m); },
+  });
+  const stores = AS.createStores({ prefix: 'pantry-sync:', colls: KINDS, metaOnly: [] });
+  const hub = AS.createSyncHub({ openStore: stores.openStore, listen: fs.listen, fetchOne: fs.fetchOne, bin: null, unstamped: 'full', expire: { items: EXPIRE, shop: EXPIRE, places: EXPIRE }, onError: e => console.warn('sync', e?.code || e?.message) });
+  AS.replanOnWake(hub);
+  // (the queue keeps a failed save's message only: its code, for the plain words, is kept here)
+  const queue = AS.createWriteQueue({
+    store: AS.createOutbox({ name: 'pantry-outbox' }), getOwner: () => owner, online: () => globalThis.navigator?.onLine !== false,
+    backend: async (hid, kind, record, base, extra) => { try { return await fs.commit(hid, kind, record, base, extra); } catch (e) { codes.set(extra.key, e?.code || ''); throw e; } },
+  });
+  globalThis.addEventListener?.('online', () => queue.kick());
+  engine = { AS, fs, stores, hub, queue, meta, codes, persisted: true, saving: new Set() };
+  return engine;
+}
+
 // `onError(err, info)` hears of a write the server refused (info says which: { op, kind, id, obj | ops });
-// `onSync(state)` of how many of this phone's changes the server hasn't confirmed yet ({ pending, cache, list, heard }).
+// `onSync(state)` of how many of this phone's changes the server hasn't confirmed yet ({ pending, cache, list, heard, stale, persisted }).
 export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
   const { F, db } = await sdk();
+  const E = await sync(), { AS, hub, queue } = E;
+  owner = hid;
+  await queue.activate(hid);
+  AS.persistGuard().then(r => { E.persisted = r.persisted || !r.supported; tell(); }, () => {});
   const col = kind => F.collection(db, 'households', hid, kind);
-  const unsubs = [];
-  // Changes the server hasn't confirmed, counted two ways, both from the SERVER's acknowledgement and nothing else:
-  //  - this phone's own writes whose promise hasn't resolved yet (`waiting`, with a record of each so Settings can say what it
-  //    was: { kind, id, op, ops | name });
-  //  - writes left from before the app was last closed (`leftover`: the documents the first snapshots flag as pending; each is
-  //    cleared when waitForPendingWrites says they were all acknowledged).
-  // NOT counted: a document the listener flags `hasPendingWrites` after this session's own write was acknowledged. The SDK keeps
-  // that flag up (as "committed mutations") until the listener stream has caught up with the write, so on a slow or stalled
-  // listener (wifi with a VPN, 17:54 on 16 Oct) a change the server already holds read as "Waiting for signal (1 change)"
-  // (found and reproduced in the emulator, test/sync.e2e.mjs "the chip tells the truth"). History lines (events) aren't
-  // counted: each belongs to a change that is.
-  let inflight = 0, serial = 0, heard = 0, leftover = [];
-  // what the listener watchdog (listen-watch.js) needs to know: when a server snapshot last arrived, since when a listener has shown only the
-  // phone's own copy, since when a document has stayed flagged pending with nothing in flight, and the last re-listen
-  const W = { lastServerAt: 0, openedAt: 0, cacheAt: {}, flaggedSince: 0, lastRelisten: 0, lastCycle: 0, relistens: 0, cycles: 0, cycling: false, why: '', timer: 0, cb: null, known: Object.fromEntries(KINDS.map(k => [k, new Map()])), restarting: {} };
-  const waiting = new Map();
-  const first = new Set();
-  const seen = Object.fromEntries(KINDS.map(k => [k, { cache: false, flagged: [] }]));
+  let heard = 0, lastServerAt = 0, relistens = 0, cycles = 0, closed = false, cb = null, timer = 0;
+  // Writes an older version of the app left in the SDK's own queue (before this phone moved to the outbox): still sent by
+  // the SDK, counted until it says they all arrived.
+  let leftover = true;
+  F.waitForPendingWrites(db).then(() => { leftover = false; tell(); }, () => {});
+  const seen = Object.fromEntries(KINDS.map(k => [k, { cache: true, ready: false }]));
+  const known = Object.fromEntries(KINDS.map(k => [k, new Map()]));   // id -> signature, as last delivered
+  const data = Object.fromEntries(KINDS.map(k => [k, new Map()]));
+  const ready = Object.fromEntries(KINDS.map(k => { let done; const p = new Promise(r => { done = r; }); return [k, { p, done }]; }));
+  const ofQueue = kind => queue.entries().filter(x => x.owner === hid && x.kind === kind && x.state === 'pending').map(x => x.record.id);
   const tell = () => {
-    const mine = [...waiting.values()];
-    const old = leftover.filter(x => !mine.some(m => m.kind === x.kind && m.id === x.id));
+    if (closed) return;
+    const mine = queue.entries().filter(x => x.owner === hid && x.state === 'pending' && counts(x.kind));
+    const list = mine.map(x => {
+      const patch = (x.ops || []).filter(o => o.patch).at(-1);
+      return { kind: x.kind, id: x.record.id, op: x.record._deleted ? 'del' : patch && !(x.ops || []).some(o => o.put) ? 'patch' : 'put', ...(patch ? { ops: patch.patch } : {}), name: x.record.name || '' };
+    });
     onSync({
-      pending: Math.max(inflight, mine.length, leftover.length),
-      cache: KINDS.some(k => seen[k].cache),
-      list: [...mine, ...old],
-      heard,
-      lastServerAt: W.lastServerAt, relistens: W.relistens, cycles: W.cycles,
+      pending: mine.length + (leftover ? 1 : 0), cache: KINDS.some(k => seen[k].cache), list: [...list, ...(leftover ? [{ kind: 'items', id: '', op: 'before' }] : [])],
+      heard, lastServerAt, relistens, cycles, stale: dog.stale(), persisted: E.persisted,
     });
   };
-  const track = (p, counted = true, recs = []) => {
-    if (!counted) return p;
-    inflight++;
-    const keys = recs.map(r => { const k = ++serial; waiting.set(k, r); return k; });
-    tell();
-    p.finally(() => { inflight--; for (const k of keys) waiting.delete(k); heard = Date.now(); tell(); });   // an answer from the server, whether it took the change or not
-    return p;
+  // A save the server refused: kept in the app's list (Settings, Retry or Discard) and set aside in the queue, so a
+  // Retry is a new save and nothing is sent twice.
+  const reported = new Set();
+  const report = () => {
+    for (const x of queue.entries()) {
+      if (x.owner !== hid || x.state !== 'failed' || reported.has(x.key)) continue;
+      reported.add(x.key);
+      const op = x.record._deleted ? 'del' : (x.ops || []).some(o => o.put) ? 'put' : 'patch', patch = (x.ops || []).filter(o => o.patch).map(o => o.patch);
+      const err = { code: E.codes.get(x.key) || '', message: x.error };
+      console.warn('save failed', op, x.kind, err.code);
+      onError(err, { op, kind: x.kind, id: x.record.id, ...(op === 'put' && x.kind !== 'photos' ? { obj: x.record } : {}), ...(op === 'patch' ? { ops: patch.length === 1 ? patch[0] : mergeAll(patch) } : {}) });
+      void queue.archive(x.key);
+    }
   };
-  const counts = kind => kind !== 'events' && kind !== 'photos';   // a history line or a photo belongs to a change that is counted
-  const refused = info => e => { console.warn('save failed', info.op, info.kind, e?.code); onError(e, info); return false; };
-  // The four listeners (items, events, shop, places, settings): one set at a time. Each snapshot is read whole (docChanges WITH
-  // metadata changes, each document compared with what was last delivered), so a change that only came with a metadata change is never
-  // dropped, and a document only changes the screen when its data did.
+  const offQueue = queue.onChange(() => { report(); tell(); });
+  // One save per document at a time from this page, in the order made (the queue orders a document's saves by the time
+  // each was stored; two stored in the same moment could otherwise swap).
+  const chains = new Map();
+  function enqueue(kind, record, base, change, info) {
+    const k = kind + ':' + record.id;
+    const run = (chains.get(k) || Promise.resolve()).then(() => queue.save(kind, hid, record, base, { ops: change }))
+      .then(() => true, e => { if (queue.error()) { console.warn('outbox', e?.message); onError(e, info); } return false; });
+    const tail = run.finally(() => { if (chains.get(k) === tail) chains.delete(k); E.saving.delete(tail); });
+    chains.set(k, tail); E.saving.add(tail);
+    return run;
+  }
+  // the listeners: each kind's whole list from the engine (this phone's copy, then the server's changes), with this
+  // phone's saves not yet sent laid over it; only what changed since the last delivery goes to the app
   const sig = d => JSON.stringify(d);
-  function startListening() {
-    if (unsubs.length) return;   // never two sets at once
-    W.openedAt = Date.now();
-    for (const k of KINDS) {
-      if (W.known[k].size > 0) W.restarting[k] = true;   // (listening again: what was deleted meanwhile must be noticed)
-      unsubs.push(F.onSnapshot(col(k), { includeMetadataChanges: true }, s => {
-        const now = Date.now(), cache = s.metadata.fromCache, known = W.known[k];
-        seen[k] = { cache, flagged: s.docs.filter(d => d.metadata.hasPendingWrites).map(d => d.id) };
-        W.cacheAt[k] = cache ? (W.cacheAt[k] || now) : 0;
-        if (!cache) { heard = now; W.lastServerAt = now; }
-        // what was already waiting when the app opened (from before it was last closed): each kind's first snapshot says
-        if (!first.has(k)) {
-          first.add(k);
-          if (first.size === KINDS.length) {
-            leftover = KINDS.filter(x => x !== 'events').flatMap(x => seen[x].flagged.map(id => ({ kind: x, id, op: 'before' })));
-            if (leftover.length) F.waitForPendingWrites(db).then(() => { leftover = []; tell(); }, () => {});
-          }
-        }
-        const docs = [], removed = [], pending = [];
-        for (const c of s.docChanges({ includeMetadataChanges: true })) {
-          if (c.type === 'removed') { if (known.delete(c.doc.id)) removed.push(c.doc.id); continue; }
-          const data = c.doc.data(), sg = sig(data);
-          if (c.doc.metadata.hasPendingWrites) pending.push(c.doc.id);
-          if (known.get(c.doc.id) === sg) continue;   // only its metadata changed
-          known.set(c.doc.id, sg); docs.push(data);
-        }
-        // a listener made again: what was deleted while it was gone isn't in its first snapshot; and a snapshot whose documents don't
-        // match what was delivered is read whole (a safety net: nothing the SDK lists as "no change" can leave the screen behind)
-        if (W.restarting[k] || s.docs.length !== known.size) {
-          W.restarting[k] = false;
-          const ids = new Set();
-          for (const d of s.docs) {
-            ids.add(d.id);
-            const data = d.data(), sg = sig(data);
-            if (known.get(d.id) !== sg) { known.set(d.id, sg); docs.push(data); if (d.metadata.hasPendingWrites) pending.push(d.id); }
-          }
-          for (const id of [...known.keys()]) if (!ids.has(id)) { known.delete(id); removed.push(id); }
-        }
-        if (docs.length || removed.length) W.cb?.(k, docs, removed, pending);   // pending: ids this phone has changes on that the server hasn't confirmed
-        tell();
-      }, e => { console.warn('sync', k, e?.code); onError(e); }));
-    }
-    if (!W.timer && globalThis.setInterval) W.timer = setInterval(() => watch(false), 3000);
-  }
-  function stopListening() { unsubs.splice(0).forEach(u => u()); }
-  // Look at the signs (listen-watch.js) and, if the listener is stuck, replace it: stop the old set, start a new one.
-  function watch(event) {
-    if (!unsubs.length || !W.cb) return false;
-    const now = Date.now(), flagged = KINDS.some(k => k !== 'events' && seen[k].flagged.length) && inflight === 0 && !leftover.length;
-    W.flaggedSince = flagged ? (W.flaggedSince || now) : 0;
-    const cacheSince = Math.min(...KINDS.map(k => W.cacheAt[k] || Infinity));
-    const d = decide({ now, online: globalThis.navigator?.onLine !== false, event, lastServerAt: W.lastServerAt, openedAt: W.openedAt, cacheSince: Number.isFinite(cacheSince) ? cacheSince : 0, flaggedSince: W.flaggedSince, lastRelisten: W.lastRelisten, lastCycle: W.lastCycle, quiet: inflight === 0 && !leftover.length });
-    if (d.cycle && !W.cycling) {
-      // still stuck after listening again, and nothing unacknowledged: restart the connection (off, then on; never on while on)
-      console.warn('connection restarted:', d.why);
-      W.cycling = true; W.lastCycle = now; W.cycles++; W.why = 'cycle:' + d.why; W.flaggedSince = 0;
-      for (const k of KINDS) W.cacheAt[k] = 0;
-      (async () => { try { await F.disableNetwork(db); await new Promise(r => setTimeout(r, 300)); await F.enableNetwork(db); } catch (e) { console.warn('network restart', e?.code || e?.message); } finally { W.cycling = false; tell(); } })();
-      return true;
-    }
-    if (!d.relisten) return false;
-    console.warn('listeners replaced:', d.why);
-    W.lastRelisten = now; W.relistens++; W.why = d.why;
-    for (const k of KINDS) { W.cacheAt[k] = 0; W.restarting[k] = true; }
-    stopListening(); startListening();
+  let offs = [];
+  function deliver(k, list, m) {
+    if (closed) return;
+    seen[k].cache = !!m?.fromCache;
+    const now = new Map(queue.overlay(k, hid, list).map(d => [d.id, strip(d)]));
+    const docs = [], removed = [];
+    for (const [id, d] of now) { const s = sig(d); if (known[k].get(id) !== s) { known[k].set(id, s); docs.push(d); } }
+    for (const id of [...known[k].keys()]) if (!now.has(id)) { known[k].delete(id); removed.push(id); }
+    data[k] = now;
+    if (!seen[k].ready) { seen[k].ready = true; ready[k].done(); }
+    else if (cb && (docs.length || removed.length)) cb(k, docs, removed, ofQueue(k));
     tell();
-    return true;
   }
+  const startListening = () => { if (!offs.length && !closed) offs = KINDS.map(k => hub.watch(hid, k, (list, m) => deliver(k, list, m))); };
+  const stopListening = () => { offs.splice(0).forEach(off => off()); };
+  const onMeta = (_kind, m) => { if (closed) return; dog.heard(m); if (!m.fromCache) { heard = lastServerAt = Date.now(); } };
+  E.meta.add(onMeta);
+  // The listener watchdog (app-sync, from this app's listen-watch.js): listening again stops the engines and starts them
+  // from this phone's copy; restarting the connection turns the SDK's network off and on (never on while on).
+  const dog = AS.createWatchdog({
+    relisten: why => { console.warn('listeners replaced:', why); relistens++; stopListening(); hub.stopAll().then(() => { startListening(); tell(); }); },
+    cycle: why => { console.warn('connection restarted:', why); cycles++; cycleNet().finally(tell); },
+    online: () => globalThis.navigator?.onLine !== false, quiet: () => queue.pending() === 0 && !leftover,
+  });
+  let cycling = false;
+  async function cycleNet() {
+    if (cycling) return; cycling = true;
+    try { await F.disableNetwork(db); await new Promise(r => setTimeout(r, 300)); await F.enableNetwork(db); } catch (e) { console.warn('network restart', e?.code || e?.message); } finally { cycling = false; }
+  }
+  startListening();
+  dog.opened();
+  if (globalThis.setInterval) timer = setInterval(() => { if (!closed) dog.check(); }, 3000);
   return {
     kind: 'cloud',
+    // what this phone holds now (its copy, or the server's first answer): each kind's first list, or after a few seconds
+    // whatever there is (a phone that never synced, with no signal); the rest arrives through listen()
     async load() {
-      const out = {};
-      for (const k of KINDS) {
-        const s = await F.getDocs(col(k));
-        out[k] = s.docs.map(d => d.data());
-      }
-      return out;
+      await Promise.all(KINDS.map(k => Promise.race([ready[k].p, new Promise(r => setTimeout(r, 5000))])));
+      for (const k of KINDS) if (!seen[k].ready) { seen[k].ready = true; ready[k].done(); }
+      return Object.fromEntries(KINDS.map(k => [k, [...data[k].values()]]));
     },
-    // Writes go to the phone's copy at once and reach the family when there's signal; don't wait for the server.
-    // The promise (which callers may ignore) says whether the server took it: true, or false when refused.
-    put: (kind, obj) => track(F.setDoc(F.doc(col(kind), obj.id), clean(kind === 'items' ? toStored(obj) : obj)).then(() => true, refused({ op: 'put', kind, id: obj.id, ...(kind === 'photos' ? {} : { obj: clean(kind === 'items' ? toStored(obj) : obj) }) })), counts(kind), [{ kind, id: obj.id, op: 'put', name: obj.name || '' }]),
-    // One item's change as instructions (ops: logic.js). `before` is the item as this phone has it (to tell an old-style
-    // array that needs converting); without one the item isn't known here yet, so the fields are merged into whatever
-    // is there (a set-with-merge, which creates it). Otherwise an update: it fails, rather than bringing back an item
-    // someone deleted.
+    // Saves go to the outbox at once and reach the family when there's signal; don't wait for the server. The promise
+    // (which callers may ignore) is true once the save is kept on this phone; a refusal comes through onError.
+    put: (kind, obj) => enqueue(kind, clean(kind === 'items' ? toStored(obj) : obj), null, { put: true }, { op: 'put', kind, id: obj.id, ...(kind === 'photos' ? {} : { obj: clean(kind === 'items' ? toStored(obj) : obj) }) }),
+    // One document's change as instructions (ops: logic.js), applied to the server's copy. `before` is the document as this
+    // phone has it: with one, a document deleted since is not made again (the save fails: "removed on another phone");
+    // without one the fields are merged into whatever is there (it makes the document).
     patch(kind, id, ops, { before = null } = {}) {
-      const ref = F.doc(col(kind), id);
-      const info = { op: 'patch', kind, id, ops };
-      // an update when this phone has the document (it fails, rather than bringing back one that is gone); a merge when it
-      // doesn't know it yet (it creates the document, or adds these fields to whatever another phone made)
-      return track((before ? F.updateDoc(ref, ...updateArgs(F, before, ops)) : F.setDoc(ref, nest(updatePairs(F, before, ops)), { merge: true })).then(() => true, refused(info)), true, [{ kind, id, op: 'patch', ops }]);
+      if (!opsValid(ops)) throw new Error('ops overlap');
+      const now = before ? (kind === 'items' ? applyOps(before, ops) : applyFieldOps(before, ops)) : applyFieldOps({ id }, ops);
+      return enqueue(kind, { ...clean(kind === 'items' ? toStored(now) : now), id }, before ? { id } : null, { patch: ops }, { op: 'patch', kind, id, ops });
     },
-    // Several items' changes in one write (renaming a place moves every item in it): [{ id, ops, before }].
-    async patchMany(kind, list) {
-      for (let i = 0; i < list.length; i += 400) {
-        const part = list.slice(i, i + 400), b = F.writeBatch(db);
-        for (const x of part) b.update(F.doc(col(kind), x.id), ...updateArgs(F, x.before, x.ops));
-        await track(b.commit().catch(e => { for (const x of part) refused({ op: 'patch', kind, id: x.id, ops: x.ops })(e); }), true, part.map(x => ({ kind, id: x.id, op: 'patch', ops: x.ops })));
-      }
-    },
+    // Several documents' changes (renaming a place moves every item in it): [{ id, ops, before }], one save each.
+    async patchMany(kind, list) { await Promise.all(list.map(x => this.patch(kind, x.id, x.ops, { before: x.before }))); },
     // Delete for good, only if it is still removed since before `cutoff` (the daily sweep): read and delete in one
     // transaction, so a Restore on another phone a moment ago is never undone by a phone whose copy is a moment old. A
     // transaction needs the server, so offline it fails and the sweep tries again another day. False for a document that is
-    // already gone (another phone swept first) or was put back.
+    // already gone (another phone swept first) or was put back. (Other phones drop it a week later: EXPIRE.)
     async purge(kind, id, cutoff) {
       const ref = F.doc(col(kind), id);
       try {
-        return await F.runTransaction(db, async t => {
+        const gone = await F.runTransaction(db, async t => {
           const s = await t.get(ref), d = s.exists() ? s.data() : null;
           if (!d || typeof d.removedAt !== 'string' || !(d.removedAt < cutoff)) return false;
           t.delete(ref);
           return true;
         });
+        if (gone && KINDS.includes(kind)) await hub.drop(hid, kind, [id]);
+        return gone;
       } catch (e) { console.warn('purge', kind, id, e?.code); return false; }
     },
     // Several documents at once (a purged item's history): at most 400 to a batch.
     async delMany(kind, ids) {
       for (let i = 0; i < ids.length; i += 400) {
-        const b = F.writeBatch(db);
-        for (const id of ids.slice(i, i + 400)) b.delete(F.doc(col(kind), id));
-        await track(b.commit().catch(e => { console.warn('delete', kind, e?.code); }), false);
+        const b = F.writeBatch(db), part = ids.slice(i, i + 400);
+        for (const id of part) b.delete(F.doc(col(kind), id));
+        await b.commit().then(() => KINDS.includes(kind) && hub.drop(hid, kind, part), e => { console.warn('delete', kind, e?.code); });
       }
     },
-    del: (kind, id) => { track(F.deleteDoc(F.doc(col(kind), id)).then(() => true, refused({ op: 'del', kind, id })), counts(kind), [{ kind, id, op: 'del' }]); },
+    del: (kind, id) => {
+      if (KINDS.includes(kind)) void hub.drop(hid, kind, [id]);
+      enqueue(kind, { id, _deleted: true }, null, undefined, { op: 'del', kind, id });
+    },
     // One document (an item's photo, when the item is opened), or null when there is none. Offline it is the
     // phone's copy if it has one; otherwise it throws, and the app tries again next time.
     async get(kind, id) {
       const s = await F.getDoc(F.doc(col(kind), id));
-      return s.exists() ? s.data() : null;
+      return s.exists() ? strip(s.data()) : null;
     },
     // Every document of one kind (a backup's photos): only when someone asks for it.
-    async list(kind) { return (await F.getDocs(col(kind))).docs.map(d => d.data()); },
-    // Write many at once (copying the phone's pantry up, restoring a backup): at most 400 documents or about 4 MB
-    // to a batch (photos are up to 150 KB each; Firestore takes about 10 MB a request).
-    putMany: (kind, list) => writeAll(F, db, hid, kind, list),
-    // The same listeners also say what is still waiting to be sent (hasPendingWrites) and whether the phone is showing
-    // its own copy (fromCache): no extra listener, no extra read.
-    listen(cb) { W.cb = cb; startListening(); },
-    // The listener watchdog: `nudge('resume')` at a moment the phone came back (online, visible, pageshow, Sync now); a timer also
-    // looks every few seconds for the signs that need no event (listen-watch.js). Resolves true when it listened again.
-    nudge(event = '') { return watch(!!event); },
-    relistens: () => W.relistens,
-    // Sync now (Settings): try to send what is waiting, now: wait a few seconds for the SDK's own acknowledgement of every change,
-    // then a read from the server to prove the family can be reached (that is "Last heard from the family"). Nothing is
-    // switched off unless the person asks again (`cycle`: the "Reconnect and try again" button): one turn of the network switch,
-    // off and then on (the SDK drops its streams and sends again what is unacknowledged; never "on" while already on, which
-    // trips an assertion in Firestore 10.14.1). That is offered, not automatic, because a change the server applied but whose
-    // acknowledgement was lost is sent again, and an increment sent twice counts twice (NOTES.md). Resolves
-    // { ok, cycled, heard }: ok = every change on this phone is acknowledged; heard = the server answered.
+    async list(kind) { return (await F.getDocs(col(kind))).docs.map(d => strip(d.data())); },
+    // Write many at once (copying the phone's pantry up, restoring a backup): at most 400 documents or about 4 MB to a
+    // batch, stamped now. Places go through the outbox instead (a place made from the old list must never overwrite one).
+    putMany: (kind, list) => kind === 'places' ? Promise.all(list.map(o => enqueue(kind, clean(o), null, { put: true }, { op: 'put', kind, id: o.id, obj: clean(o) }))) : writeAll(F, db, hid, kind, list),
+    listen(fn) { cb = fn; startListening(); },
+    // The listener watchdog: `nudge('resume')` at a moment the phone came back (online, visible, pageshow, Sync now); a timer
+    // also looks every few seconds for the signs that need no event. Resolves true when it listened again or restarted.
+    nudge(event = '') { if (!offs.length) return false; const a = event ? dog.event() : dog.check(); return !!(a.relisten || a.cycle); },
+    relistens: () => relistens,
+    // Sync now (Settings): send what is waiting, now, and wait a few seconds to know what became of it; then a read from
+    // the server to prove the family can be reached ("Last heard from the family"). `cycle` (the "Reconnect and try
+    // again" button) first turns the SDK's network off and on. Resolves { ok, cycled, heard }: ok = nothing of this
+    // phone's is left unsent.
     async syncNow({ cycle = false, wait = 5000 } = {}) {
-      const race = (p, ms) => Promise.race([Promise.resolve(p).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), ms))]);
+      const race = (p, ms) => Promise.race([Promise.resolve(p).then(r => r !== false, () => false), new Promise(r => setTimeout(() => r(false), ms))]);
       let cycled = false;
-      if (cycle && globalThis.navigator?.onLine !== false) {
-        cycled = true;
-        try { await F.disableNetwork(db); await new Promise(r => setTimeout(r, 300)); await F.enableNetwork(db); } catch (e) { console.warn('network cycle', e?.code || e?.message); }
-      }
-      const ok = await race(F.waitForPendingWrites(db), cycled ? wait + 3000 : wait);
+      if (cycle && globalThis.navigator?.onLine !== false) { cycled = true; await cycleNet(); }
+      hub.replan();
+      const ok = await queue.flush(cycled ? wait + 3000 : wait) && (!leftover || await race(F.waitForPendingWrites(db), 2000));
       const reached = await race(F.getDocFromServer(F.doc(db, 'households', hid)), 6000);
       if (reached) { heard = Date.now(); tell(); }
       return { ok, cycled, heard: reached };
     },
-    close() { clearInterval(W.timer); W.timer = 0; stopListening(); },
+    close() { closed = true; clearInterval(timer); timer = 0; stopListening(); offQueue(); E.meta.delete(onMeta); },
   };
 }
+const mergeAll = list => list.reduce((a, o) => ({ set: { ...a.set, ...o.set }, inc: { ...a.inc, ...o.inc }, del: [...a.del, ...(o.del || [])], keyed: { ...a.keyed, ...o.keyed } }), { set: {}, inc: {}, del: [], keyed: {} });

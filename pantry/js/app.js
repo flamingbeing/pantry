@@ -2943,7 +2943,7 @@ function syncView() {
   return SY.syncState({
     refused: SY.refusedFor(S.refused, S.household?.id || '').length, pending: S.sync.pending, cache: S.sync.cache,
     offline: navigator.onLine === false, waited: S.sync.since ? Date.now() - S.sync.since : 0,
-    recent: !!S.sync.lastServerAt && Date.now() - S.sync.lastServerAt < 10000,
+    recent: !!S.sync.lastServerAt && Date.now() - S.sync.lastServerAt < 10000, persisted: S.sync.persisted !== false, stale: !!S.sync.stale,
   });
 }
 const SYNC_BADGE = { saved: 'ha-badge--ok', waiting: 'ha-badge--warn', attention: 'ha-badge--bad' };
@@ -2971,7 +2971,7 @@ function drawSync() {
 // stays unconfirmed for a moment turns the chip to "Waiting for signal"; a normal save confirms before that.
 function onSyncState(st) {
   const was = S.sync.pending;
-  S.sync = { pending: st.pending, cache: st.cache, since: st.pending > 0 ? (was > 0 ? S.sync.since : Date.now()) : 0, list: st.list || [], heard: st.heard || S.sync.heard || 0, lastServerAt: st.lastServerAt || 0, relistens: st.relistens || 0, cycles: st.cycles || 0 };
+  S.sync = { pending: st.pending, cache: st.cache, since: st.pending > 0 ? (was > 0 ? S.sync.since : Date.now()) : 0, list: st.list || [], heard: st.heard || S.sync.heard || 0, lastServerAt: st.lastServerAt || 0, relistens: st.relistens || 0, cycles: st.cycles || 0, stale: !!st.stale, persisted: st.persisted !== false };
   drawSync(); drawSyncDetail();
   adoptName();
   clearTimeout(syncTimer);
@@ -3349,7 +3349,7 @@ async function start() {
   if ('serviceWorker' in navigator && !EMULATOR) {
     navigator.serviceWorker.register('sw.js').then(watchUpdates).catch(() => { /* no offline copy (private window) */ });
   }
-  window.__pantry = { ...(window.__pantry || {}), S, redraw, places: () => placeList().map(e => e.name), ...(EMULATOR ? { act: testActions } : {}) };
+  window.__pantry = { ...(window.__pantry || {}), S, redraw, places: () => placeList().map(e => e.name), ...(EMULATOR ? { act: testActions, synced: ms => S.cloud.synced(ms), kick: () => S.cloud.kick() } : {}) };
   setTimeout(maybeWelcome, 300);
 }
 
