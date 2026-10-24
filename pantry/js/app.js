@@ -13,6 +13,7 @@ import * as SEL from './select.js';
 import * as O from './order.js';
 import * as BI from './bulk-items.js';
 import { startDrag } from './drag.js';
+import { startUpdates, versionText } from './app-update.js';
 import { openLocal, openMemory, prefs, KINDS, PHOTOS } from './store.js';
 import { sampleData, demoBy, DEMO_FAMILY, DEMO_ME, DEMO_NAMES } from './sample.js';
 import { openWelcome, viewGuide, welcomed, markWelcomed, installed } from './guide.js';
@@ -2447,6 +2448,14 @@ async function syncNow({ cycle = false } = {}) {
   haAnnounce(S.syncNow.result.text);
 }
 
+// The kit's two version lines (and its "Get the latest version" button); the line reads the running worker's version,
+// as the kit's own guess (the first 'pantry-' cache) can be a runtime cache ('pantry-rt-kit').
+async function showVersion(el) {
+  await haVersion(el, 'pantry');
+  const v = await versionText(), text = el?.querySelector('.ha-version-text');
+  if (v && text) { text.textContent = 'App version ' + v; text.hidden = false; }
+}
+
 function viewSettings() {
   const configured = !!S.cloud?.configured;
   const row = (inner, cls = '') => `<li><div class="ha-row${cls}">${inner}</div></li>`;
@@ -2565,7 +2574,7 @@ function draw(r, { keep = false } = {}) {
   else if (name === 'guide') { title = GUIDE; main.innerHTML = viewGuide(); setBar({ title: 'How to use it', lead: backBtn(S.backLabel) }); }
   else if (name === 'settings') {
     main.innerHTML = viewSettings(); setBar({ title });
-    haVersion($('#pa-version'), 'pantry');
+    showVersion($('#pa-version'));
   }
   document.title = name === 'home' ? 'Pantry' : `${title} · Pantry`;
   drawSelBar();
@@ -3257,27 +3266,6 @@ async function finishEmailLink() {
   openEmailSheet({ confirm: true, onSubmit: attempt }).closed.then(() => { if (used) tidy(); });
 }
 
-// ---- updates: a new version takes over only when nobody is in the middle of something ----------------------------
-
-const idle = () => !haSheetOpen() && !['add', 'edit'].includes(screen()) && !S.dirty
-  && !(document.activeElement?.matches?.('input, textarea, select') && document.activeElement.value);
-let waiting = null, reloading = false;
-function offerUpdate(w) {
-  waiting = w;
-  if (idle()) { w.postMessage('take-over'); return; }
-  haToast('Update ready', { action: 'Restart', ms: 10000, onAction: () => waiting?.postMessage('take-over') });
-}
-function watchUpdates(reg) {
-  if (reg.waiting && navigator.serviceWorker.controller) offerUpdate(reg.waiting);
-  reg.addEventListener('updatefound', () => {
-    const w = reg.installing;
-    w?.addEventListener('statechange', () => { if (w.state === 'installed' && navigator.serviceWorker.controller) offerUpdate(w); });
-  });
-  navigator.serviceWorker.addEventListener('controllerchange', () => { if (!reloading) { reloading = true; location.reload(); } });
-  // the app went to the background: a good moment to take the update quietly
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && waiting && idle()) waiting.postMessage('take-over'); });
-}
-
 // ---- start ----------------------------------------------------------------------------------------------------
 
 let R = null;
@@ -3347,7 +3335,7 @@ async function start() {
     redraw();
   }
   if ('serviceWorker' in navigator && !EMULATOR) {
-    navigator.serviceWorker.register('sw.js').then(watchUpdates).catch(() => { /* no offline copy (private window) */ });
+    startUpdates();   // no offline copy in a private window: the app still runs
   }
   window.__pantry = { ...(window.__pantry || {}), S, redraw, places: () => placeList().map(e => e.name), ...(EMULATOR ? { act: testActions, synced: ms => S.cloud.synced(ms), kick: () => S.cloud.kick() } : {}) };
   setTimeout(maybeWelcome, 300);

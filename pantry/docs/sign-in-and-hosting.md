@@ -20,11 +20,14 @@ Where the app is served, how sign-in works, config, the service worker, rules de
   `node pantry/tools/set-config.mjs '<config>'` writes `config.js` and `auth/firebase/init.json` with
   `authDomain: 'pantry.flamingbeing.com'`. These are public client IDs, not secrets.
 
-- **Service worker** (`sw.js`): `VERSION = 'pantry-v1'`, stamped only at deploy (`tools/stamp-versions.mjs`); never by
-  hand. Install is all or nothing (every SHELL file, kit files included) and does not `skipWaiting`. The page tells a
-  waiting version to take over only when idle (no sheet open, not on Add/Edit, nothing typed) or when the app goes to the
-  background; otherwise it shows "Update ready · Restart". Activate deletes only `pantry-` caches. The Firebase SDK and
-  the barcode reader are cached on first use. `/__/` (sign-in pages) and `sw.js` always go to the network.
+- **Service worker** (`sw.js`, on the shared update module app-update 0.1.0 from `core.anawj.com/update/`):
+  `VERSION = 'pantry-v<N>'` and `MANIFEST = {}`, both stamped only at deploy (`tools/stamp-versions.mjs`); never by
+  hand. Install is all or nothing (every SHELL file, kit files included; only files whose hash changed are fetched). A new
+  version takes over at once and the open page reloads once (owner's choice, 24 Oct 2026: updates are rare and deployed
+  with care), checked on every return to the app and every 3 h (`js/app-update.js`). No update toast. Settings ends with
+  the version line and "Not updating? Get the latest version". Activate deletes only this app's `pantry-` shell caches.
+  The Firebase SDK, the barcode reader and other same-origin files are cached on first use (`pantry-rt-*`). `/__/`
+  (sign-in pages) and `sw.js` always go to the network.
 
 - **Rules deploy on merge** through `.github/workflows/deploy-firestore-rules.yml` (project id from the repo variable
   `PANTRY_FIREBASE_PROJECT`, key from the secret `FIREBASE_SERVICE_ACCOUNT`); it skips cleanly until both are set.

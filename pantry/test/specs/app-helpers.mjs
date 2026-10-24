@@ -33,17 +33,21 @@ export const shot = async (page, name, full = false) => { if (SHOTS) await page.
 
 // open the app on a phone of this size (390x844 unless told) and wait for the first screen
 // The service worker stays out of it unless a test is about it ({ sw: true }): on a phone's first visit the worker installs
-// and takes over the page, and the app reloads itself once when that happens (the controllerchange handler in app.js), at
-// a moment no test can predict, with the history entry of an open sheet carried over to the new page. With sw: true an
-// init script notes whether each document began under the worker, and open() waits for one that did, so the test never
-// clicks into a page that is about to reload.
+// and takes over the page (quietly: app-update reloads only when a later version takes over), at a moment no test can
+// predict. With sw: true an init script notes whether each document began under the worker, and open() waits for the
+// worker, reloads once if needed and waits for a page that did, so the test never clicks into a page about to change.
 const UNDER_WORKER = 'window.__swAtStart = !!navigator.serviceWorker?.controller;';
 export async function open(phone, name, url = BASE, { width = 390, height = 844, init, sw = false, ...opts } = {}) {
   const page = await phone(name, {
     url, viewport: { width, height }, ...MOBILE, serviceWorkers: sw ? 'allow' : 'block',
     init: { content: `${[].concat(init || []).map(f => `(${f})();`).join('')}${UNDER_WORKER}` }, ...opts,
   });
-  if (sw) await page.waitForFunction(() => window.__swAtStart === true);
+  if (sw) {
+    // the first install takes over quietly (no reload, app-update): wait for it, then open the page again under it
+    await page.waitForFunction(() => !!navigator.serviceWorker?.controller, null, { timeout: 20000 });
+    if (!(await page.evaluate(() => window.__swAtStart))) await page.reload();
+    await page.waitForFunction(() => window.__swAtStart === true);
+  }
   await expect(page.locator('.ha-large-title').first()).toBeVisible();
   return page;
 }
