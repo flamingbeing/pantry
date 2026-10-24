@@ -86,7 +86,7 @@ and sessions run only with `--dry` (`pantry/test/run-live-dry.sh`, local emulato
 
 ## Sync engine: app-sync (24 Oct 2026)
 
-Saves and listeners go through app-sync `0.2.0` (`https://core.anawj.com/sync/0.2.0/`, exact pin, precached by `sw.js`):
+Saves and listeners go through app-sync `0.3.0` (`https://core.anawj.com/sync/0.3.0/`, exact pin, precached by `sw.js`):
 every save goes to an outbox on the phone (IndexedDB) and then to the server in a transaction, one document at a time;
 each kind keeps a copy on the phone and listens only for documents changed since the last sync (`updatedAt`, stamped by
 the adapter as the save reaches the server). Every kind is merged on the server's copy (`cloud.js mergeSaves`): a whole
@@ -96,3 +96,12 @@ app versions from before refuse to update until the phone updates (their change 
 one-off backfill (`pantry/tools/backfill-updated-at.mjs`, dry run by default) has stamped old documents, the engine reads
 in full while any document has no stamp (`unstamped: 'full'`); drop that option once it has run. The SDK's network
 switch doesn't stop a transaction: tests go offline with the browser context as well (`test/specs/sync-lib.mjs net`).
+
+Server stamps (app-sync `0.3.0`, 24 Oct 2026): the adapter runs `stampMode: 'server'`, so every save also writes
+`serverAt` = the server's time (`serverTimestamp()`), beside `updatedAt`; `writeAll` (backup restore, merging pantries)
+sets it too and drops any copied one. The hub still reads by `updatedAt` (client mode). `serverAt` is the engine's, like
+`_saves`: `strip` keeps it out of the app's records. The rules allow it (a timestamp must be `request.time`) and still
+take older versions' saves: none, or their JSON copy of one (a map). Next, in order: backfill
+(`pantry/tools/backfill-server-at.mjs`, dry run by default; stamps documents with none or with a copy), then once no
+older version is left a second rules change requires `serverAt == request.time`, then the hub gets `stampMode: 'server'`
+(no clock in the delta read). Tests: `test/specs/sync-stamps.spec.mjs`.
