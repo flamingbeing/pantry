@@ -35,11 +35,14 @@ pointers like "ask the owner" are fine).
 ## Checks before merging
 
 ```
-node tools/check.mjs                 # repo checks + Worker tests
+node .devkit/tools/check.mjs                 # repo checks + Worker tests
 node tools/stamp-versions.mjs --check
 for f in pantry/test/*.test.mjs; do node "$f"; done
-node tools/proofread.mjs             # page and doc mistakes
+node .devkit/tools/proofread.mjs             # page and doc mistakes
 ```
+
+`.devkit/` (git-ignored) holds the kit's tools; CI copies it with `app-devkit/setup-tools@v1.6.0`. Locally:
+`git clone --depth 1 --branch v1.6.0 https://github.com/flamingbeing/app-devkit /tmp/devkit && mkdir -p .devkit && cp -R /tmp/devkit/{tools,playwright,rules,worker} .devkit/`.
 
 Plus the browser tests when the app changes (listed in `pantry/NOTES.md`; "Pantry checks" runs them on PRs).
 

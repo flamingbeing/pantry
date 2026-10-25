@@ -68,7 +68,7 @@ npm ci && npx playwright test          # Playwright Test specs in pantry/test/sp
                                        # the randomised three-phone run: multidevice.spec.mjs, SEED=<n> re-runs a seed): fully parallel, 4 workers, own server,
                                        # accounts and ids per test; starts the emulators itself. One file: npx playwright test app-places;
                                        # the env var PW_NO_EMULATOR (set to 1) skips the emulators (the app-* specs don't need them); the env var SHOTS (a folder) saves screenshots
-node tools/check.mjs && node tools/stamp-versions.mjs --check
+node .devkit/tools/check.mjs && node tools/stamp-versions.mjs --check
 ```
 
 Known emulator flake (about 1 test in 200 under 4 workers): the Firestore emulator (v1.19.8, firebase-tools 13.29.1) sometimes
