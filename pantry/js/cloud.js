@@ -411,13 +411,12 @@ export function merge3(cur, base, mine) {
   return out;
 }
 const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
-const SYNC = 'https://core.anawj.com/sync/0.7.3/index.js';
+const SYNC = 'https://core.anawj.com/sync/0.7.4/index.js';
 // Held conflicts (app-sync 0.7.1): a field changed on this phone and on another to different values is kept on this phone
 // for the person to choose (Keep mine / Keep theirs / per field), never overwritten. History lines are write-once and a
-// photo is one whole picture: those stay as they were. So do settings: the names are keyed by email, and app-sync 0.7.1
-// names a clashing field by its keys joined with dots, which an email's own dots would split (Keep theirs would write a
-// broken name).
-export const HELD = ['items', 'shop', 'places'];
+// photo is one whole picture: those stay as they were. Settings are held too: the names are keyed by email, and app-sync
+// 0.7.4 escapes the dots inside a key in a clash's path (`names.a\.b@x\.com`; describe gives `keys` for labels).
+export const HELD = ['items', 'shop', 'places', 'settings'];
 // This phone as people know it, for "changed on Dad's iPhone" in the conflict popup (no setting: the browser's own words)
 export function deviceName(ua = globalThis.navigator?.userAgent || '') {
   if (/iPhone/.test(ua)) return 'iPhone';
@@ -568,7 +567,7 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     const had = data[kind]?.find(d => d.id === id);
     return had ? clean(had) : before ? clean(kind === 'items' ? toStored(before) : before) : null;
   };
-  // (app-sync 0.7.3 lays a save over the lists from the moment save() is called, so a list heard meanwhile has it)
+  // (app-sync 0.7.4 lays a save over the lists from the moment save() is called, so a list heard meanwhile has it)
   function enqueue(kind, record, base, change, info) {
     return app.save(kind, hid, record, base, { ops: change })
       .then(() => true, e => { if (queue.error()) { console.warn('outbox', e?.message); onError(e, info); } return false; });
@@ -615,11 +614,11 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     // One document's change as instructions (ops: logic.js), applied to the server's copy. `before` is the document as this
     // phone has it: with one, a document deleted since is not made again (a HELD kind asks: Keep mine puts it back; the
     // others fail: "removed on another phone"); without one the fields are merged into whatever is there (it makes it).
-    patch(kind, id, ops, { before = null } = {}) {
+    patch(kind, id, ops, { before = null, unheld = false } = {}) {
       if (!opsValid(ops)) throw new Error('ops overlap');
       const now = before ? (kind === 'items' ? applyOps(before, ops) : applyFieldOps(before, ops)) : applyFieldOps({ id }, ops);
-      // (base: with held kinds the copy it started from; for the others `{ id }`, so one deleted since isn't made again)
-      const base = HELD.includes(kind) ? (before ? baseOf(kind, id, before) : null) : before ? { id } : null;
+      // (`unheld`: a change that wins over another phone's, never asked about: no base. Base: with held kinds the copy it started from; for the others `{ id }`, so one deleted since isn't made again)
+      const base = HELD.includes(kind) ? (unheld ? null : before ? baseOf(kind, id, before) : null) : before ? { id } : null;
       return enqueue(kind, { ...clean(kind === 'items' ? toStored(now) : now), id }, base, { patch: ops }, { op: 'patch', kind, id, ops });
     },
     // Several documents' changes (renaming a place moves every item in it): [{ id, ops, before }], one save each.

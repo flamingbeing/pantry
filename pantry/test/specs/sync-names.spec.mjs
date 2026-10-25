@@ -41,7 +41,7 @@ test('the name of a person whose email has dots is one field, and clearing it to
   await act(mum, 'namePerson', ann, ''); await drain(mum);
   const after = await serverNames(fsAdmin, hid);
   expect(ann in after, 'cleared by itself').toBe(false); expect(after[dadE]).toBe('Dad again');
-  expect(Object.keys(await fsAdmin.get(`households/${hid}/settings/people`)).sort()).toEqual(['_saves', 'id', 'names', 'serverAt', 'updatedAt']);
+  expect(Object.keys(await fsAdmin.get(`households/${hid}/settings/people`)).sort()).toEqual(['_edits', '_saves', 'id', 'names', 'serverAt', 'updatedAt']);
 });
 
 test('Mum names Gran while Dad, offline, stops sharing with her: Gran’s name goes, the other names stay', async ({ phone, fsAdmin, uid }) => {

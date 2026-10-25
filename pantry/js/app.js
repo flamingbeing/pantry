@@ -156,10 +156,10 @@ function patchLines(list) {
 }
 // Any other small document (a place, the names) changed the same way: by field, never rewritten whole from a copy. A document this
 // phone doesn't have yet is made by the change itself (the backends merge the fields into whatever is there).
-function patchDoc(kind, id, ops) {
+function patchDoc(kind, id, ops, opts = {}) {
   const before = S[kind].get(id) || null;
   S[kind].set(id, L.applyFieldOps(before || { id }, ops));
-  S.backend.patch(kind, id, ops, { before });
+  S.backend.patch(kind, id, ops, { before, ...opts });
   return ops;
 }
 const removeLine = id => patchLine(id, L.removeOps(who()));
@@ -2336,10 +2336,10 @@ async function setMembers(list) {
 }
 // One person's name (or clearing it): a change to that one field, `names.<email>` (people.js nameOps), never the whole map from
 // a copy that may be a moment old. A household with no names yet gets the document made by the same change.
-function setPersonName(email, name) {
+function setPersonName(email, name, opts) {
   const members = S.household?.members || [], cur = names();
   const ops = PP.nameOps(email, name, { orphans: PP.orphanNames(cur, members, email) });
-  return patchDoc('settings', PP.PEOPLE_ID, S.settings.has(PP.PEOPLE_ID) ? ops : L.mergeOps(ops, { set: { id: PP.PEOPLE_ID } }));
+  return patchDoc('settings', PP.PEOPLE_ID, S.settings.has(PP.PEOPLE_ID) ? ops : L.mergeOps(ops, { set: { id: PP.PEOPLE_ID } }), opts);
 }
 // A name this phone had saved for itself (Settings → You, before the family pantry) becomes the family's name for this account, once per
 // household and only when the family has none for it: one field (`names.<email>`) like any other name. Waits until the family's own
@@ -2388,7 +2388,7 @@ function openPerson(email) {
     if (!(await haConfirm({ title: 'Stop sharing?', text: `${label} won’t see the pantry any more. You can add them again later.`, ok: 'Stop sharing', danger: true }))) return;
     try {
       await setMembers(h.members.filter(x => x !== email));
-      if (names()[email]) setPersonName(email, '');
+      if (names()[email]) setPersonName(email, '', { unheld: true });   // (stopping sharing wins over a name given meanwhile: never asked)
       await haCloseSheet(s.el);
       redraw();
       haToast(`Stopped sharing with ${label}`);
@@ -2410,20 +2410,19 @@ function heldTitle(c) {
 const HELD_FIELD = { name: 'Name', brand: 'Brand', size: 'Size', category: 'Category', location: 'Place', order: 'Position in the list',
   done: 'Ticked', removedAt: 'Removed', itemId: 'Linked item', list: 'Places', kind: 'Kind of place', openDays: 'Keeps once opened',
   level: 'How much is left', notes: 'Notes', barcode: 'Barcode', thumb: 'Picture', staple: 'Always keep some' };
-function heldField(kind, path) {
-  const p = path.split('.');
+function heldField(kind, p) {   // p: the field as its keys (app-sync describe `keys`: an email keeps its dots)
   if (p[0] === 'names') return `Name for ${nameOf(p.slice(1).join('.'))}`;
   if (p[0] === 'batches') return p[2] === 'expiry' ? 'Use by' : p[2] === 'qty' ? 'How many' : 'Stock';
   return HELD_FIELD[p[0]] || p[0];
 }
-function heldValue(path, v) {
-  const last = path.split('.').at(-1);
+function heldValue(keys, v) {
+  const last = keys.at(-1);
   if (last === 'removedAt') return v ? 'Removed' : 'Not removed';
   if (v === undefined || v === null || v === '') return 'Nothing';
   if (typeof v === 'boolean') return v ? 'Yes' : 'No';
   if (last === 'expiry' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return fmt(v);
   if (last === 'thumb') return 'A picture';
-  if (path === 'batches' && typeof v === 'object') { const n = Object.values(v).reduce((a, b) => a + (Number(b?.qty) || 0), 0); return plural(n, 'unit'); }
+  if (keys.length === 1 && keys[0] === 'batches' && typeof v === 'object') { const n = Object.values(v).reduce((a, b) => a + (Number(b?.qty) || 0), 0); return plural(n, 'unit'); }
   if (Array.isArray(v)) return v.join(', ');
   if (typeof v === 'object') return 'Changed';
   return String(v);
@@ -2436,8 +2435,8 @@ function openHeld(key) {
   const c = { key, kind: d.kind, id: d.id };
   const whole = d.deleted.mine || d.deleted.theirs || !d.fields.length;
   const side = (f, which, me) => `<label class="ha-row pa-held-side"><input type="radio" name="f${d.fields.indexOf(f)}" value="${which}"${which === 'mine' ? ' checked' : ''}>
-      <span class="ha-row-body"><span class="ha-row-title pa-break">${esc(heldValue(f.path, f[which].value))}</span><span class="ha-row-sub">${esc(me ? 'Yours' : 'Theirs')}: ${esc(heldWho(f[which], me))}</span></span></label>`;
-  const fields = d.fields.map(f => `<fieldset class="pa-held-field"><legend class="pa-held-legend">${esc(heldField(d.kind, f.path))}</legend><div class="ha-list">${side(f, 'mine', true)}${side(f, 'theirs', false)}</div></fieldset>`).join('');
+      <span class="ha-row-body"><span class="ha-row-title pa-break">${esc(heldValue(f.keys, f[which].value))}</span><span class="ha-row-sub">${esc(me ? 'Yours' : 'Theirs')}: ${esc(heldWho(f[which], me))}</span></span></label>`;
+  const fields = d.fields.map(f => `<fieldset class="pa-held-field"><legend class="pa-held-legend">${esc(heldField(d.kind, f.keys))}</legend><div class="ha-list">${side(f, 'mine', true)}${side(f, 'theirs', false)}</div></fieldset>`).join('');
   const lead = d.deleted.theirs ? 'It was deleted on another phone after you changed it here. Keep yours to put it back with your change, or let it go.'
     : d.deleted.mine ? 'You deleted it here, but another phone changed it meanwhile. Keep yours to delete it, or keep theirs.'
     : `You and another phone changed the same ${d.fields.length === 1 ? 'thing' : 'things'} at about the same time. Nothing is lost until you choose; your other changes are kept either way.`;

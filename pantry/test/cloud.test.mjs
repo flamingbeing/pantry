@@ -115,7 +115,7 @@ assert.throws(() => updatePairs(F, null, L.mergeOps(PP.nameOps('a@b.c', 'A'), { 
   assert.equal((await import('../js/cloud.js')).stampAfter, undefined, 'stampAfter is gone');
   assert.ok(!/\bstamp:\s*doc\s*=>/.test(cloudSrc) && !/stampAfter/.test(cloudSrc), 'the adapter gets no stamp function of its own');
   assert.ok(!/code\s*===\s*'aborted'/.test(cloudSrc), 'no retry of aborted: the queue does it');
-  assert.ok(/const SYNC = 'https:\/\/core\.anawj\.com\/sync\/0\.7\.3\/index\.js'/.test(cloudSrc), 'app-sync 0.7.3, exact pin');
+  assert.ok(/const SYNC = 'https:\/\/core\.anawj\.com\/sync\/0\.7\.4\/index\.js'/.test(cloudSrc), 'app-sync 0.7.4, exact pin');
   assert.equal(items(server, { id: 'i1', name: 'N', batches: [] }, null, [{ put: true }]).updatedAt, server.updatedAt, 'a whole document keeps the server stamp');
   // held conflicts (app-sync 0.7.1): who and when, changed on both sides since base, keep the server's value (so the clash
   // check, which holds only where the merge takes this phone's value over another's, never asks about them); the change
@@ -145,8 +145,10 @@ assert.throws(() => updatePairs(F, null, L.mergeOps(PP.nameOps('a@b.c', 'A'), { 
   assert.equal(deviceName('Mozilla/5.0 (Linux; Android 15; Pixel 9) Mobile Safari'), 'Android phone');
   assert.equal(deviceName('Mozilla/5.0 (Windows NT 10.0; Win64; x64)'), 'Windows computer');
   assert.equal(deviceName(''), 'Computer');
-  assert.deepEqual(HELD, ['items', 'shop', 'places'], 'history, photos and settings stay as they were');
+  assert.deepEqual(HELD, ['items', 'shop', 'places', 'settings'], 'history and photos stay as they were');
   assert.match(cloudSrc, /held: Object\.fromEntries\(HELD\.map\(k => \[k, true\]\)\), edits: '_edits'/, 'held kinds named, with _edits');
+  // settings on a known copy (3-way): a name Mum added meanwhile stays, Dad's own change to his name goes in
+  assert.deepEqual(settings({ id: 'people', names: { 'dad.x@x.com': 'Dad', 'mum@x.com': 'Mum' } }, { id: 'people', names: { 'dad.x@x.com': 'Daddy' } }, { id: 'people', names: { 'dad.x@x.com': 'Dad' } }, null).names, { 'dad.x@x.com': 'Daddy', 'mum@x.com': 'Mum' });
   // field updates as the server does them
   assert.deepEqual(applyPairs({ a: { b: 1 }, n: 'x' }, [[['a', 'b'], { __inc: 2 }], [['n'], { __inc: 1 }], [['a', 'c'], { __del: true }]]), { a: { b: 3 }, n: 1 });
 }

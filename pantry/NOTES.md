@@ -86,7 +86,7 @@ and sessions run only with `--dry` (`pantry/test/run-live-dry.sh`, local emulato
 
 ## Sync engine: app-sync (24 Oct 2026)
 
-Saves and listeners go through app-sync `0.7.3` (`https://core.anawj.com/sync/0.7.3/`, exact pin, precached by `sw.js`):
+Saves and listeners go through app-sync `0.7.4` (`https://core.anawj.com/sync/0.7.4/`, exact pin, precached by `sw.js`):
 every save goes to an outbox on the phone (IndexedDB) and then to the server in a transaction, one document at a time;
 each kind keeps a copy on the phone and listens only for documents changed since the last sync (`updatedAt`, stamped by
 the adapter as the save reaches the server: its default stamp, the later of now and the server copy's stamp plus one,
@@ -106,8 +106,9 @@ a save of that record is held, the held save's base, so later changes join the c
 other phone's. `_edits` keeps who changed each field ({ by, device, at }, rules allow it on the held kinds). The phone
 that holds it says "Needs attention" and opens a popup (both versions, when in Singapore time, who and which device):
 Keep mine, Keep theirs or field by field; Settings lists any still waiting. Bookkeeping fields (`updatedBy`, removal
-stamps, `doneBy`) never clash alone: when both changed them the server's stays. Settings (list, names) is not held:
-names are keyed by email, and app-sync's field paths split on dots, so a clash there can't be shown or answered (reported).
+stamps, `doneBy`) never clash alone: when both changed them the server's stays. Settings (names) are held too since
+app-sync `0.7.4`: names are keyed by email, and 0.7.4 escapes the dots inside a key in a clash's path (`names.a\.b@x\.com`;
+`describe()` gives `keys` for the label, which the popup uses).
 
 Wired by `createApp` (app-sync `0.6.0`, 25 Oct 2026): `js/cloud.js` hands Google sign-in, the device copy, the outbox
 (also in the origin's outbox list), the queue, the hub, the watchdog and sign-out (`forgetDevice`) to one call and keeps

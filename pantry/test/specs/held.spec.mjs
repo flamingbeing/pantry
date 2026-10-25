@@ -118,3 +118,36 @@ test('Keep theirs (a place renamed on both) and Keep mine (a line removed here, 
   for (const p of [mum, dad]) await expect.poll(() => p.evaluate(() => [window.__pantry.S.places.get('pl1').name, !!window.__pantry.S.shop.get('l1').removedAt])).toEqual(['Store room', false]);
   expect([await held(mum), await held(dad)]).toEqual([0, 0]);
 });
+
+// Settings (app-sync 0.7.4): the names are keyed by email, whose dots app-sync escapes in a clash's path, so Keep theirs
+// and Keep mine write the right name and the popup reads "Name for <person>".
+for (const choice of ['theirs', 'mine']) {
+  test(`a name given to the same person on two phones (dotted email): Keep ${choice}`, async ({ phone, fsAdmin, uid }, info) => {
+    const { mum, dad, mumE, dadE, hid } = await pair(phone, fsAdmin, uid, [`gran.${uid}@example.com`]);
+    const granE = `gran.${uid}@example.com`;
+    const names = { [mumE]: 'Jun', [dadE]: 'Dad', [granE]: 'Gran' };
+    await fsAdmin.put(`households/${hid}/settings/people`, { id: 'people', names, updatedAt: String(Math.random()) });
+    for (const p of [mum, dad]) await p.waitForFunction(m => Object.keys(m).every(k => window.__pantry.S.settings.get('people')?.names?.[k] === m[k]), names);
+    await net(dad, false);
+    await act(dad, 'namePerson', granE, 'Grandma'); await act(dad, 'namePerson', dadE, 'Daddy');
+    await act(mum, 'namePerson', granE, 'Granny'); await drain(mum);
+    await net(dad, true);
+    await dad.waitForFunction(() => window.__pantry.held().length === 1);
+    expect(await held(mum), 'Mum is never asked').toBe(0);
+    expect((await fsAdmin.get(`households/${hid}/settings/people`)).names[granE], 'nothing of Dad’s overwrote Mum’s').toBe('Granny');
+    const sheet = dad.locator('[data-held-key]');
+    await sheet.waitFor();
+    await expect(dad.locator('.pa-held-legend')).toContainText('Name for');
+    await expect(dad.locator('.pa-held-side').filter({ hasText: 'Grandma' })).toHaveCount(1);
+    await expect(dad.locator('.pa-held-side').filter({ hasText: 'Granny' })).toHaveCount(1);
+    if (process.env.SHOTS && choice === 'theirs') await dad.screenshot({ path: `${process.env.SHOTS}/held-names-390.png` });
+    await dad.locator(`[data-held="${choice}"]`).click();
+    await expect.poll(() => held(dad)).toBe(0);
+    await drain(dad);
+    const got = (await fsAdmin.get(`households/${hid}/settings/people`)).names;
+    expect(got[granE], `Keep ${choice}`).toBe(choice === 'mine' ? 'Grandma' : 'Granny');
+    expect(got[dadE], 'the other name, made meanwhile, went through').toBe('Daddy');
+    expect(Object.keys(got).sort(), 'no broken keys from the dots').toEqual([mumE, dadE, granE].sort());
+    for (const p of [mum, dad]) await expect.poll(() => p.evaluate(g => window.__pantry.S.settings.get('people').names[g], granE)).toBe(choice === 'mine' ? 'Grandma' : 'Granny');
+  });
+}

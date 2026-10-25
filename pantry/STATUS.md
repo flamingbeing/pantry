@@ -27,8 +27,8 @@ Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner
   wait on app-sync supporting them for merge collections, then a rules change for `_edits` first.
   Rules for `_edits` (25 Oct 2026): optional `{ <field>: { by, device, at } }` on items, shop lines, places and settings
   (keys their own fields; items at most 40 keys); never on history or photos (#28).
-  App-sync `0.7.3` with held conflicts (25 Oct 2026; held for merge collections came in 0.7.1): items, shop lines and places; a same-field clash is held on the
-  later phone and asked in a popup (Keep mine / Keep theirs / field by field); settings not held (NOTES.md, "Held conflicts").
+  App-sync `0.7.4` with held conflicts (25 Oct 2026; held for merge collections came in 0.7.1; 0.7.4 escapes dots in keys): items, shop lines, places and settings (names); a same-field clash is held on the
+  later phone and asked in a popup (Keep mine / Keep theirs / field by field) (NOTES.md, "Held conflicts").
   Next: the backfill (`tools/backfill-server-at.mjs`, owner's go), then rules require it, then the hub reads by it
   (NOTES.md, "Sync engine").
 - Nothing blocks the build. iPhone touch is untested (only real touch events in Chromium).

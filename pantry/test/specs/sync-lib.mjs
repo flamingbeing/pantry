@@ -81,7 +81,7 @@ export async function answerHeld(p, choose, pick = () => 'mine') {
   }
   throw new Error('held conflicts never ended');
 }
-// a value in a document by its dotted path (as the conflict popup names fields)
-// (a name's key is a whole email, dots and all: names.<email>)
-export const valueAt = (doc, path) => /^names\./.test(path) ? doc?.names?.[path.slice(6)]
-  : path.split('.').reduce((v, k) => v && typeof v === 'object' ? v[k] : undefined, doc);
+// a value in a document by its path as the conflict popup names fields (app-sync 0.7.4: a backslash before each '.' or
+// backslash inside a key, so names.<email> has its email's dots escaped)
+const keysOf = path => path.match(/(?:\\.|[^.])+/g).map(k => k.replace(/\\(.)/g, '$1'));
+export const valueAt = (doc, path) => keysOf(path).reduce((v, k) => v && typeof v === 'object' ? v[k] : undefined, doc);
