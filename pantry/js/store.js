@@ -12,7 +12,7 @@ import { applyOps, applyFieldOps, toStored } from './logic.js';
 //   purge(kind, id, cutoff) delete an item or shopping line for good, only if it is still removed (removedAt before the
 //                          ISO time `cutoff`); true when deleted (the sweep: logic.js sweepDue)
 //   delMany(kind, ids)     delete several documents (the history of a purged item)
-//   listen(cb)             cb(kind, docs, removedIds) when another device changes something (cloud only)
+//   listen(cb)             cb(kind, list, pendingIds) with the kind's whole list whenever it changes (cloud only)
 // Items go in as the map shape of batches (logic.js toStored) and come out as they were stored (either shape): the app
 // runs every item through normalizeItem when it loads or hears of one.
 // The local backend keeps everything in this browser's IndexedDB (nothing leaves the phone).

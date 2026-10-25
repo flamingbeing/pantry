@@ -2936,16 +2936,17 @@ function loadInto(data) {
   for (const k of KINDS) { S[k].clear(); for (const o of data[k] || []) S[k].set(o.id, k === 'items' ? L.normalizeItem(o) : o); }   // items: either shape of batches in, one out
   for (const it of S.items.values()) noteLanded(it);
 }
-// `pending`: ids of these documents this phone has changes on that the server hasn't confirmed yet.
-function onRemote(kind, docs, removed, pending = []) {
-  for (const d of docs) {
-    const was = S[kind].get(d.id);
-    S[kind].set(d.id, kind === 'items' ? L.normalizeItem(d) : d);
-    if (kind === 'items' && L.isRemoved(d) && !L.isRemoved(was)) noteLanded(d, pending.includes(d.id));   // removed on another phone
-  }
-  for (const id of removed) S[kind].delete(id);
+// `list`: the kind's whole list as the engine has it (its copy, with this phone's unsent saves laid over it). S[kind] is
+// made again from it each time, never patched by a difference, so the screen shows exactly that (a change made here
+// shows at once and comes back the same from the outbox a moment later). `pending`: ids of these documents this phone
+// has changes on that the server hasn't confirmed yet.
+function onRemote(kind, list, pending = []) {
+  const was = new Map(S[kind]), now = list.map(d => kind === 'items' ? L.normalizeItem(d) : d);
+  S[kind].clear();
+  for (const d of now) S[kind].set(d.id, d);
+  if (kind === 'items') for (const d of now) if (L.isRemoved(d) && !L.isRemoved(was.get(d.id))) noteLanded(d, pending.includes(d.id));   // removed on another phone
   redraw();
-  if (kind === 'items' && docs.some(d => d.photo)) migratePhotos();
+  if (kind === 'items' && list.some(d => d.photo)) migratePhotos();
 }
 // ---- saving to the family: the chip, and what the server refused (sync.js) ----------------------------------------------
 

@@ -86,7 +86,7 @@ and sessions run only with `--dry` (`pantry/test/run-live-dry.sh`, local emulato
 
 ## Sync engine: app-sync (24 Oct 2026)
 
-Saves and listeners go through app-sync `0.6.0` (`https://core.anawj.com/sync/0.6.0/`, exact pin, precached by `sw.js`):
+Saves and listeners go through app-sync `0.6.1` (`https://core.anawj.com/sync/0.6.1/`, exact pin, precached by `sw.js`):
 every save goes to an outbox on the phone (IndexedDB) and then to the server in a transaction, one document at a time;
 each kind keeps a copy on the phone and listens only for documents changed since the last sync (`updatedAt`, stamped by
 the adapter as the save reaches the server: its default stamp, the later of now and the server copy's stamp plus one,
@@ -104,7 +104,10 @@ its own parts: the merge rule (`mergeSaves`), the `permission-denied` retry (`co
 Settings draw, the SDK's leftover writes, Sync now and "Reconnect and try again". The hub is told `stampMode: 'client'`
 (createApp would pass the adapter's server mode on), so it still reads by `updatedAt`. Lists come through createApp's
 `watch` (app-sync `watchSaved`): a phone's own unsent save is laid over again when it is done, so another phone's change
-heard meanwhile shows then (the two-phone lag). createApp's sign-out refuses while anything is unsent; "Sign out anyway"
+heard meanwhile shows then (the two-phone lag). One copy (25 Oct 2026): each delivery is the kind's whole list and
+`app.js onRemote` makes `S[kind]` again from it; `cloud.js` keeps no difference of its own (it had an id → signature map,
+a second copy that could disagree with the engine's). A change made on this phone still shows in `S` at once and comes
+back the same from the outbox. Test: `test/specs/shopline.spec.mjs` (the shopping list only, seeded). createApp's sign-out refuses while anything is unsent; "Sign out anyway"
 first sets this phone's unsent saves aside (lost, as the dialog says), then signs out. Two things createApp can't take
 yet: the watchdog's "nothing unacknowledged" can't count the SDK's leftover writes, and it shares no storage-guard or
 last-heard time (cloud.js asks the storage guard itself).
