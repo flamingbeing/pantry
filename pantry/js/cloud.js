@@ -387,7 +387,7 @@ export function mergeSaves(kind) {
   };
 }
 const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
-const SYNC = 'https://core.anawj.com/sync/0.6.0/index.js';
+const SYNC = 'https://core.anawj.com/sync/0.6.1/index.js';
 // A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
 // so the sweep still sees it here first.
 const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };
@@ -493,8 +493,7 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
   let leftover = true;
   F.waitForPendingWrites(db).then(() => { leftover = false; tell(); }, () => {});
   const seen = Object.fromEntries(KINDS.map(k => [k, { cache: true, ready: false }]));
-  const known = Object.fromEntries(KINDS.map(k => [k, new Map()]));   // id -> signature, as last delivered
-  const data = Object.fromEntries(KINDS.map(k => [k, new Map()]));
+  const data = Object.fromEntries(KINDS.map(k => [k, []]));   // each kind's list, as last delivered (load)
   const ready = Object.fromEntries(KINDS.map(k => { let done; const p = new Promise(r => { done = r; }); return [k, { p, done }]; }));
   const ofQueue = kind => queue.entries().filter(x => x.owner === hid && x.kind === kind && x.state === 'pending').map(x => x.record.id);
   function tell() {
@@ -510,26 +509,33 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     });
   }
   const offQueue = queue.onChange(() => tell());
+  // saves handed to the engine that it hasn't taken yet: id -> { record } per kind (deliver lays them over)
+  const sending = Object.fromEntries(KINDS.map(k => [k, new Map()]));
+  const heardList = {};   // each kind's last list from the engine, as it came: [list, meta] (handed again once a save leaves `sending`)
   function enqueue(kind, record, base, change, info) {
+    const mine = sending[kind] && { record };
+    if (mine) sending[kind].set(record.id, mine);
     return app.save(kind, hid, record, base, { ops: change })
-      .then(() => true, e => { if (queue.error()) { console.warn('outbox', e?.message); onError(e, info); } return false; });
+      .then(() => true, e => { if (queue.error()) { console.warn('outbox', e?.message); onError(e, info); } return false; })
+      .finally(() => { if (mine && sending[kind].get(record.id) === mine) { sending[kind].delete(record.id); if (heardList[kind]) deliver(kind, heardList[kind][0], { ...heardList[kind][1], again: true }); } });
   }
   // the listeners (createApp watch: app-sync watchSaved): each kind's whole list from the engine (this phone's copy, then
   // the server's changes), with this phone's saves not yet sent laid over it, again when a save is done, so the server's
-  // copy heard while it was sent shows then; only what changed since the last delivery goes to the app
-  const sig = d => JSON.stringify(d);
+  // copy heard while it was sent shows then. The app gets the whole list each time and draws from it alone (no
+  // difference kept here: a second copy that could disagree with the engine's)
   let offs = [];
   function deliver(k, list, m) {
     if (closed) return;
+    if (!m?.again) heardList[k] = [list, m];
     seen[k].cache = !!m?.fromCache;
-    if (m && m.fromCache === false) heard = lastServerAt = Date.now();
-    const now = new Map(list.map(d => [d.id, d]));
-    const docs = [], removed = [];
-    for (const [id, d] of now) { const s = sig(d); if (known[k].get(id) !== s) { known[k].set(id, s); docs.push(d); } }
-    for (const id of [...known[k].keys()]) if (!now.has(id)) { known[k].delete(id); removed.push(id); }
-    data[k] = now;
+    if (m && m.fromCache === false && !m.again) heard = lastServerAt = Date.now();   // (`again`: the same list handed once more)
+    // (app-sync lays a save over the list only once it is accepted: stored, then sent or 180 ms later. A list heard
+    // before that would take back a change made here a moment ago, and the next change would be worked out from it, so
+    // the saves handed to the engine and not back yet are laid over here too.)
+    if (sending[k].size) { const out = new Map(list.map(d => [d.id, d])); for (const [id, { record }] of sending[k]) { if (record._deleted) out.delete(id); else out.set(id, strip(record)); } list = [...out.values()]; }
+    data[k] = list;
     if (!seen[k].ready) { seen[k].ready = true; ready[k].done(); }
-    else if (cb && (docs.length || removed.length)) cb(k, docs, removed, ofQueue(k));
+    else if (cb) cb(k, list, ofQueue(k));
     tell();
   }
   const startListening = () => { if (!offs.length && !closed) offs = KINDS.map(k => app.watch(hid, k, (list, m) => deliver(k, list, m))); };
@@ -552,7 +558,7 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     async load() {
       await Promise.all(KINDS.map(k => Promise.race([ready[k].p, new Promise(r => setTimeout(r, 5000))])));
       for (const k of KINDS) if (!seen[k].ready) { seen[k].ready = true; ready[k].done(); }
-      return Object.fromEntries(KINDS.map(k => [k, [...data[k].values()]]));
+      return Object.fromEntries(KINDS.map(k => [k, data[k]]));
     },
     // Saves go to the outbox at once and reach the family when there's signal; don't wait for the server. The promise
     // (which callers may ignore) is true once the save is kept on this phone; a refusal comes through onError.

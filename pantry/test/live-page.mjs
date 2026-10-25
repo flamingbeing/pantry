@@ -27,7 +27,10 @@ const onError = (e, info) => { refused.push({ code: String(e?.code || e?.name ||
 // the last few things the page heard about each document (to explain a stale screen): [ms, quantities, waiting-to-send?]
 const TRACE = new Map();
 const SH = { full: new Map(), chg: new Map(), off: null };
-function onRemote(kind, docs, removed, pending = []) {
+// (the backend hands each kind's whole list: what changed is worked out here, for the trace and the read count only)
+function onRemote(kind, list, pending = []) {
+  const ids = new Set(list.map(d => d.id)), removed = [...RAW[kind].keys()].filter(id => !ids.has(id));
+  const docs = list.filter(d => JSON.stringify(RAW[kind].get(d.id)) !== JSON.stringify(d));
   for (const d of docs) {
     const key = kind + '/' + d.id, tr = TRACE.get(key) || [];
     tr.push([Math.round(performance.now()), kind === 'items' ? JSON.stringify(qtyMap(d)) : JSON.stringify([d.done, d.removedAt || null]), pending.includes(d.id) ? 1 : 0]);
