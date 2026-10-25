@@ -511,12 +511,13 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
   const offQueue = queue.onChange(() => tell());
   // saves handed to the engine that it hasn't taken yet: id -> { record } per kind (deliver lays them over)
   const sending = Object.fromEntries(KINDS.map(k => [k, new Map()]));
+  const heardList = {};   // each kind's last list from the engine, as it came: [list, meta] (handed again once a save leaves `sending`)
   function enqueue(kind, record, base, change, info) {
     const mine = sending[kind] && { record };
     if (mine) sending[kind].set(record.id, mine);
     return app.save(kind, hid, record, base, { ops: change })
       .then(() => true, e => { if (queue.error()) { console.warn('outbox', e?.message); onError(e, info); } return false; })
-      .finally(() => { if (mine && sending[kind].get(record.id) === mine) sending[kind].delete(record.id); });
+      .finally(() => { if (mine && sending[kind].get(record.id) === mine) { sending[kind].delete(record.id); if (heardList[kind]) deliver(kind, heardList[kind][0], { ...heardList[kind][1], again: true }); } });
   }
   // the listeners (createApp watch: app-sync watchSaved): each kind's whole list from the engine (this phone's copy, then
   // the server's changes), with this phone's saves not yet sent laid over it, again when a save is done, so the server's
@@ -525,8 +526,9 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
   let offs = [];
   function deliver(k, list, m) {
     if (closed) return;
+    if (!m?.again) heardList[k] = [list, m];
     seen[k].cache = !!m?.fromCache;
-    if (m && m.fromCache === false) heard = lastServerAt = Date.now();
+    if (m && m.fromCache === false && !m.again) heard = lastServerAt = Date.now();   // (`again`: the same list handed once more)
     // (app-sync lays a save over the list only once it is accepted: stored, then sent or 180 ms later. A list heard
     // before that would take back a change made here a moment ago, and the next change would be worked out from it, so
     // the saves handed to the engine and not back yet are laid over here too.)
