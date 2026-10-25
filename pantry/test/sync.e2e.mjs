@@ -752,7 +752,8 @@ try {
     assert.equal(await sy.locator('[data-act="sync-cycle"]').count(), 1, 'offers one reconnect');
     await axe(sy, 'Settings: Sync now, still waiting, with the list');
     if (process.env.SHOTS) { await sy.locator('section[aria-labelledby="h-saving"]').scrollIntoViewIfNeeded(); await sy.evaluate(() => scrollTo(0, document.querySelector('section[aria-labelledby="h-saving"]').offsetTop - 70)); await settle(sy); await sy.screenshot({ path: process.env.SHOTS + '/p01-sync-now.png' }); }
-    // the server already has all three
+    // the server already has all three (the change may still be on its way through the proxy: up to 10 s)
+    for (let t = Date.now(); (await admin.get(`households/${shid}/items/sy1`)).name !== 'Rice (new)' && Date.now() - t < 10000;) await sy.waitForTimeout(250);
     assert.equal((await admin.get(`households/${shid}/items/sy1`)).name, 'Rice (new)');
     // Reconnect and try again: one switch off and on; nothing breaks, and still nothing is heard back
     await sy.click('[data-act="sync-cycle"]');
