@@ -2,7 +2,7 @@
 // adapter's own stamp moves updatedAt forward, and signing out wipes the phone's copy in app-sync's order.
 // Each test has its own family. Run: npx playwright test sync-adopt
 import { test, expect, FS } from './fixtures.mjs';
-import { pair, drain, act, refused, BASE_ITEM } from './sync-lib.mjs';
+import { pair, drain, act, refused, net, BASE_ITEM } from './sync-lib.mjs';
 
 const stampOf = async path => {
   const r = await fetch(FS + path, { headers: { Authorization: 'Bearer owner' } });
@@ -43,4 +43,22 @@ test('signing out leaves nothing of the family on the phone (copies, outbox) and
   await expect.poll(() => mum.evaluate(() => window.__pantry.S.mode)).toBe('local');
   await expect.poll(held, { message: 'the family’s copies and the outbox are gone' }).toBe(0);
   expect(await fsAdmin.get(`households/${hid}`)).toBeTruthy();   // the family itself is untouched
+});
+
+test('“Sign out anyway” with a change still unsent signs out and drops it, as the dialog says', async ({ phone, fsAdmin, uid }) => {
+  const { mum, hid } = await pair(phone, fsAdmin, uid);
+  await fsAdmin.put(`households/${hid}/items/milk`, { id: 'milk', name: 'Milk', ...BASE_ITEM, batches: {} });
+  await expect.poll(() => mum.evaluate(() => window.__pantry.S.items.has('milk'))).toBe(true);
+  await net(mum, false);
+  await act(mum, 'set', 'milk', 'brand', 'Unsent');
+  await expect.poll(() => mum.evaluate(() => window.__pantry.S.sync.pending)).toBeGreaterThan(0);
+  await mum.evaluate(() => { location.hash = '#/settings'; });
+  await mum.click('[data-act="signout"]');
+  const ask = mum.locator('dialog[open]', { hasText: 'Sign out now?' });
+  await expect(ask).toBeVisible({ timeout: 15_000 });
+  await ask.locator('button[value="yes"]').click();
+  await expect.poll(() => mum.evaluate(() => window.__pantry.S.mode), { timeout: 20_000 }).toBe('local');
+  await net(mum, true);
+  await mum.waitForTimeout(1500);   // (a save left in the outbox would be sent now)
+  expect((await fsAdmin.get(`households/${hid}/items/milk`))?.brand ?? '', 'the dropped change never reached the family').not.toBe('Unsent');
 });

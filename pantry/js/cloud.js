@@ -92,41 +92,24 @@ export function explain(err, doing = 'That') {
   if (/expired-action-code/.test(code)) return 'That link has expired or was already used. Ask for a new one.';
   if (/invalid-action-code/.test(code)) return 'That link isn’t valid any more. Ask for a new one.';
   if (/merge-count/.test(code)) return 'Not everything arrived in the pantry you’re keeping, so nothing was deleted.';
+  if (/signout-unsent/.test(code)) return 'Some changes just arrived on this phone and haven’t reached the family yet, so you’re still signed in. Try again in a moment.';
   if (/operation-not-allowed/.test(code)) return 'This way of signing in isn’t switched on yet.';
   return `${doing} didn’t work. Try again in a moment.`;
 }
 
 // Sign in by redirect straight away in the installed app (display-mode standalone, or iOS's navigator.standalone)
 // and on Firefox for Android (a popup there opens as a separate tab that can't hand back; the anawj.com lesson).
-// Elsewhere, a popup, falling back to a redirect when popups are blocked or unsupported.
+// Elsewhere, a popup, falling back to a redirect when popups are blocked or unsupported (createApp's signIn).
 export const redirectFirst = ({ standalone = false, ua = '' } = {}) => standalone || (/Android/i.test(ua) && /Firefox\//i.test(ua));
 const installedApp = () => {
   try { return !!(globalThis.matchMedia?.('(display-mode: standalone)').matches || globalThis.matchMedia?.('(display-mode: fullscreen)').matches || globalThis.navigator?.standalone); } catch { return false; }
 };
-const REDIRECT_CODES = ['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/web-storage-unsupported', 'auth/cancelled-popup-request'];
 
-export async function onUser(cb) {
-  const { A, auth } = await sdk();
-  // finishes a redirect sign-in when the page loads again
-  A.getRedirectResult(auth).catch(e => console.warn('Redirect sign-in failed', e?.code || e));
-  A.onAuthStateChanged(auth, u => cb(userInfo(u)));
-}
 // What the app needs to know about the signed-in account. `verified` is false for a new password account until the
 // person taps the emailed link: the rules need a verified email, so the app shows no family data until then. (Google
 // and email-link sign-ins are verified already.)
 export const userInfo = u => u ? { email: lc(u.email), name: u.displayName || u.email, photo: u.photoURL || '', verified: u.emailVerified === true } : null;
 
-export async function signIn() {
-  const { A, auth } = await sdk();
-  const provider = new A.GoogleAuthProvider();
-  provider.setCustomParameters({ prompt: 'select_account' });
-  if (redirectFirst({ standalone: installedApp(), ua: globalThis.navigator?.userAgent || '' })) return A.signInWithRedirect(auth, provider);
-  try { await A.signInWithPopup(auth, provider); }
-  catch (e) {
-    if (!REDIRECT_CODES.includes(e?.code)) throw e;
-    await A.signInWithRedirect(auth, provider);
-  }
-}
 // ---- email link and password (besides Google) ----------------------------------------------------------------------
 
 // Where an emailed link brings the person back: the app's own address (installed apps and the home screen open this).
@@ -211,42 +194,6 @@ export async function emulatorSignIn(email) {
   const { A, auth } = await sdk();
   await A.signInWithCredential(auth, A.GoogleAuthProvider.credential(JSON.stringify({ sub: lc(email).replace(/\W/g, ''), email: lc(email), email_verified: true })));
 }
-// True when every change made on this phone has reached the family within ms (false offline, on a timeout, or while
-// a save waits in another tab), so signing out doesn't silently drop changes still waiting for signal.
-export async function synced(ms = 4000) {
-  const { F, db } = await sdk();
-  const sdkDone = Promise.race([F.waitForPendingWrites(db).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), ms))]);
-  if (engine) await Promise.race([Promise.allSettled([...engine.saving]), new Promise(r => setTimeout(r, ms))]);   // (saves still being stored)
-  return (engine ? await engine.queue.flush(ms) : true) && await sdkDone;
-}
-// Send what waits in the outbox now (tests: after the SDK's network is switched back on).
-export function kick() { engine?.queue.kick(); }
-// Signing out wipes this phone's family copy, in app-sync's order (forgetDevice): stop every listener, check the person is
-// still the one signing out, the copy of every kind (in every tab), the outbox, and the SDK's own cache (terminated, so
-// that instance can't be used again: the app reloads, `reload`). The sign-out check (`synced`) came first.
-export async function signOut() {
-  const { A, auth } = await sdk(), uid = auth.currentUser?.uid || null;
-  if (engine) {
-    const { hub, stores, queue, fs } = engine;
-    owner = '';
-    const r = await engine.AS.forgetDevice({
-      hub, stores, queue, keep: [],
-      proceed: async () => (auth.currentUser?.uid || null) === uid,   // another tab signed in as someone else meanwhile: wipe nothing
-      clearBackendCache: emulator ? null : fs.clearCache,
-      extra: async () => { engine = null; if (!emulator) fb = null; },
-    });
-    if (!r.wiped) throw Object.assign(new Error('Signing out was stopped: someone signed in on this phone meanwhile.'), { code: 'signout-stopped' });   // (the hub is stopped: the page starts again)
-    if (r.failed.length) console.warn('sign-out steps that failed', r.failed);
-  }
-  await A.signOut(auth);
-  return { reload: !emulator };   // (the SDK instance is closed outside the emulator: the page starts clean)
-}
-// How many of this phone's changes the outbox still holds (the update reload waits for none).
-export function pending() { return engine ? engine.queue.pending() : 0; }
-// The chip's state by app-sync's rules (a chip drawn by app.js): never Saved before the server has answered once, and
-// at-risk only while offline. -> { state, count }
-export function status(input) { return engine ? engine.AS.syncStatus({ atRiskOnlyOffline: true, ...input }) : null; }
-
 // The household this account belongs to (the owner adds family members by their Google email). An account can end up
 // in more than one (a second "Start our family pantry" tapped when the first couldn't be found), and a query's
 // first match is arbitrary: so pick the one this phone used last (`prefer`), else the one with the most members,
@@ -335,7 +282,7 @@ export function nest(pairs) {
 // every save through the outbox is.
 async function writeAll(F, db, hid, kind, list) {
   let b = null, n = 0, bytes = 0;
-  const st = await (await sync()).fs.stampFields();
+  const st = await (await sync()).parts.adapter.stampFields();
   for (const o of list) {
     const { _saves, serverAt, ...c } = clean(kind === 'items' ? toStored(normalizeItem(o)) : o), size = JSON.stringify(c).length;
     Object.assign(c, st);   // stamped now, so every phone's delta listener hears it, and the server's own stamp (a copied one is another pantry's)
@@ -440,7 +387,7 @@ export function mergeSaves(kind) {
   };
 }
 const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
-const SYNC = 'https://core.anawj.com/sync/0.5.1/index.js';
+const SYNC = 'https://core.anawj.com/sync/0.6.0/index.js';
 // A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
 // so the sweep still sees it here first.
 const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };
@@ -448,59 +395,99 @@ const counts = x => x.kind !== 'events' && x.kind !== 'photos'   // a history li
   && !(x.kind === 'places' && x.record?.updatedAt === SEED_AT);      // and a place made from the old list is no one's change
 // (`_saves` and the server's stamp `serverAt` are the engine's, never the app's: a record the app writes back never carries them)
 const strip = d => { if (!d || !('_saves' in d || 'serverAt' in d)) return d; const { _saves, serverAt, ...rest } = d; return rest; };
+// what a queued save was, for the app's words and its Retry/Discard list: { op, kind, id, obj | ops }
+const infoOf = x => {
+  const op = x.record._deleted ? 'del' : (x.ops || []).some(o => o.put) ? 'put' : 'patch', patch = (x.ops || []).filter(o => o.patch).map(o => o.patch);
+  return { op, kind: x.kind, id: x.record.id, ...(op === 'put' && x.kind !== 'photos' ? { obj: x.record } : {}), ...(op === 'patch' ? { ops: patch.length === 1 ? patch[0] : mergeAll(patch) } : {}) };
+};
 
-// The engine, once a page: the device copy, the outbox and the queue outlive a switch between households (owner: the
-// household's id), and signing out wipes them.
-let engine = null, owner = '';
-async function sync() {
+// The engine, once a page (app-sync createApp): sign-in, the device copy, the outbox and the queue (they outlive a switch
+// between households: the scope is the household's id), the hub, the listener watchdog and sign-out (forgetDevice). Saves
+// the server refused go to the open household's `onError`.
+let engine = null, current = null, AS = null, refused = null;   // (current: the engine once up, so pending() answers at once)
+function sync() {
   if (engine) return engine;
-  const { F, db } = await sdk(), AS = await import(SYNC);
-  const meta = new Set(), codes = new Map();
-  const fs = AS.createFirestoreBackend({
-    // stampMode 'server' (app-sync 0.3.0): every save also sets `serverAt` to the server's time, beside `updatedAt`. The
-    // hub still reads by `updatedAt` until the backfill (tools/backfill-server-at.mjs) and the rules require the stamp.
-    // `updatedAt` is the adapter's default stamp (0.4.0): max(now, the server copy's + 1), taken inside the commit.
-    sdk: async () => ({ F, db }), path: (hid, kind) => ['households', hid, kind], time: 'iso', mark: '_saves', stampMode: 'server',
-    merge: Object.fromEntries(ALL_KINDS.map(k => [k, mergeSaves(k)])),
-    onSnapshotMeta: (kind, m) => { for (const fn of meta) fn(kind, m); },
-  });
-  const stores = AS.createStores({ prefix: 'pantry-sync:', colls: KINDS, metaOnly: [] });
-  // nothing-lost report (app-sync report.js): counts only (saves waiting over an hour, refused, in conflict, sync
-  // errors by code) and versions, at most once an hour and when the page is hidden; never an item, a household or an id
-  let appVersion = 'unknown';
-  import('https://core.anawj.com/update/0.2.0/register.js').then(m => m.version()).then(v => { if (v) appVersion = v; }).catch(() => {});
-  const report = AS.createReport({ app: 'pantry', version: () => appVersion, storage: (() => { try { return localStorage; } catch { return null; } })() });
-  report.start();
-  const hub = AS.createSyncHub({ openStore: stores.openStore, listen: fs.listen, fetchOne: fs.fetchOne, bin: null, unstamped: 'full', expire: { items: EXPIRE, shop: EXPIRE, places: EXPIRE }, onError: e => { report.error(e?.code); console.warn('sync', e?.code || e?.message); } });
-  AS.replanOnWake(hub);
-  // (the queue keeps a failed save's message only: its code, for the plain words, is kept here)
-  const queue = AS.createWriteQueue({
-    store: AS.createOutbox({ name: 'pantry-outbox' }), getOwner: () => owner, online: () => globalThis.navigator?.onLine !== false,
-    report,
-    // ('aborted', two phones' transactions on one document at once, is retried by the queue itself (app-sync 0.4.0).
-    // 'permission-denied' is tried once more on a fresh read: the server judges the rules before it notices the copy read
-    // was stale, so a write racing another phone's in the same millisecond can be refused for the same stamp.)
-    backend: async (hid, kind, record, base, extra) => {
-      const once = () => fs.commit(hid, kind, record, base, extra);
-      try { return await once().catch(async e => { if (e?.code !== 'permission-denied') throw e; await new Promise(r => setTimeout(r, 50 + Math.random() * 100)); return once(); }); }
-      catch (e) { codes.set(extra.key, e?.code || ''); throw e; }
-    },
-  });
-  globalThis.addEventListener?.('online', () => queue.kick());
-  engine = { AS, fs, stores, hub, queue, meta, codes, persisted: true, saving: new Set() };
+  engine = (async () => {
+    AS = await import(SYNC);
+    // nothing-lost report (app-sync report.js): counts only (saves waiting over an hour, refused, in conflict, sync
+    // errors by code) and versions, at most once an hour and when the page is hidden; never an item, a household or an id
+    let appVersion = 'unknown';
+    import('https://core.anawj.com/update/0.2.0/register.js').then(m => m.version()).then(v => { if (v) appVersion = v; }).catch(() => {});
+    const report = AS.createReport({ app: 'pantry', version: () => appVersion, storage: (() => { try { return localStorage; } catch { return null; } })() });
+    report.start();
+    const app = AS.createApp({
+      name: 'pantry', colls: KINDS, path: (hid, kind) => ['households', hid, kind],
+      sdk: async () => ({ ...await sdk(), emulator: usingEmulator }),
+      // stampMode 'server' (app-sync 0.3.0): every save also sets `serverAt` to the server's time, beside `updatedAt`. The
+      // hub still reads by `updatedAt` (its stampMode 'client' below) until the backfill (tools/backfill-server-at.mjs)
+      // and the rules require the stamp. `updatedAt` is the adapter's default stamp (0.4.0): max(now, the server copy's
+      // + 1), taken inside the commit.
+      backend: { time: 'iso', mark: '_saves', stampMode: 'server', merge: Object.fromEntries(ALL_KINDS.map(k => [k, mergeSaves(k)])) },
+      stores: { metaOnly: [] },
+      hub: { bin: null, unstamped: 'full', expire: { items: EXPIRE, shop: EXPIRE, places: EXPIRE }, stampMode: 'client' },
+      report,
+      // ('aborted', two phones' transactions on one document at once, is retried by the queue itself (app-sync 0.4.0).
+      // 'permission-denied' is tried once more on a fresh read: the server judges the rules before it notices the copy read
+      // was stale, so a write racing another phone's in the same millisecond can be refused for the same stamp.)
+      commit: (hid, kind, record, base, extra) => {
+        const once = () => app.parts.adapter.commit(hid, kind, record, base, extra);
+        return once().catch(async e => { if (e?.code !== 'permission-denied') throw e; await new Promise(r => setTimeout(r, 50 + Math.random() * 100)); return once(); });
+      },
+      // a save the server refused: kept in the app's list (Settings, Retry or Discard) and set aside in the queue, so a
+      // Retry is a new save and nothing is sent twice
+      onRefused: (err, x) => { const info = infoOf(x); console.warn('save failed', info.op, x.kind, err.code); refused?.(err, info); return 'archive'; },
+      redirectFirst: () => redirectFirst({ standalone: installedApp(), ua: globalThis.navigator?.userAgent || '' }),
+    });
+    return app;
+  })();
+  engine.catch(() => { engine = null; });
   return engine;
 }
+export async function onUser(cb) { return (await sync()).onUser(cb); }
+export async function signIn() { return (await sync()).signIn(); }
+// True when every change made on this phone has reached the family within ms (false offline, on a timeout, or while
+// a save waits in another tab), so signing out doesn't silently drop changes still waiting for signal.
+export async function synced(ms = 4000) {
+  const { F, db } = await sdk();
+  const sdkDone = Promise.race([F.waitForPendingWrites(db).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), ms))]);
+  return (engine ? await (await engine).flush(ms) : true) && await sdkDone;
+}
+// Send what waits in the outbox now (tests: after the SDK's network is switched back on).
+export function kick() { engine?.then(a => a.queue.kick(), () => {}); }
+// Signing out wipes this phone's family copy, in app-sync's order (createApp: forgetDevice): stop every listener, check
+// the person is still the one signing out and nothing is unsent, then the copy of every kind (in every tab), the outbox,
+// and the SDK's own cache (terminated, so that instance can't be used again: the app reloads, `reload`). The sign-out
+// check (`synced`) came first; `anyway` (the person chose "Sign out anyway") sets this phone's unsent saves aside first,
+// so they are lost as the dialog said.
+export async function signOut({ anyway = false } = {}) {
+  const app = await sync();
+  if (anyway) for (const x of app.queue.entries()) if (x.state !== 'synced' && x.state !== 'archived') await app.queue.archive(x.key);
+  const r = await app.signOut();
+  if (!r.ok) {
+    if (r.reason === 'changed') throw Object.assign(new Error('Signing out was stopped: someone signed in on this phone meanwhile.'), { code: 'signout-stopped' });
+    throw Object.assign(new Error('Changes on this phone are still unsent.'), { code: 'signout-unsent' });
+  }
+  if (r.failed.length) console.warn('sign-out steps that failed', r.failed);
+  if (r.reload) fb = null;
+  return { reload: r.reload };   // (the SDK instance is closed outside the emulator: the page starts clean)
+}
+// How many of this phone's changes the outbox still holds (the update reload waits for none).
+export function pending() { return current ? current.queue.pending() : 0; }
+// The chip's state by app-sync's rules (a chip drawn by app.js): never Saved before the server has answered once, and
+// at-risk only while offline. -> { state, count }
+export function status(input) { return AS ? AS.syncStatus({ atRiskOnlyOffline: true, ...input }) : null; }
 
 // `onError(err, info)` hears of a write the server refused (info says which: { op, kind, id, obj | ops });
 // `onSync(state)` of how many of this phone's changes the server hasn't confirmed yet ({ pending, cache, list, heard, stale, persisted }).
 export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
   const { F, db } = await sdk();
-  const E = await sync(), { AS, hub, queue } = E;
-  owner = hid;
-  await queue.activate(hid);
-  AS.persistGuard().then(r => { E.persisted = r.persisted || !r.supported; tell(); }, () => {});
+  const app = current = await sync(), { hub, queue } = app;
+  await app.open(hid);
+  refused = onError;
+  let persisted = true;
+  AS.persistGuard().then(r => { persisted = r.persisted || !r.supported; tell(); }, () => {});
   const col = kind => F.collection(db, 'households', hid, kind);
-  let heard = 0, lastServerAt = 0, relistens = 0, cycles = 0, closed = false, cb = null, timer = 0;
+  let heard = 0, lastServerAt = 0, cycles = 0, closed = false, cb = null;
   // Writes an older version of the app left in the SDK's own queue (before this phone moved to the outbox): still sent by
   // the SDK, counted until it says they all arrived.
   let leftover = true;
@@ -510,7 +497,7 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
   const data = Object.fromEntries(KINDS.map(k => [k, new Map()]));
   const ready = Object.fromEntries(KINDS.map(k => { let done; const p = new Promise(r => { done = r; }); return [k, { p, done }]; }));
   const ofQueue = kind => queue.entries().filter(x => x.owner === hid && x.kind === kind && x.state === 'pending').map(x => x.record.id);
-  const tell = () => {
+  function tell() {
     if (closed) return;
     const mine = queue.entries().filter(x => x.owner === hid && x.state === 'pending' && counts(x));
     const list = mine.map(x => {
@@ -519,43 +506,24 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     });
     onSync({
       pending: mine.length + (leftover ? 1 : 0), cache: !cb || KINDS.some(k => seen[k].cache), list: [...list, ...(leftover ? [{ kind: 'items', id: '', op: 'before' }] : [])],
-      heard, lastServerAt, relistens, cycles, stale: dog.stale(), persisted: E.persisted,
+      heard, lastServerAt, relistens: app.relistens(), cycles, stale: app.parts.watchdog.stale(), persisted,
     });
-  };
-  // A save the server refused: kept in the app's list (Settings, Retry or Discard) and set aside in the queue, so a
-  // Retry is a new save and nothing is sent twice.
-  const reported = new Set();
-  const report = () => {
-    for (const x of queue.entries()) {
-      if (x.owner !== hid || x.state !== 'failed' || reported.has(x.key)) continue;
-      reported.add(x.key);
-      const op = x.record._deleted ? 'del' : (x.ops || []).some(o => o.put) ? 'put' : 'patch', patch = (x.ops || []).filter(o => o.patch).map(o => o.patch);
-      const err = { code: E.codes.get(x.key) || '', message: x.error };
-      console.warn('save failed', op, x.kind, err.code);
-      onError(err, { op, kind: x.kind, id: x.record.id, ...(op === 'put' && x.kind !== 'photos' ? { obj: x.record } : {}), ...(op === 'patch' ? { ops: patch.length === 1 ? patch[0] : mergeAll(patch) } : {}) });
-      void queue.archive(x.key);
-    }
-  };
-  const offQueue = queue.onChange(() => { report(); tell(); });
-  // One save per document at a time from this page, in the order made (the queue orders a document's saves by the time
-  // each was stored; two stored in the same moment could otherwise swap).
-  const chains = new Map();
-  function enqueue(kind, record, base, change, info) {
-    const k = kind + ':' + record.id;
-    const run = (chains.get(k) || Promise.resolve()).then(() => queue.save(kind, hid, record, base, { ops: change }))
-      .then(() => true, e => { if (queue.error()) { console.warn('outbox', e?.message); onError(e, info); } return false; });
-    const tail = run.finally(() => { if (chains.get(k) === tail) chains.delete(k); E.saving.delete(tail); });
-    chains.set(k, tail); E.saving.add(tail);
-    return run;
   }
-  // the listeners: each kind's whole list from the engine (this phone's copy, then the server's changes), with this
-  // phone's saves not yet sent laid over it; only what changed since the last delivery goes to the app
+  const offQueue = queue.onChange(() => tell());
+  function enqueue(kind, record, base, change, info) {
+    return app.save(kind, hid, record, base, { ops: change })
+      .then(() => true, e => { if (queue.error()) { console.warn('outbox', e?.message); onError(e, info); } return false; });
+  }
+  // the listeners (createApp watch: app-sync watchSaved): each kind's whole list from the engine (this phone's copy, then
+  // the server's changes), with this phone's saves not yet sent laid over it, again when a save is done, so the server's
+  // copy heard while it was sent shows then; only what changed since the last delivery goes to the app
   const sig = d => JSON.stringify(d);
   let offs = [];
   function deliver(k, list, m) {
     if (closed) return;
     seen[k].cache = !!m?.fromCache;
-    const now = new Map(queue.overlay(k, hid, list).map(d => [d.id, strip(d)]));
+    if (m && m.fromCache === false) heard = lastServerAt = Date.now();
+    const now = new Map(list.map(d => [d.id, d]));
     const docs = [], removed = [];
     for (const [id, d] of now) { const s = sig(d); if (known[k].get(id) !== s) { known[k].set(id, s); docs.push(d); } }
     for (const id of [...known[k].keys()]) if (!now.has(id)) { known[k].delete(id); removed.push(id); }
@@ -564,28 +532,19 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     else if (cb && (docs.length || removed.length)) cb(k, docs, removed, ofQueue(k));
     tell();
   }
-  const startListening = () => { if (!offs.length && !closed) offs = KINDS.map(k => hub.watch(hid, k, (list, m) => deliver(k, list, m))); };
+  const startListening = () => { if (!offs.length && !closed) offs = KINDS.map(k => app.watch(hid, k, (list, m) => deliver(k, list, m))); };
   const stopListening = () => { offs.splice(0).forEach(off => off()); };
-  const onMeta = (_kind, m) => { if (closed) return; dog.heard(m); if (!m.fromCache) { heard = lastServerAt = Date.now(); } };
-  E.meta.add(onMeta);
-  // The listener watchdog (app-sync, from this app's listen-watch.js): listening again stops the engines and starts them
-  // from this phone's copy; restarting the connection turns the SDK's network off and on (never on while on).
-  const dog = AS.createWatchdog({
-    relisten: why => { console.warn('listeners replaced:', why); relistens++; stopListening(); hub.stopAll().then(() => { startListening(); tell(); }); },
-    cycle: why => { console.warn('connection restarted:', why); cycles++; cycleNet().finally(tell); },
-    online: () => globalThis.navigator?.onLine !== false, quiet: () => queue.pending() === 0 && !leftover,
-  });
+  // "Reconnect and try again" (Settings): turns the SDK's network off and on (the watchdog does its own when it decides to)
   let cycling = false;
   async function cycleNet() {
-    if (cycling) return; cycling = true;
+    if (cycling) return; cycling = true; cycles++;
     // (capped: the SDK's switch waits its turn behind a save whose answer is held up)
     const turn = (async () => { await F.disableNetwork(db); await new Promise(r => setTimeout(r, 300)); await F.enableNetwork(db); })();
     try { await Promise.race([turn, new Promise(r => setTimeout(r, 4000))]); } catch (e) { console.warn('network restart', e?.code || e?.message); } finally { cycling = false; }
     turn.catch(() => {});
   }
   startListening();
-  dog.opened();
-  if (globalThis.setInterval) timer = setInterval(() => { if (!closed) dog.check(); }, 3000);
+  app.parts.watchdog.opened();
   return {
     kind: 'cloud',
     // what this phone holds now (its copy, or the server's first answer): each kind's first list, or after a few seconds
@@ -655,8 +614,8 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     listen(fn) { cb = fn; startListening(); tell(); },   // (until the app has the lists, it hears `cache`: nothing is decided from half a copy)
     // The listener watchdog: `nudge('resume')` at a moment the phone came back (online, visible, pageshow, Sync now); a timer
     // also looks every few seconds for the signs that need no event. Resolves true when it listened again or restarted.
-    nudge(event = '') { if (!offs.length) return false; const a = event ? dog.event() : dog.check(); return !!(a.relisten || a.cycle); },
-    relistens: () => relistens,
+    nudge: (event = '') => offs.length ? app.nudge(event) : false,
+    relistens: () => app.relistens(),
     // Sync now (Settings): send what is waiting, now, and wait a few seconds to know what became of it; then a read from
     // the server to prove the family can be reached ("Last heard from the family"). `cycle` (the "Reconnect and try
     // again" button) first turns the SDK's network off and on. Resolves { ok, cycled, heard }: ok = nothing of this
@@ -666,12 +625,12 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
       let cycled = false;
       if (cycle && globalThis.navigator?.onLine !== false) { cycled = true; await cycleNet(); }
       hub.replan();
-      const ok = await queue.flush(cycled ? wait + 3000 : wait) && (!leftover || await race(F.waitForPendingWrites(db), 2000));
+      const ok = await app.queue.flush(cycled ? wait + 3000 : wait) && (!leftover || await race(F.waitForPendingWrites(db), 2000));
       const reached = await race(F.getDocFromServer(F.doc(db, 'households', hid)), 6000);
       if (reached) { heard = Date.now(); tell(); }
       return { ok, cycled, heard: reached };
     },
-    close() { closed = true; clearInterval(timer); timer = 0; stopListening(); offQueue(); E.meta.delete(onMeta); },
+    close() { closed = true; stopListening(); offQueue(); if (refused === onError) refused = null; },
   };
 }
 const mergeAll = list => list.reduce((a, o) => ({ set: { ...a.set, ...o.set }, inc: { ...a.inc, ...o.inc }, del: [...a.del, ...(o.del || [])], keyed: { ...a.keyed, ...o.keyed } }), { set: {}, inc: {}, del: [], keyed: {} });

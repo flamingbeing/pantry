@@ -19,6 +19,8 @@ Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner
   reloads the page only when nothing is open or sending.
   App-sync `0.5.1` (25 Oct 2026): restore, copy-up and the sweep's deletes go through the outbox too (NOTES.md, "Every
   write behind the adapter").
+  App-sync `0.6.0` (25 Oct 2026): `js/cloud.js` wired by one `createApp` call; lists through `watchSaved` (the two-phone
+  lag fix from the stopped 0.5.2 work); "Sign out anyway" sets unsent saves aside first (NOTES.md, "Sync engine").
   Next: the backfill (`tools/backfill-server-at.mjs`, owner's go), then rules require it, then the hub reads by it
   (NOTES.md, "Sync engine").
 - Nothing blocks the build. iPhone touch is untested (only real touch events in Chromium).
