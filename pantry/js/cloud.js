@@ -282,7 +282,7 @@ export function nest(pairs) {
 // every save through the outbox is.
 async function writeAll(F, db, hid, kind, list) {
   let b = null, n = 0, bytes = 0;
-  const st = await (await sync()).fs.stampFields();
+  const st = await (await sync()).parts.adapter.stampFields();
   for (const o of list) {
     const { _saves, serverAt, ...c } = clean(kind === 'items' ? toStored(normalizeItem(o)) : o), size = JSON.stringify(c).length;
     Object.assign(c, st);   // stamped now, so every phone's delta listener hears it, and the server's own stamp (a copied one is another pantry's)
@@ -625,7 +625,7 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
       let cycled = false;
       if (cycle && globalThis.navigator?.onLine !== false) { cycled = true; await cycleNet(); }
       hub.replan();
-      const ok = await app.flush(cycled ? wait + 3000 : wait) && (!leftover || await race(F.waitForPendingWrites(db), 2000));
+      const ok = await app.queue.flush(cycled ? wait + 3000 : wait) && (!leftover || await race(F.waitForPendingWrites(db), 2000));
       const reached = await race(F.getDocFromServer(F.doc(db, 'households', hid)), 6000);
       if (reached) { heard = Date.now(); tell(); }
       return { ok, cycled, heard: reached };
