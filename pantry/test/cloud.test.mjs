@@ -99,14 +99,15 @@ assert.throws(() => updatePairs(F, null, L.mergeOps(PP.nameOps('a@b.c', 'A'), { 
   const renamed = { id: 'p1', name: 'Big fridge', order: 1, updatedAt: '2026-10-21T00:00:00.000Z' };
   assert.deepEqual(places(renamed, { id: 'p1', name: 'Fridge', order: 1, updatedAt: '1970-01-01T00:00:00.000Z' }, null, [{ put: true }]), renamed);
   assert.equal(places(null, { id: 'p1', name: 'Fridge', order: 1, updatedAt: '1970-01-01T00:00:00.000Z' }, null, [{ put: true }]).name, 'Fridge');
-  // a save's stamp always moves on from the server's, even in the same millisecond or behind it
-  const { stampAfter } = await import('../js/cloud.js');
-  const T = Date.parse('2026-10-24T01:00:00.000Z');
-  assert.equal(stampAfter({ updatedAt: '2026-10-24T01:00:00.000Z' }, T).updatedAt, '2026-10-24T01:00:00.001Z');
-  assert.equal(stampAfter({ updatedAt: '2026-10-24T02:00:00.000Z' }, T).updatedAt, '2026-10-24T02:00:00.001Z');
-  assert.equal(stampAfter({ updatedAt: '2026-10-24T00:00:00.000Z' }, T).updatedAt, '2026-10-24T01:00:00.000Z');
-  assert.equal(stampAfter({ id: 'x' }, T).updatedAt, '2026-10-24T01:00:00.000Z');
-  assert.equal(items(server, { id: 'i1', name: 'N', batches: [] }, null, [{ put: true }]).updatedAt, server.updatedAt, 'a whole document keeps the server stamp for stampAfter');
+  // a save's stamp moving on from the server's is app-sync's own rule now (0.4.0: the adapter's default stamp, taken inside
+  // the commit transaction; sync-stamps.spec.mjs runs it against the emulator): the app keeps no stamp function of its own,
+  // and no retry of `aborted` (the write queue treats it as transient)
+  const cloudSrc = (await import('node:fs')).readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');
+  assert.equal((await import('../js/cloud.js')).stampAfter, undefined, 'stampAfter is gone');
+  assert.ok(!/\bstamp:\s*doc\s*=>/.test(cloudSrc) && !/stampAfter/.test(cloudSrc), 'the adapter gets no stamp function of its own');
+  assert.ok(!/code\s*===\s*'aborted'/.test(cloudSrc), 'no retry of aborted: the queue does it');
+  assert.ok(/const SYNC = 'https:\/\/core\.anawj\.com\/sync\/0\.4\.1\/index\.js'/.test(cloudSrc), 'app-sync 0.4.1, exact pin');
+  assert.equal(items(server, { id: 'i1', name: 'N', batches: [] }, null, [{ put: true }]).updatedAt, server.updatedAt, 'a whole document keeps the server stamp');
   // field updates as the server does them
   assert.deepEqual(applyPairs({ a: { b: 1 }, n: 'x' }, [[['a', 'b'], { __inc: 2 }], [['n'], { __inc: 1 }], [['a', 'c'], { __del: true }]]), { a: { b: 3 }, n: 1 });
 }

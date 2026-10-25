@@ -221,25 +221,31 @@ export async function synced(ms = 4000) {
 }
 // Send what waits in the outbox now (tests: after the SDK's network is switched back on).
 export function kick() { engine?.queue.kick(); }
-// Signing out wipes this phone's family copy: the outbox (the sign-out check came first: synced), the copy of every
-// kind, in every tab, and the SDK's own cache (it can't be cleared while in use, so that instance is closed and the
-// next use starts a new one).
+// Signing out wipes this phone's family copy, in app-sync's order (forgetDevice): stop every listener, check the person is
+// still the one signing out, the copy of every kind (in every tab), the outbox, and the SDK's own cache (terminated, so
+// that instance can't be used again: the app reloads, `reload`). The sign-out check (`synced`) came first.
 export async function signOut() {
-  const { A, F, auth, db } = await sdk();
+  const { A, auth } = await sdk(), uid = auth.currentUser?.uid || null;
   if (engine) {
-    const { hub, stores, queue } = engine;
+    const { hub, stores, queue, fs } = engine;
     owner = '';
-    await hub.stopAll();
-    await queue.forget().catch(e => console.warn('outbox', e?.message));
-    await stores.wipeStores().catch(e => console.warn('device copy', e?.message));
+    const r = await engine.AS.forgetDevice({
+      hub, stores, queue, keep: [],
+      proceed: async () => (auth.currentUser?.uid || null) === uid,   // another tab signed in as someone else meanwhile: wipe nothing
+      clearBackendCache: emulator ? null : fs.clearCache,
+      extra: async () => { engine = null; if (!emulator) fb = null; },
+    });
+    if (!r.wiped) throw Object.assign(new Error('Signing out was stopped: someone signed in on this phone meanwhile.'), { code: 'signout-stopped' });   // (the hub is stopped: the page starts again)
+    if (r.failed.length) console.warn('sign-out steps that failed', r.failed);
   }
   await A.signOut(auth);
-  if (!emulator) {
-    engine = null;
-    try { await F.terminate(db); await F.clearIndexedDbPersistence(db); } catch (e) { console.warn('cache', e?.code || e?.message); }
-    fb = null;
-  }
+  return { reload: !emulator };   // (the SDK instance is closed outside the emulator: the page starts clean)
 }
+// How many of this phone's changes the outbox still holds (the update reload waits for none).
+export function pending() { return engine ? engine.queue.pending() : 0; }
+// The chip's state by app-sync's rules (a chip drawn by app.js): never Saved before the server has answered once, and
+// at-risk only while offline. -> { state, count }
+export function status(input) { return engine ? engine.AS.syncStatus({ atRiskOnlyOffline: true, ...input }) : null; }
 
 // The household this account belongs to (the owner adds family members by their Google email). An account can end up
 // in more than one (a second "Start our family pantry" tapped when the first couldn't be found), and a query's
@@ -429,17 +435,11 @@ export function mergeSaves(kind) {
       else if (kind === 'places' && record.updatedAt === SEED_AT && doc) continue;
       else doc = { ...(kind === 'items' ? toStored(normalizeItem(record)) : clean(record)), ...(current?.updatedAt ? { updatedAt: current.updatedAt } : {}) };
     }
-    return doc;   // (updatedAt still the server's: stampAfter moves it on)
+    return doc;   // (updatedAt still the server's: the adapter's stamp moves it on)
   };
 }
 const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
-// The stamp a save writes: now, or just after the server's own stamp when that is not earlier (two phones in the same
-// millisecond, or a clock behind), so a change always moves updatedAt on, as the rules require.
-export function stampAfter(doc, now = Date.now()) {
-  const prev = Date.parse(doc?.updatedAt || '');
-  return { ...doc, updatedAt: new Date(Number.isFinite(prev) && prev >= now ? prev + 1 : now).toISOString() };
-}
-const SYNC = 'https://core.anawj.com/sync/0.3.0/index.js';
+const SYNC = 'https://core.anawj.com/sync/0.4.1/index.js';
 // A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
 // so the sweep still sees it here first.
 const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };
@@ -458,7 +458,8 @@ async function sync() {
   const fs = AS.createFirestoreBackend({
     // stampMode 'server' (app-sync 0.3.0): every save also sets `serverAt` to the server's time, beside `updatedAt`. The
     // hub still reads by `updatedAt` until the backfill (tools/backfill-server-at.mjs) and the rules require the stamp.
-    sdk: async () => ({ F, db }), path: (hid, kind) => ['households', hid, kind], time: 'iso', mark: '_saves', stamp: doc => stampAfter(doc), stampMode: 'server',
+    // `updatedAt` is the adapter's default stamp (0.4.0): max(now, the server copy's + 1), taken inside the commit.
+    sdk: async () => ({ F, db }), path: (hid, kind) => ['households', hid, kind], time: 'iso', mark: '_saves', stampMode: 'server',
     merge: Object.fromEntries(ALL_KINDS.map(k => [k, mergeSaves(k)])),
     onSnapshotMeta: (kind, m) => { for (const fn of meta) fn(kind, m); },
   });
@@ -468,13 +469,13 @@ async function sync() {
   // (the queue keeps a failed save's message only: its code, for the plain words, is kept here)
   const queue = AS.createWriteQueue({
     store: AS.createOutbox({ name: 'pantry-outbox' }), getOwner: () => owner, online: () => globalThis.navigator?.onLine !== false,
-    // ('aborted': two phones' transactions on one document at once, after the SDK's own retries; sent again later.
+    // ('aborted', two phones' transactions on one document at once, is retried by the queue itself (app-sync 0.4.0).
     // 'permission-denied' is tried once more on a fresh read: the server judges the rules before it notices the copy read
     // was stale, so a write racing another phone's in the same millisecond can be refused for the same stamp.)
     backend: async (hid, kind, record, base, extra) => {
       const once = () => fs.commit(hid, kind, record, base, extra);
       try { return await once().catch(async e => { if (e?.code !== 'permission-denied') throw e; await new Promise(r => setTimeout(r, 50 + Math.random() * 100)); return once(); }); }
-      catch (e) { if (e?.code === 'aborted') { const t = new Error(e.message); t.code = 'unavailable'; throw t; } codes.set(extra.key, e?.code || ''); throw e; }
+      catch (e) { codes.set(extra.key, e?.code || ''); throw e; }
     },
   });
   globalThis.addEventListener?.('online', () => queue.kick());

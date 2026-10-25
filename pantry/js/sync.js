@@ -7,7 +7,6 @@
 // refused (a small list, on this phone) and says "Needs attention" until the person retries or discards it.
 
 export const MAX_REFUSED = 30;
-export const AT_RISK_MS = 10 * 60000;
 const MAX_BYTES = 200000;
 
 // The chip near the top of Home and Settings: Saved, Waiting for signal (N changes), or Needs attention.
@@ -15,16 +14,26 @@ const MAX_BYTES = 200000;
 // connection to the server); `recent`: the server was heard from within the last few seconds; `waited`: ms since the oldest unconfirmed change (a normal save is confirmed in well under
 // a second, which isn't worth a "waiting" chip).
 // `persisted`: false when the browser may clear this site's storage (app-sync persistGuard), so changes still unsent after
-// AT_RISK_MS are at risk (most browsers say false to an ordinary site; the risk is changes left for days); `stale`: the listener watchdog says the server isn't being heard, so what shows may be old.
-export function syncState({ refused = 0, pending = 0, cache = false, offline = false, waited = 0, recent = false, persisted = true, stale = false } = {}) {
+// are at risk only while the phone is offline (online they are on their way; most browsers say false to an ordinary site);
+// `stale`: the listener watchdog says the server isn't being heard, so what shows may be old; `confirmed`: the server has answered once since
+// the app opened (false: not "Saved" yet). `status`: app-sync's syncStatus answer for the same facts (cloud.status); without it the same rules run here.
+export function syncState({ refused = 0, pending = 0, cache = false, offline = false, waited = 0, recent = false, persisted = true, stale = false, confirmed = true, status = null } = {}) {
+  const st = status || statusRules({ online: !offline, pending, attention: refused, persisted, confirmed });
   const n = `${pending} ${pending === 1 ? 'change' : 'changes'}`;
   if (refused > 0) return { kind: 'attention', text: refused === 1 ? 'Needs attention' : `Needs attention (${refused})` };
-  if (pending > 0 && !persisted && waited >= AT_RISK_MS) return { kind: 'waiting', text: `Only on this phone (${n})` };
+  if (st.state === 'at-risk') return { kind: 'waiting', text: `Only on this phone (${n})` };
   // (`recent`: a snapshot came from the server a moment ago, so a listener that still says "my own copy" is behind, not the connection)
   if (pending > 0 && ((cache && !recent) || offline || waited >= 1500)) return { kind: 'waiting', text: `Waiting for signal (${n})` };
   if (pending === 0 && stale && !offline) return { kind: 'waiting', text: 'May be out of date' };
+  if (st.state === 'unknown') return { kind: 'waiting', text: 'Not checked with the family yet' };
   return { kind: 'saved', text: 'Saved' };
 }
+// app-sync's syncStatus rules for the states the chip tells apart (at-risk only while offline; unknown until the server has answered).
+const statusRules = ({ online, pending, attention, persisted, confirmed }) =>
+  attention > 0 ? { state: 'attention' } : pending > 0 && !persisted && !online ? { state: 'at-risk' } : pending === 0 && confirmed === false ? { state: 'unknown' } : { state: 'other' };
+
+// The page may reload for a new version (app-update's canReload) only with nothing open and nothing sending.
+export const reloadAllowed = ({ pending = 0, sheet = false, draft = false, typing = false, dragging = false } = {}) => !(pending > 0 || sheet || draft || typing || dragging);
 
 // Why the server said no, in plain words (never the raw error).
 export function refusedReason(code) {

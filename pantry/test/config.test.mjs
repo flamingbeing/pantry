@@ -56,6 +56,12 @@ assert.ok(!/'index\.html'/.test(sw.match(/const SHELL = \[([\s\S]*?)\];/)[1]), '
 assert.ok(sw.includes("never: [/\\/sw\\.js$/]"), 'sw.js never cached');
 assert.ok(!/take-over|Update ready/.test(fs.readFileSync(new URL('../js/app.js', import.meta.url), 'utf8')), 'no update toast');
 for (const f of ['tokens.css', 'app.css', 'app.js', 'icons.svg'].map(f => 'https://design.flamingbeing.com/v1/' + f)) assert.ok(sw.includes(`'${f}'`), f);
+// one exact app-sync version, the same in the page and the worker, with every module of the index precached
+const syncPins = new Set([...sw.matchAll(/core\.anawj\.com\/sync\/(\d+\.\d+\.\d+)\//g)].map(m => m[1]));
+assert.deepEqual([...syncPins], ['0.4.1'], 'app-sync 0.4.1 only in sw.js');
+assert.ok(fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8').includes('/sync/0.4.1/index.js'), 'cloud.js loads the same version');
+for (const m of ['sync', 'writes', 'conflict', 'store', 'outbox', 'watchdog', 'persist', 'status', 'forget', 'firestore']) assert.ok(sw.includes(`'https://core.anawj.com/sync/0.4.1/src/${m}.js'`), m + '.js in SHELL');
+assert.equal(core, '0.2.0', 'the update module at 0.2.0 (canReload)');
 console.log('pantry config: ok');
 
 // which family pantry opens when an account is in more than one: the remembered one, else the one with most people
