@@ -2770,7 +2770,7 @@ async function onClick(e) {
       haHideToast();
       if (!ok && !(await haConfirm({ title: 'Sign out now?', text: 'Some changes on this phone haven’t reached the family yet (no signal?). Signing out now loses them. Wait for signal, then sign out.', ok: 'Sign out anyway', cancel: 'Wait', danger: true }))) return;
       let out;
-      try { out = await S.cloud.signOut(); } catch (err) { return void haToast(S.cloud.explain(err, 'Signing out')); }
+      try { out = await S.cloud.signOut(); } catch (err) { haToast(S.cloud.explain(err, 'Signing out')); if (err?.code === 'signout-stopped') setTimeout(() => location.reload(), 1500); return; }
       haToast('Signed out. This phone is back to its own pantry.');
       if (out?.reload) setTimeout(() => location.reload(), 400);   // the SDK's cache was cleared and its instance closed: start clean
       return;

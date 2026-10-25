@@ -235,7 +235,7 @@ export async function signOut() {
       clearBackendCache: emulator ? null : fs.clearCache,
       extra: async () => { engine = null; if (!emulator) fb = null; },
     });
-    if (!r.wiped) throw new Error('Signing out was stopped: someone signed in on this phone meanwhile.');
+    if (!r.wiped) throw Object.assign(new Error('Signing out was stopped: someone signed in on this phone meanwhile.'), { code: 'signout-stopped' });   // (the hub is stopped: the page starts again)
     if (r.failed.length) console.warn('sign-out steps that failed', r.failed);
   }
   await A.signOut(auth);
@@ -439,7 +439,7 @@ export function mergeSaves(kind) {
   };
 }
 const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
-const SYNC = 'https://core.anawj.com/sync/0.4.0/index.js';
+const SYNC = 'https://core.anawj.com/sync/0.4.1/index.js';
 // A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
 // so the sweep still sees it here first.
 const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };

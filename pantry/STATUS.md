@@ -14,7 +14,7 @@ Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner
   multidevice, signin; PRs #5-#8 and #6). Specs block the service worker unless a test is about it (`sw: true`). CI retries
   a failed test once for a Firestore emulator flake (pantry/NOTES.md, "How to test").
 - Server stamps (24 Oct 2026): every save also writes `serverAt` (the server's time); rules allow it.
-- App-sync `0.4.0` and update `0.2.0` (25 Oct 2026): updatedAt stamped forward by the adapter, `aborted` retried by the queue,
+- App-sync `0.4.1` and update `0.2.0` (25 Oct 2026): updatedAt stamped forward by the adapter, `aborted` retried by the queue,
   the chip never says Saved before the server has answered, sign-out wipes the phone's copy and reloads, a new version
   reloads the page only when nothing is open or sending.
   Next: the backfill (`tools/backfill-server-at.mjs`, owner's go), then rules require it, then the hub reads by it
