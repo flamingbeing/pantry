@@ -21,6 +21,10 @@ Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner
   write behind the adapter").
   App-sync `0.6.0` (25 Oct 2026): `js/cloud.js` wired by one `createApp` call; lists through `watchSaved` (the two-phone
   lag fix from the stopped 0.5.2 work); "Sign out anyway" sets unsent saves aside first (NOTES.md, "Sync engine").
+  App-sync `0.6.1` (25 Oct 2026, #26): one copy (each list rebuilt from the engine's whole list; saves still being
+  handed over laid over it). App-sync `0.6.3` (25 Oct 2026): pin only; its held conflicts stay off here, because every
+  kind saves through pantry's own merge function (`mergeSaves`), which 0.6.3's held mode skips. Held conflicts for pantry
+  wait on app-sync supporting them for merge collections, then a rules change for `_edits` first.
   Next: the backfill (`tools/backfill-server-at.mjs`, owner's go), then rules require it, then the hub reads by it
   (NOTES.md, "Sync engine").
 - Nothing blocks the build. iPhone touch is untested (only real touch events in Chromium).
