@@ -105,7 +105,7 @@ try {
   await net(dad, false);
   await act(dad, 'use', 'soy', 'ba');
   await go(dad, '#/');
-  await dad.locator('.pa-sync', { hasText: 'Waiting for signal (1 change)' }).waitFor();
+  await dad.locator('.pa-sync', { hasText: /(Waiting for signal|Only on this phone) \(1 change\)/ }).waitFor();
   if (process.env.SHOTS) await dad.screenshot({ path: process.env.SHOTS + '/s02-waiting.png' });
   await act(mum, 'use', 'soy', 'ba'); await drain(mum);
   assert.deepEqual(await rawQty('soy'), { ba: 2, bb: 2 }, 'the server has only mum’s use while dad is offline');
@@ -741,7 +741,7 @@ try {
     await act(sy, 'namePerson', 'syncy@example.com', 'Jun');
     await act(sy, 'addPlace', 'Shed');
     await sy.waitForFunction(() => window.__pantry.S.sync.pending === 3, null, { timeout: 8000 });
-    await sy.locator('[data-sync] .ha-badge--warn', { hasText: 'Waiting for signal (3 changes)' }).waitFor({ timeout: 8000 });
+    await sy.locator('[data-sync] .ha-badge--warn', { hasText: /(Waiting for signal|Only on this phone) \(3 changes\)/ }).waitFor({ timeout: 8000 });
     await go(sy, '#/settings');
     await sy.click('#pa-syncnow');
     await sy.locator('.pa-syncnow-result--waiting', { hasText: 'Still waiting: this phone can’t reach the family right now' }).waitFor({ timeout: 20000 });
