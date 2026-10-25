@@ -39,7 +39,7 @@ test('a rename on one phone shows on the other: the list, the items in it, and t
   const docs = await placeDocs(fsAdmin, hid);
   expect(docs.map(d => d.name).slice(0, 3), 'the defaults became place documents, the rename kept its position').toEqual(['Kitchen cabinet', 'Kitchen fridge', 'Level 1 fridge']);
   expect(docs.length, 'one document each, none twice').toBe(11);
-  expect(Object.keys(docs[1]).sort()).toEqual(['_saves', 'id', 'name', 'order', 'serverAt', 'updatedAt']);
+  expect(Object.keys(docs[1]).sort()).toEqual(['_edits', '_saves', 'id', 'name', 'order', 'serverAt', 'updatedAt']);
   // (app-sync stamps every save as it reaches the server, the migration's too, so other phones' delta listeners hear it;
   // the server still never lets a copy made from the old list overwrite a place: cloud.js mergeSaves)
   expect(docs[0].updatedAt, 'an untouched one has a real time too').not.toBe('1970-01-01T00:00:00.000Z');
@@ -71,7 +71,7 @@ test('a rename on one phone while the other reorders the same place (offline): b
   const docs = await placeDocs(fsAdmin, hid);
   const bDoc = docs.find(d => d.id === idB);
   expect(bDoc.name).toBe('Shelf Bee'); expect(bDoc.order, 'renamed and moved').toBeLessThan(docs.find(d => d.id === idA).order);
-  expect(Object.keys(bDoc).sort()).toEqual(['_saves', 'id', 'name', 'order', 'serverAt', 'updatedAt']);
+  expect(Object.keys(bDoc).sort()).toEqual(['_edits', '_saves', 'id', 'name', 'order', 'serverAt', 'updatedAt']);
 });
 
 test('one phone removes a place while the other, offline, renames it: it stays hidden, Restore shows the new name, and a removed one never comes back', async ({ phone, fsAdmin, uid }) => {

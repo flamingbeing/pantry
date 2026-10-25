@@ -86,7 +86,7 @@ and sessions run only with `--dry` (`pantry/test/run-live-dry.sh`, local emulato
 
 ## Sync engine: app-sync (24 Oct 2026)
 
-Saves and listeners go through app-sync `0.6.3` (`https://core.anawj.com/sync/0.6.3/`, exact pin, precached by `sw.js`):
+Saves and listeners go through app-sync `0.7.3` (`https://core.anawj.com/sync/0.7.3/`, exact pin, precached by `sw.js`):
 every save goes to an outbox on the phone (IndexedDB) and then to the server in a transaction, one document at a time;
 each kind keeps a copy on the phone and listens only for documents changed since the last sync (`updatedAt`, stamped by
 the adapter as the save reaches the server: its default stamp, the later of now and the server copy's stamp plus one,
@@ -97,6 +97,17 @@ app versions from before refuse to update until the phone updates (their change 
 one-off backfill (`pantry/tools/backfill-updated-at.mjs`, dry run by default) has stamped old documents, the engine reads
 in full while any document has no stamp (`unstamped: 'full'`); drop that option once it has run. The SDK's network
 switch doesn't stop a transaction: tests go offline with the browser context as well (`test/specs/sync-lib.mjs net`).
+
+Held conflicts (app-sync 0.7.1, `cloud.js HELD`: items, shop lines, places). A save is held on its phone, never written,
+only when a field changed on both phones to different values and the merge would take this phone's; uses and adds
+(increments), different fields, the same change on both and a change made after hearing the other's go through as
+before. Every save passes the copy it was made on as its base (`baseOf`): the phone's copy before the change, or, while
+a save of that record is held, the held save's base, so later changes join the choice instead of quietly replacing the
+other phone's. `_edits` keeps who changed each field ({ by, device, at }, rules allow it on the held kinds). The phone
+that holds it says "Needs attention" and opens a popup (both versions, when in Singapore time, who and which device):
+Keep mine, Keep theirs or field by field; Settings lists any still waiting. Bookkeeping fields (`updatedBy`, removal
+stamps, `doneBy`) never clash alone: when both changed them the server's stays. Settings (list, names) is not held:
+names are keyed by email, and app-sync's field paths split on dots, so a clash there can't be shown or answered (reported).
 
 Wired by `createApp` (app-sync `0.6.0`, 25 Oct 2026): `js/cloud.js` hands Google sign-in, the device copy, the outbox
 (also in the origin's outbox list), the queue, the hub, the watchdog and sign-out (`forgetDevice`) to one call and keeps

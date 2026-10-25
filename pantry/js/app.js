@@ -40,7 +40,7 @@ const S = {
   folded: new Set(prefs.get('folded', []) || []),   // place headings folded shut on Items (Group by place); per phone
   draft: null, dirty: false, pendingRender: false, syncError: false,
   refused: prefs.get('refused', []) || [],   // changes the family pantry refused, kept here until retried or discarded (sync.js)
-  sync: { pending: 0, cache: false, since: 0, list: [], heard: 0, lastServerAt: 0, relistens: 0, cycles: 0 },   // changes this phone made that the server hasn't confirmed yet (list: each in words' records), and when the family last answered
+  sync: { pending: 0, held: 0, cache: false, since: 0, list: [], heard: 0, lastServerAt: 0, relistens: 0, cycles: 0 },   // changes this phone made that the server hasn't confirmed yet (list: each in words' records), and when the family last answered
   syncNow: { busy: false, result: null },   // Settings → Saving to the family → Sync now
   lastUndo: null,
   removedNotes: prefs.get('removedNotes', {}) || {},   // items another phone removed that this phone had changes on: id -> removedAt (until Recently removed is opened)
@@ -2398,6 +2398,77 @@ function openPerson(email) {
 }
 
 
+// ---- held conflicts (app-sync 0.7.1): this phone's change met another phone's change to the same field ----------------
+// Only the phone that made the change asks (the server never has it); nothing is overwritten until the person chooses:
+// Keep mine, Keep theirs, or field by field. Both versions show with when (Singapore time) and who.
+const HELD_WHAT = { items: 'Item', shop: 'Shopping list', places: 'Place', settings: 'Family settings' };
+function heldTitle(c) {
+  const name = c.kind === 'settings' ? '' : S[c.kind]?.get(c.id)?.name || '';
+  return `${HELD_WHAT[c.kind] || 'Change'}${name ? `: ${name}` : ''}`;
+}
+// A clashing field in words: its name, and each side's value
+const HELD_FIELD = { name: 'Name', brand: 'Brand', size: 'Size', category: 'Category', location: 'Place', order: 'Position in the list',
+  done: 'Ticked', removedAt: 'Removed', itemId: 'Linked item', list: 'Places', kind: 'Kind of place', openDays: 'Keeps once opened',
+  level: 'How much is left', notes: 'Notes', barcode: 'Barcode', thumb: 'Picture', staple: 'Always keep some' };
+function heldField(kind, path) {
+  const p = path.split('.');
+  if (p[0] === 'names') return `Name for ${nameOf(p.slice(1).join('.'))}`;
+  if (p[0] === 'batches') return p[2] === 'expiry' ? 'Use by' : p[2] === 'qty' ? 'How many' : 'Stock';
+  return HELD_FIELD[p[0]] || p[0];
+}
+function heldValue(path, v) {
+  const last = path.split('.').at(-1);
+  if (last === 'removedAt') return v ? 'Removed' : 'Not removed';
+  if (v === undefined || v === null || v === '') return 'Nothing';
+  if (typeof v === 'boolean') return v ? 'Yes' : 'No';
+  if (last === 'expiry' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return fmt(v);
+  if (last === 'thumb') return 'A picture';
+  if (path === 'batches' && typeof v === 'object') { const n = Object.values(v).reduce((a, b) => a + (Number(b?.qty) || 0), 0); return plural(n, 'unit'); }
+  if (Array.isArray(v)) return v.join(', ');
+  if (typeof v === 'object') return 'Changed';
+  return String(v);
+}
+const heldWho = (side, me) => [side.when, me ? 'this phone' : [side.by && nameOf(side.by), side.device].filter(Boolean).join(' · ') || 'another phone'].filter(Boolean).join(', ');
+function openHeld(key) {
+  if (haSheetOpen()) return null;   // (one sheet at a time: the next one asks once this is answered)
+  const d = S.backend?.describe?.(key);
+  if (!d) { redraw(); return; }
+  const c = { key, kind: d.kind, id: d.id };
+  const whole = d.deleted.mine || d.deleted.theirs || !d.fields.length;
+  const side = (f, which, me) => `<label class="ha-row pa-held-side"><input type="radio" name="f${d.fields.indexOf(f)}" value="${which}"${which === 'mine' ? ' checked' : ''}>
+      <span class="ha-row-body"><span class="ha-row-title pa-break">${esc(heldValue(f.path, f[which].value))}</span><span class="ha-row-sub">${esc(me ? 'Yours' : 'Theirs')}: ${esc(heldWho(f[which], me))}</span></span></label>`;
+  const fields = d.fields.map(f => `<fieldset class="pa-held-field"><legend class="pa-held-legend">${esc(heldField(d.kind, f.path))}</legend><div class="ha-list">${side(f, 'mine', true)}${side(f, 'theirs', false)}</div></fieldset>`).join('');
+  const lead = d.deleted.theirs ? 'It was deleted on another phone after you changed it here. Keep yours to put it back with your change, or let it go.'
+    : d.deleted.mine ? 'You deleted it here, but another phone changed it meanwhile. Keep yours to delete it, or keep theirs.'
+    : `You and another phone changed the same ${d.fields.length === 1 ? 'thing' : 'things'} at about the same time. Nothing is lost until you choose; your other changes are kept either way.`;
+  const s = haSheet({
+    title: 'Changed on two phones', closeLabel: 'Later', grey: true,
+    body: `<p class="pa-held-what" data-held-key="${esc(key)}"><strong>${esc(heldTitle(c))}</strong></p><p class="ha-section-footer pa-held-lead">${esc(lead)}</p>
+      ${whole ? `<ul class="ha-list"><li><div class="ha-row"><span class="ha-row-body"><span class="ha-row-title">Yours</span><span class="ha-row-sub">${esc(heldWho(d.mine, true))}</span></span></div></li><li><div class="ha-row"><span class="ha-row-body"><span class="ha-row-title">Theirs</span><span class="ha-row-sub">${esc(heldWho(d.theirs, false))}</span></span></div></li></ul>` : fields}
+      <div class="pa-held-acts">
+        <button type="button" class="ha-btn ha-btn--primary ha-btn--block" data-held="mine">Keep mine</button>
+        <button type="button" class="ha-btn ha-btn--block" data-held="theirs">Keep theirs</button>
+        ${!whole && d.fields.length > 1 ? '<button type="button" class="ha-btn ha-btn--quiet ha-btn--block" data-held="each">Keep what I picked</button>' : ''}
+      </div>`,
+    onClose: afterSheet,
+  });
+  s.el.addEventListener('click', async e => {
+    const b = e.target.closest('[data-held]'); if (!b) return;
+    const choice = b.dataset.held === 'each'
+      ? Object.fromEntries(d.fields.map((f, i) => [f.path, $(`input[name="f${i}"]:checked`, s.el)?.value === 'mine' ? 'mine' : 'theirs']))
+      : b.dataset.held;
+    try {
+      await S.backend.resolve(key, choice);
+      await haCloseSheet(s.el);
+      redraw();
+      haToast(choice === 'theirs' ? 'Kept theirs' : choice === 'mine' ? 'Kept yours' : 'Kept what you picked');
+      const next = S.backend.conflicts?.()[0];
+      if (next) setTimeout(() => { if (!haSheetOpen()) openHeld(next.key); }, 400);
+    } catch (err) { haToast(S.cloud.explain(err, 'Saving your choice')); }
+  });
+  return s;
+}
+
 // Settings → Saving to the family: the chip, and each change the server refused with Retry and Discard.
 function viewSaving() {
   const v = syncView(); if (!v) return '';
@@ -2405,7 +2476,9 @@ function viewSaving() {
   const row = r => `<li><div class="ha-row pa-refused"><span class="ha-row-body"><span class="ha-row-title pa-break">${esc(SY.describeRefused(r, id => S.items.get(id)?.name))}</span><span class="ha-row-sub">${esc(SY.refusedReason(r.code))}</span></span>
       <span class="pa-batch-acts"><button type="button" class="ha-btn ha-btn--small" data-act="refused-retry" data-n="${esc(r.n)}">Retry</button><button type="button" class="ha-btn ha-btn--small ha-btn--quiet" data-act="refused-discard" data-n="${esc(r.n)}">Discard</button></span></div></li>`;
   const syncRow = `<ul class="ha-list pa-syncnow"><li><button type="button" class="ha-row ha-row--action" data-act="sync-now" id="pa-syncnow"${S.syncNow.busy ? ' aria-disabled="true"' : ''}><span class="ha-row-icon">${icon('refresh')}</span><span class="ha-row-body"><span class="ha-row-title">${S.syncNow.busy ? 'Checking…' : 'Sync now'}</span><span class="ha-row-sub">Send what’s waiting and check the family can be reached</span></span></button></li></ul>`;
-  return section('Saving to the family', `${syncChip()}${syncRow}<div id="pa-sync-detail" class="pa-sync-detail">${syncDetail()}</div>${mine.length ? `<ul class="ha-list pa-refusals">${mine.map(row).join('')}</ul>` : ''}`, { id: 'saving' });
+  const held = S.backend?.conflicts?.() || [];
+  const heldRow = c => `<li><button type="button" class="ha-row ha-row--action pa-held" data-act="held-open" data-key="${esc(c.key)}"><span class="ha-row-icon">${icon('alert')}</span><span class="ha-row-body"><span class="ha-row-title pa-break">${esc(heldTitle(c))}</span><span class="ha-row-sub">Changed on another phone too. Choose which to keep</span></span></button></li>`;
+  return section('Saving to the family', `${syncChip()}${syncRow}<div id="pa-sync-detail" class="pa-sync-detail">${syncDetail()}</div>${held.length ? `<ul class="ha-list pa-held-list">${held.map(heldRow).join('')}</ul>` : ''}${mine.length ? `<ul class="ha-list pa-refusals">${mine.map(row).join('')}</ul>` : ''}`, { id: 'saving' });
 }
 // What Sync now found, what is waiting (each change in words), and when the family last answered. Redrawn on its own as the
 // state changes (drawSyncDetail), without redrawing the screen.
@@ -2420,7 +2493,8 @@ function syncDetail() {
   h += `<p class="pa-heard" id="pa-heard">Last heard from the family: ${esc(SY.heardText(S.sync.heard))}</p>`;
   const v = syncView();
   const foot = v && { saved: 'Everything done on this phone has reached the family.', waiting: 'These changes are kept on this phone and sent when there is signal. Nothing is lost by closing the app.',
-    attention: 'The family pantry would not take these. Retry sends one again; Discard drops it.' }[v.kind];
+    attention: S.sync.held && !SY.refusedFor(S.refused, S.household?.id || '').length ? 'Someone changed the same thing on another phone. Nothing is lost: choose which version to keep.'
+      : 'The family pantry would not take these. Retry sends one again; Discard drops it.' }[v.kind];
   return h + (foot ? `<p class="ha-section-footer pa-sync-foot">${esc(foot)}</p>` : '');
 }
 function drawSyncDetail() {
@@ -2802,6 +2876,7 @@ async function onClick(e) {
     case 'sync-cycle': return syncNow({ cycle: true });
     case 'refused-retry': return settleRefused(b.dataset.n, true);
     case 'refused-discard': return settleRefused(b.dataset.n, false);
+    case 'held-open': return openHeld(b.dataset.key);
     case 'person': return openPerson(b.dataset.v);
     case 'copy-up': {
       try {
@@ -2953,7 +3028,8 @@ function onRemote(kind, list, pending = []) {
 // What the chip says now (only in a family pantry: on this phone alone there is nothing to wait for).
 function syncView() {
   if (S.mode !== 'cloud') return null;
-  const refused = SY.refusedFor(S.refused, S.household?.id || '').length, offline = navigator.onLine === false;
+  // (needs the person: a change the server refused, or one held because another phone changed the same thing)
+  const refused = SY.refusedFor(S.refused, S.household?.id || '').length + (S.sync.held || 0), offline = navigator.onLine === false;
   const confirmed = !!S.sync.lastServerAt, persisted = S.sync.persisted !== false;   // (confirmed: the server has answered since the app opened)
   return SY.syncState({
     refused, pending: S.sync.pending, cache: S.sync.cache, offline, waited: S.sync.since ? Date.now() - S.sync.since : 0,
@@ -2985,10 +3061,12 @@ function drawSync() {
 // The cloud backend's count of this phone's unconfirmed changes (and whether it is showing its own copy). A change that
 // stays unconfirmed for a moment turns the chip to "Waiting for signal"; a normal save confirms before that.
 function onSyncState(st) {
-  const was = S.sync.pending;
-  S.sync = { pending: st.pending, cache: st.cache, since: st.pending > 0 ? (was > 0 ? S.sync.since : Date.now()) : 0, list: st.list || [], heard: st.heard || S.sync.heard || 0, lastServerAt: st.lastServerAt || 0, relistens: st.relistens || 0, cycles: st.cycles || 0, stale: !!st.stale, persisted: st.persisted !== false };
+  const was = S.sync.pending, heldWas = S.sync.held || 0;
+  S.sync = { pending: st.pending, held: st.held || 0, cache: st.cache, since: st.pending > 0 ? (was > 0 ? S.sync.since : Date.now()) : 0, list: st.list || [], heard: st.heard || S.sync.heard || 0, lastServerAt: st.lastServerAt || 0, relistens: st.relistens || 0, cycles: st.cycles || 0, stale: !!st.stale, persisted: st.persisted !== false };
   drawSync(); drawSyncDetail();
   adoptName();
+  // a change of this phone's just met another phone's change to the same thing: ask now (Settings keeps the list too)
+  if (S.sync.held > heldWas) setTimeout(() => { if (!haSheetOpen()) { const c = S.backend?.conflicts?.()[0]; if (c) openHeld(c.key); } }, 0);
   clearTimeout(syncTimer);
   if (st.pending > 0) syncTimer = setTimeout(drawSync, 1600);
 }
@@ -3030,7 +3108,7 @@ async function useHousehold(h) {
   S.household = h; S.lost = null;
   prefs.set('household', h.id);
   S.backend?.close?.();
-  S.sync = { pending: 0, cache: false, since: 0, list: [], heard: 0, lastServerAt: 0, relistens: 0, cycles: 0 }; S.syncNow = { busy: false, result: null };
+  S.sync = { pending: 0, held: 0, cache: false, since: 0, list: [], heard: 0, lastServerAt: 0, relistens: 0, cycles: 0 }; S.syncNow = { busy: false, result: null };
   S.backend = await S.cloud.openCloud(h.id, onWriteError, onSyncState);
   S.mode = 'cloud';
   S.pics.clear();
@@ -3351,7 +3429,8 @@ async function start() {
       beforeReload: () => S.cloud?.synced?.(1500),
     });
   }
-  window.__pantry = { ...(window.__pantry || {}), S, redraw, places: () => placeList().map(e => e.name), ...(EMULATOR ? { act: testActions, synced: ms => S.cloud.synced(ms), kick: () => S.cloud.kick() } : {}) };
+  window.__pantry = { ...(window.__pantry || {}), S, redraw, places: () => placeList().map(e => e.name), ...(EMULATOR ? { act: testActions, synced: ms => S.cloud.synced(ms), kick: () => S.cloud.kick(),
+    held: () => S.backend?.conflicts?.() || [], describeHeld: key => S.backend?.describe?.(key) || null, openHeld: key => { openHeld(key); } } : {}) };
   setTimeout(maybeWelcome, 300);
 }
 

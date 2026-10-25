@@ -99,6 +99,15 @@ assert.throws(() => updatePairs(F, null, L.mergeOps(PP.nameOps('a@b.c', 'A'), { 
   const renamed = { id: 'p1', name: 'Big fridge', order: 1, updatedAt: '2026-10-21T00:00:00.000Z' };
   assert.deepEqual(places(renamed, { id: 'p1', name: 'Fridge', order: 1, updatedAt: '1970-01-01T00:00:00.000Z' }, null, [{ put: true }]), renamed);
   assert.equal(places(null, { id: 'p1', name: 'Fridge', order: 1, updatedAt: '1970-01-01T00:00:00.000Z' }, null, [{ put: true }]).name, 'Fridge');
+  // a whole document made on a known copy (base: the HELD kinds) keeps what changed elsewhere meanwhile and this phone left
+  // as it was: a removal, another field, another batch (an answered held conflict is saved this way, on the copy it met)
+  const was = { id: 'p2', name: 'Shed', order: 2 };
+  const gone = { ...was, removedAt: '2026-10-25T01:00:00.000Z', removedBy: 'Mum', name: 'Garden shed' };
+  assert.deepEqual(places(gone, { ...was, order: 1 }, was, [{ put: true }]), { ...gone, order: 1 }, 'removed and renamed there, moved here: all three');
+  assert.deepEqual(places(gone, { ...was, name: 'Store' }, was, [{ put: true }]).name, 'Store', 'the same field changed on both: this phone\'s (app-sync holds it)');
+  const two = items({ ...server, batches: { b1: { qty: 2 }, b2: { qty: 5 } } }, { id: 'i1', name: 'Kaya', batches: [{ id: 'b1', qty: 1 }] }, { id: 'i1', name: 'Kaya', batches: { b1: { qty: 2 } } }, [{ put: true }]);
+  assert.deepEqual(two.batches, { b1: { qty: 1 }, b2: { qty: 5 } }, 'a batch added elsewhere stays');
+  assert.equal('removedAt' in places({ ...was, removedAt: 'x' }, was, { ...was, removedAt: 'x' }, [{ put: true }]), false, 'put back here (removedAt gone): gone');
   // a save's stamp moving on from the server's is app-sync's own rule now (0.4.0: the adapter's default stamp, taken inside
   // the commit transaction; sync-stamps.spec.mjs runs it against the emulator): the app keeps no stamp function of its own,
   // and no retry of `aborted` (the write queue treats it as transient)
@@ -106,8 +115,38 @@ assert.throws(() => updatePairs(F, null, L.mergeOps(PP.nameOps('a@b.c', 'A'), { 
   assert.equal((await import('../js/cloud.js')).stampAfter, undefined, 'stampAfter is gone');
   assert.ok(!/\bstamp:\s*doc\s*=>/.test(cloudSrc) && !/stampAfter/.test(cloudSrc), 'the adapter gets no stamp function of its own');
   assert.ok(!/code\s*===\s*'aborted'/.test(cloudSrc), 'no retry of aborted: the queue does it');
-  assert.ok(/const SYNC = 'https:\/\/core\.anawj\.com\/sync\/0\.6\.3\/index\.js'/.test(cloudSrc), 'app-sync 0.6.3, exact pin');
+  assert.ok(/const SYNC = 'https:\/\/core\.anawj\.com\/sync\/0\.7\.3\/index\.js'/.test(cloudSrc), 'app-sync 0.7.3, exact pin');
   assert.equal(items(server, { id: 'i1', name: 'N', batches: [] }, null, [{ put: true }]).updatedAt, server.updatedAt, 'a whole document keeps the server stamp');
+  // held conflicts (app-sync 0.7.1): who and when, changed on both sides since base, keep the server's value (so the clash
+  // check, which holds only where the merge takes this phone's value over another's, never asks about them); the change
+  // itself still lands, and with no change elsewhere (or no base) this phone's name is written as before
+  {
+    const base = { id: 'i1', name: 'Rice', batches: { b1: { qty: 3 } }, updatedBy: 'Mum' };
+    const server = { ...base, batches: { b1: { qty: 2 } }, updatedBy: 'Dad', updatedAt: '2026-10-25T08:00:00.000Z' };
+    const use = [{ patch: { set: { updatedBy: 'Me' }, inc: { 'batches.b1.qty': -1 }, del: [] } }];
+    const both = items(server, { id: 'i1' }, base, use);
+    assert.equal(both.updatedBy, 'Dad', 'updatedBy changed on both sides: the server\'s stays');
+    assert.equal(both.batches.b1.qty, 1, 'both uses count');
+    assert.equal(items(base, { id: 'i1' }, base, use).updatedBy, 'Me', 'nothing changed elsewhere: this phone\'s name');
+    assert.equal(items(server, { id: 'i1' }, null, use).updatedBy, 'Me', 'no base (not held): as before');
+    const lineBase = { id: 'l1', name: 'Milk', done: false };
+    const lineServer = { ...lineBase, done: true, doneBy: 'Dad', removedAt: '2026-10-25T08:00:00.000Z', removedBy: 'Dad' };
+    const tick = [{ patch: { set: { done: true, doneBy: 'Me' }, inc: {}, del: [] } }];
+    assert.deepEqual([shop(lineServer, { id: 'l1' }, lineBase, tick).doneBy, shop(lineServer, { id: 'l1' }, lineBase, tick).done], ['Dad', true], 'both ticked: no clash about who');
+    const rm = [{ patch: L.removeOps('Me', '2026-10-25T09:00:00.000Z') }];
+    const removedTwice = shop(lineServer, { id: 'l1' }, lineBase, rm);
+    assert.deepEqual([removedTwice.removedAt, removedTwice.removedBy], [lineServer.removedAt, 'Dad'], 'removed on both phones: the first removal stays');
+    const restored = { ...lineBase, done: false };   // put back elsewhere while this phone removed it: a real clash, left to the check
+    assert.equal(shop(restored, { id: 'l1' }, { ...lineBase, removedAt: 'x', removedBy: 'Dad' }, rm).removedAt, '2026-10-25T09:00:00.000Z');
+  }
+  // this phone's name in the popup, from the browser
+  const { deviceName, HELD } = await import('../js/cloud.js');
+  assert.equal(deviceName('Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)'), 'iPhone');
+  assert.equal(deviceName('Mozilla/5.0 (Linux; Android 15; Pixel 9) Mobile Safari'), 'Android phone');
+  assert.equal(deviceName('Mozilla/5.0 (Windows NT 10.0; Win64; x64)'), 'Windows computer');
+  assert.equal(deviceName(''), 'Computer');
+  assert.deepEqual(HELD, ['items', 'shop', 'places'], 'history, photos and settings stay as they were');
+  assert.match(cloudSrc, /held: Object\.fromEntries\(HELD\.map\(k => \[k, true\]\)\), edits: '_edits'/, 'held kinds named, with _edits');
   // field updates as the server does them
   assert.deepEqual(applyPairs({ a: { b: 1 }, n: 'x' }, [[['a', 'b'], { __inc: 2 }], [['n'], { __inc: 1 }], [['a', 'c'], { __del: true }]]), { a: { b: 3 }, n: 1 });
 }

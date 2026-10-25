@@ -4,9 +4,10 @@
 // npx playwright test shopline runs that seed again.
 //
 // What must hold when everyone is back online and everything has been sent: each line's done is the last tick (line k is
-// ticked only by phone k % 3), a removed line nobody restored stays removed, and every phone shows what the server has.
+// ticked only by phone k % 3), a removed line nobody restored stays removed, every phone shows what the server has, and
+// every change held for a person (removed here, put back there) was answered.
 import { test, expect } from './fixtures.mjs';
-import { person, seedFamily, inFamily, drain, net, act } from './sync-lib.mjs';
+import { person, seedFamily, inFamily, drain, net, act, settle, answerHeld } from './sync-lib.mjs';
 
 const STEPS = Number(process.env.STEPS || 60);
 const rng = seed => { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; };
@@ -36,8 +37,8 @@ for (const first of [5, 404]) {
       const i = Math.floor(R() * 3), p = phones[i], r = R();
       if (r < 0.08) {
         // (as multidevice: a phone drops offline only once what it sent is confirmed, and sends everything when back)
-        if (!offline[i]) await drain(p);
-        offline[i] = !offline[i]; await net(p, !offline[i]); if (!offline[i]) await drain(p);
+        if (!offline[i]) await settle(p);
+        offline[i] = !offline[i]; await net(p, !offline[i]); if (!offline[i]) await settle(p);
         log.push(`${step} p${i} ${offline[i] ? 'offline' : 'online'}`);
       } else if (r < 0.2) {
         // tick and untick at once (two saves to one line within a moment: the second must win everywhere)
@@ -56,6 +57,14 @@ for (const first of [5, 404]) {
       await jitter(p, R);
     }
     for (let i = 0; i < 3; i++) if (offline[i]) await net(phones[i], true);
+    // a line removed on one phone while another put it back (both offline): the later one is held on its phone (app-sync
+    // 0.7.1) and answered in its popup, at random; its ticks made meanwhile join that answer, so the last tick still wins
+    let held = 0;
+    for (let round = 0; round < 6; round++) {
+      let any = false;
+      for (const p of phones) { await settle(p); const a = await answerHeld(p, () => pick(['mine', 'theirs'])); if (a.length) { any = true; held += a.length; log.push(`answered ${a.map(x => `${x.id.split('-')[1]} ${x.choice}`).join(', ')}`); } }
+      if (!any) break;
+    }
     for (const p of phones) await drain(p);
     const check = async () => {
       let problem = '';
@@ -68,6 +77,7 @@ for (const first of [5, 404]) {
         for (const [n, p] of phones.entries()) { const l = await localLine(p, lid); if (l.removed !== gone || l.done !== raw.done) problem += `${lid}: phone ${n} has done ${l.done}/removed ${l.removed}, the server ${raw.done}/${gone}; `; }
       }
       for (const p of phones) { const n = await p.evaluate(() => window.__pantry.S.refused.length); if (n) problem += `a phone has ${n} refused change(s); `; }
+      for (const p of phones) { const n = await p.evaluate(() => window.__pantry.held().length); if (n) problem += `a phone still holds ${n} change(s); `; }
       return problem;
     };
     try { await expect.poll(check, { timeout: 20_000, intervals: [500], message: `seed ${seed}` }).toBe(''); } catch (e) {

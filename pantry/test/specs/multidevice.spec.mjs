@@ -9,7 +9,10 @@
 //     was offline. (The screen shows max(0, that): stock never below 0.)
 //   - all three phones show what the server has (quantities and names); a name is one of the names someone saved;
 //   - the history (events) on the server is exactly the lines created and not undone;
-//   - no change was refused and left in "Needs attention";
+//   - no change was refused and left in "Needs attention"; two phones setting the same field to different values (a rename, a
+//     move, an order, removed vs put back) hold the later change on its phone (app-sync 0.7.1), never overwrite: each is
+//     answered in the popup at random (mine, theirs or field by field), the server then has exactly the chosen values, and
+//     no phone holds anything at the end. Uses and adds are instructions: they never clash and are never lost to an answer;
 //   - deletes are markers (removedAt): Rice is only ever deleted, Milk deleted and restored (a phone restores only what it sees
 //     removed, as the button does), Eggs never; at the end a deleted item nobody restored is still removed on the server and on
 //     every phone (nothing brings it back: not a use, an add, an undo or an edit that landed on it, online or not), Eggs is
@@ -32,7 +35,7 @@
 // Two tests (two seeds, so two workers can run them side by side); each repeat of a run uses other seeds.
 // Run: npx playwright test multidevice
 import { test, expect } from './fixtures.mjs';
-import { person, seedFamily, inFamily, drain } from './sync-lib.mjs';
+import { person, seedFamily, inFamily, drain, settle, answerHeld, valueAt } from './sync-lib.mjs';
 import * as Ord from '../../js/order.js';
 
 const STEPS = Number(process.env.STEPS || 36);
@@ -102,7 +105,7 @@ for (const first of [11, 2026]) {
     const nameLast = emails.map(e => names0[e] ?? ''), nameEver = emails.map(() => new Set());
     const placeIds = [], placeNameEver = {}, placeRemoved = new Set(), placeRestored = new Set();
     const locs = Object.fromEntries(ids.map(id => [id, new Set(['Fridge'])])), orderEver = Object.fromEntries(ids.map(id => [id, new Set()]));
-    const counts = { reorder: 0, 'bulk move': 0, use: 0, add: 0, open: 0, rename: 0, undo: 0, delete: 0, restore: 0, tick: 0, 'remove line': 0, 'restore line': 0, 'name myself': 0, 'add place': 0, 'rename place': 0, 'move place': 0, 'remove place': 0, 'restore place': 0, toggles: 0 };
+    const counts = { reorder: 0, 'bulk move': 0, use: 0, add: 0, open: 0, rename: 0, undo: 0, delete: 0, restore: 0, tick: 0, 'remove line': 0, 'restore line': 0, 'name myself': 0, 'add place': 0, 'rename place': 0, 'move place': 0, 'remove place': 0, 'restore place': 0, held: 0, toggles: 0 };
 
     for (let step = 0; step < STEPS; step++) {
       const i = Math.floor(R() * 3), p = phones[i], id = pick(ids);
@@ -154,8 +157,9 @@ for (const first of [11, 2026]) {
         // write and the phone hearing so makes the phone send that write again, and an increment applied twice counts
         // twice. That is how Firestore's `increment` works; NOTES.md says so. It needs a connection lost within a
         // fraction of a second of a save, and the test can't make it come out right, so it avoids it.)
-        if (!offline[i]) await drain(p);
-        offline[i] = !offline[i]; await net(p, !offline[i]); if (!offline[i]) await drain(p); counts.toggles++;
+        // (settle: held changes wait for a person, not for the line; they are answered at the end)
+        if (!offline[i]) await settle(p);
+        offline[i] = !offline[i]; await net(p, !offline[i]); if (!offline[i]) await settle(p); counts.toggles++;
       }
       else if (r < 0.32) {
         const mine = (await local(p, id)).batches.filter(([, q]) => q > 0);
@@ -195,6 +199,30 @@ for (const first of [11, 2026]) {
     }
     // everyone back online; everything sent; then every phone and the server must agree
     for (let i = 0; i < 3; i++) if (offline[i]) await net(phones[i], true);   // (switching the network on when it is already on trips an assertion in Firestore 10.14.1)
+    // held conflicts (app-sync 0.7.1): two phones set the same field to different values; the later one holds its change for
+    // its person, who answers in the popup (Keep mine, Keep theirs or field by field, at random). Then the server has exactly
+    // what was chosen. An answer saved over a copy that changed meanwhile (another phone's answer) is held again and answered
+    // again, so this goes round until no phone holds anything.
+    for (let round = 0; round < 6; round++) {
+      let any = false;
+      for (const [n, p] of phones.entries()) {
+        await settle(p);
+        const answers = await answerHeld(p, () => pick(['mine', 'theirs', 'each']), () => pick(['mine', 'theirs']));
+        if (!answers.length) continue;
+        any = true; counts.held += answers.length;
+        await settle(p);
+        if ((await p.evaluate(() => window.__pantry.held().length))) continue;   // (held again: the next round answers it)
+        for (const a of answers) {
+          const raw = await fsAdmin.get(`households/${hid}/${a.kind}/${a.id}`);
+          if (a.deleted) continue;
+          for (const f of a.fields) {
+            const got = valueAt(raw, f.path);
+            if (JSON.stringify(got ?? null) !== JSON.stringify(f.value ?? null)) throw new Error(`seed ${seed}: phone ${n} chose ${f.side} for ${a.kind}/${a.id} ${f.path} = ${JSON.stringify(f.value)}, the server has ${JSON.stringify(got)}`);
+          }
+        }
+      }
+      if (!any) break;
+    }
       const check = async () => {
         let problem = '';
       for (const p of phones) await drain(p);
@@ -273,6 +301,7 @@ for (const first of [11, 2026]) {
       const mineOnServer = [...onServer].filter(x => x);
       for (const e of events) if (!onServer.has(e)) problem += `event ${e} missing; `;
       for (const p of phones) { const n = await p.evaluate(() => window.__pantry.S.refused.length); if (n) problem += `a phone has ${n} refused change(s); `; }
+      for (const p of phones) { const n = await p.evaluate(() => window.__pantry.held().length); if (n) problem += `a phone still holds ${n} change(s) nobody answered; `; }
         return problem;
       };
       try { await expect.poll(check, { timeout: 40_000, intervals: [500], message: `seed ${seed}` }).toBe(''); } catch (e) {

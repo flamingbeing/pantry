@@ -159,37 +159,54 @@ try {
   await dad.waitForFunction(() => window.__pantry.S.items.get('old3')._arr === true);
   assert.deepEqual(await shown(dad, 'old3'), { y1: 3 });
   await act(dad, 'use', 'old3'); await both('old3', { y1: 2 }, 'converted again');
-  // 7. a change the server refuses is kept on the phone and says Needs attention, with Retry and Discard
-  await admin.put(`households/${hid}/items/gone`, { id: 'gone', name: 'Gone soon', ...base, batches: { g1: { qty: 2, expiry: '2027-01-01' } } });
-  await has(dad, 'gone');
-  await net(dad, false);
-  await admin.del(`households/${hid}/items/gone`);
-  await act(dad, 'use', 'gone');
-  await net(dad, true);
+  // 7. a change to an item deleted on another phone meanwhile (the sweep): held on this phone, never refused or lost; the
+  // popup asks (app-sync held conflicts): Keep theirs lets it go, Keep mine puts it back with the change
+  const answer = async (p, choice, lead = /deleted on another phone/) => {
+    const sheet = p.locator('[data-held-key]'); await sheet.waitFor();
+    assert.match(await p.locator('.pa-held-lead').textContent(), lead);
+    const key = await sheet.getAttribute('data-held-key');
+    await p.locator(`.ha-sheet:has([data-held-key="${key}"]) [data-held="${choice}"]`).click();
+    await p.locator(`[data-held-key="${key}"]`).waitFor({ state: 'detached' });
+  };
+  for (const [id, choice] of [['gone', 'theirs'], ['gone2', 'mine']]) {
+    await admin.put(`households/${hid}/items/${id}`, { id, name: 'Gone ' + id, ...base, batches: { g1: { qty: 2, expiry: '2027-01-01' } } });
+    await has(dad, id);
+    await net(dad, false);
+    await admin.del(`households/${hid}/items/${id}`);
+    await act(dad, 'use', id);
+    await net(dad, true);
+    await go(dad, '#/');
+    await dad.locator('.pa-sync', { hasText: 'Needs attention' }).waitFor();
+    assert.equal(await admin.get(`households/${hid}/items/${id}`), null, 'nothing written until the person chooses');
+    if (process.env.SHOTS && id === 'gone') await dad.screenshot({ path: process.env.SHOTS + '/s03-held-deleted.png' });
+    await answer(dad, choice);
+    await dad.locator('.pa-sync', { hasText: 'Saved' }).waitFor();
+    const now = await admin.get(`households/${hid}/items/${id}`);
+    if (choice === 'theirs') assert.equal(now, null, 'Keep theirs: it stays deleted');
+    else assert.equal(now?.batches?.g1?.qty, 1, 'Keep mine: back, with the use');
+    assert.equal(await dad.evaluate(() => window.__pantry.S.refused.length), 0, 'nothing refused');
+  }
+  // a change the server refuses (the rules: a shopping line's name over 80) is kept on the phone and says Needs
+  // attention, with Retry (refused again: still kept) and Discard
+  await admin.put(`households/${hid}/shop/long`, { id: 'long', name: 'Long name', done: false, itemId: null, at: '2026-10-16T00:00:00.000Z', by: 'Mum' });
+  await dad.waitForFunction(() => window.__pantry.S.shop.has('long'));
+  await act(dad, 'rename', 'long', 'x'.repeat(81));
   await go(dad, '#/');
   await dad.locator('.pa-sync', { hasText: 'Needs attention' }).waitFor();
   assert.equal(await dad.evaluate(() => window.__pantry.S.refused.length), 1);
   assert.equal(await dad.evaluate(() => JSON.parse(localStorage.getItem('pantry:refused')).length), 1, 'kept on the phone');
   await go(dad, '#/settings');
-  await dad.locator('#main .pa-refused', { hasText: 'Gone soon' }).waitFor();
-  assert.match(await dad.locator('#main .pa-refused').textContent(), /removed on another phone/);
+  await dad.locator('#main .pa-refused').first().waitFor();
+  assert.match(await dad.locator('#main .pa-refused').first().textContent(), /wouldn’t take it/);
   assert.equal(await dad.locator('[data-act="refused-retry"]').count(), 1); assert.equal(await dad.locator('[data-act="refused-discard"]').count(), 1);
   if (process.env.SHOTS) await dad.screenshot({ path: process.env.SHOTS + '/s03-attention.png' });
-  // retry: the item is gone, so there is nothing to change; the entry goes
-  await dad.click('[data-act="refused-retry"]'); await settle(dad);
-  await dad.locator('.pa-sync', { hasText: 'Saved' }).waitFor();
-  assert.equal(await dad.evaluate(() => window.__pantry.S.refused.length), 0);
-  assert.equal(await admin.get(`households/${hid}/items/gone`), null, 'a retry never brings a deleted item back');
-  // discard
-  await admin.put(`households/${hid}/items/gone2`, { id: 'gone2', name: 'Gone too', ...base, batches: { g1: { qty: 2, expiry: '2027-01-01' } } });
-  await has(dad, 'gone2'); await net(dad, false);
-  await admin.del(`households/${hid}/items/gone2`);
-  await act(dad, 'use', 'gone2'); await net(dad, true);
-  await dad.locator('.pa-sync', { hasText: 'Needs attention' }).waitFor();
+  await dad.click('[data-act="refused-retry"]');
+  await dad.waitForFunction(() => window.__pantry.S.refused.length === 1);   // (sent again, refused again: kept)
+  await dad.locator('[data-act="refused-discard"]').waitFor();
   await dad.click('[data-act="refused-discard"]'); await settle(dad);
-  await dad.locator('.pa-sync', { hasText: 'Saved' }).waitFor();
+  await dad.waitForFunction(() => window.__pantry.S.refused.length === 0);
   assert.equal(await dad.evaluate(() => JSON.parse(localStorage.getItem('pantry:refused')).length), 0);
-  assert.equal(await admin.get(`households/${hid}/items/gone2`), null);
+  assert.equal((await admin.get(`households/${hid}/shop/long`)).name, 'Long name', 'the server never had it');
 
   // ---- the rules for stock: the map and the array both accepted, anything else refused; history is write-once ----
   const stockRules = await mum.evaluate(async hid => {
@@ -308,12 +325,14 @@ try {
       for (const ph of [mum, dad]) await settle(ph, ([i, w]) => { const it = window.__pantry.S.items.get(i); return JSON.stringify([it.location, it.batches[0].qty, it.name]) === w; }, [id, JSON.stringify([loc, qty, name])]);
       for (const ph of [mum, dad]) assert.deepEqual(await ph.evaluate(i => { const it = window.__pantry.S.items.get(i); return [it.location, it.batches[0].qty, it.name]; }, id), [loc, qty, name], id + ' on a phone');
     }
-    // two bulk moves of the same item to different places at once: one place wins, on every phone (a field: last write)
+    // two bulk moves of the same item to different places at once: the later is held on its phone, whose person chooses
+    // (here Keep mine); then that place, on every phone
     await net(dad, false);
     await act(dad, 'bulkMove', ['bm1'], 'Fridge'); await act(mum, 'bulkMove', ['bm1'], 'Laundry'); await drain(mum);
-    await net(dad, true); await drain(dad);
+    await net(dad, true);
+    await answer(dad, 'mine', /same thing/); await drain(dad);
     const won = (await admin.get(`households/${hid}/items/bm1`)).location;
-    assert.ok(['Fridge', 'Laundry'].includes(won), 'one of the two places: ' + won);
+    assert.equal(won, 'Fridge', 'the place Dad chose');
     for (const ph of [mum, dad]) await settle(ph, w => window.__pantry.S.items.get('bm1').location === w, won);
     for (const ph of [mum, dad]) assert.equal(await ph.evaluate(() => window.__pantry.S.items.get('bm1').location), won, 'both phones agree');
 

@@ -376,18 +376,58 @@ export function applyPairs(doc, pairs) {
 // on this phone can no longer overwrite another phone's change. A place made from the old single list (SEED_AT) is
 // written only when the place isn't there yet, as the rules have it.
 export function mergeSaves(kind) {
-  return (current, record, _base, ops) => {
+  return (current, record, base, ops) => {
     let doc = current ? clean(current) : null;
     for (const o of ops && ops.length ? ops : [{ put: true }]) {
       if (o.patch) doc = applyPairs(doc || { id: record.id }, updatePairs(OPS_F, kind === 'items' && doc && Array.isArray(doc.batches) ? normalizeItem(doc) : null, o.patch));
       else if (kind === 'places' && record.updatedAt === SEED_AT && doc) continue;
-      else doc = { ...(kind === 'items' ? toStored(normalizeItem(record)) : clean(record)), ...(current?.updatedAt ? { updatedAt: current.updatedAt } : {}) };
+      else {
+        const mine = kind === 'items' ? toStored(normalizeItem(record)) : clean(record);
+        // made on a known copy (`base`, the HELD kinds): what this phone left as it was keeps the server's (a removal or
+        // a rename made elsewhere meanwhile stays); without one, the document replaces it (last write wins)
+        doc = { ...(doc && base ? merge3(doc, clean(base), mine) : mine), ...(current?.updatedAt ? { updatedAt: current.updatedAt } : {}) };
+      }
     }
+    // Who and when (BOOKKEEPING), changed on both sides since `base`: the server's stays. Two phones using the same item,
+    // ticking the same line or removing the same thing each write their own name and time; that is no clash to ask about
+    // (held conflicts, app-sync 0.7.1: a field where this keeps the server's value is never held).
+    if (doc && current && base) for (const f of BOOKKEEPING) if (f in current && f in doc && current[f] !== base[f] && doc[f] !== current[f]) doc[f] = current[f];
     return doc;   // (updatedAt still the server's: the adapter's stamp moves it on)
   };
 }
+const BOOKKEEPING = ['updatedBy', 'removedAt', 'removedBy', 'doneBy'];
+const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+const plain = v => !!v && typeof v === 'object' && !Array.isArray(v);
+// Three-way, field by field (maps inside too): unchanged here since `base`, the server's; unchanged there, this phone's;
+// changed on both, this phone's (app-sync holds that one when the values differ). A field gone is left out.
+export function merge3(cur, base, mine) {
+  if (same(mine, base)) return cur;
+  if (same(cur, base) || !plain(cur) || !plain(mine)) return mine;
+  const out = {};
+  for (const k of new Set([...Object.keys(cur), ...Object.keys(mine), ...Object.keys(plain(base) ? base : {})])) {
+    const v = merge3(cur[k], plain(base) ? base[k] : undefined, mine[k]);
+    if (v !== undefined) out[k] = v;
+  }
+  return out;
+}
 const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
-const SYNC = 'https://core.anawj.com/sync/0.6.3/index.js';
+const SYNC = 'https://core.anawj.com/sync/0.7.3/index.js';
+// Held conflicts (app-sync 0.7.1): a field changed on this phone and on another to different values is kept on this phone
+// for the person to choose (Keep mine / Keep theirs / per field), never overwritten. History lines are write-once and a
+// photo is one whole picture: those stay as they were. So do settings: the names are keyed by email, and app-sync 0.7.1
+// names a clashing field by its keys joined with dots, which an email's own dots would split (Keep theirs would write a
+// broken name).
+export const HELD = ['items', 'shop', 'places'];
+// This phone as people know it, for "changed on Dad's iPhone" in the conflict popup (no setting: the browser's own words)
+export function deviceName(ua = globalThis.navigator?.userAgent || '') {
+  if (/iPhone/.test(ua)) return 'iPhone';
+  if (/iPad/.test(ua) || /Macintosh/.test(ua) && globalThis.navigator?.maxTouchPoints > 1) return 'iPad';
+  if (/Android/.test(ua)) return /Mobile/.test(ua) ? 'Android phone' : 'Android tablet';
+  if (/Macintosh/.test(ua)) return 'Mac';
+  if (/Windows/.test(ua)) return 'Windows computer';
+  if (/CrOS/.test(ua)) return 'Chromebook';
+  return 'Computer';
+}
 // A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
 // so the sweep still sees it here first.
 const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };
@@ -422,7 +462,11 @@ function sync() {
       // hub still reads by `updatedAt` (its stampMode 'client' below) until the backfill (tools/backfill-server-at.mjs)
       // and the rules require the stamp. `updatedAt` is the adapter's default stamp (0.4.0): max(now, the server copy's
       // + 1), taken inside the commit.
-      backend: { time: 'iso', mark: '_saves', stampMode: 'server', merge: Object.fromEntries(ALL_KINDS.map(k => [k, mergeSaves(k)])) },
+      // held + edits (0.7.1): the HELD kinds keep their merge function and hold a same-field clash for this phone's person;
+      // `_edits` records who changed each field and when (the rules allow it on those kinds only)
+      backend: { time: 'iso', mark: '_saves', stampMode: 'server', merge: Object.fromEntries(ALL_KINDS.map(k => [k, mergeSaves(k)])),
+        held: Object.fromEntries(HELD.map(k => [k, true])), edits: '_edits' },
+      device: deviceName(),
       stores: { metaOnly: [] },
       hub: { bin: null, unstamped: 'full', expire: { items: EXPIRE, shop: EXPIRE, places: EXPIRE }, stampMode: 'client' },
       report,
@@ -504,20 +548,30 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
       return { kind: x.kind, id: x.record.id, op: x.record._deleted ? 'del' : patch && !(x.ops || []).some(o => o.put) ? 'patch' : 'put', ...(patch ? { ops: patch.patch } : {}), name: x.record.name || '' };
     });
     onSync({
+      held: held().length,
       pending: mine.length + (leftover ? 1 : 0), cache: !cb || KINDS.some(k => seen[k].cache), list: [...list, ...(leftover ? [{ kind: 'items', id: '', op: 'before' }] : [])],
       heard, lastServerAt, relistens: app.relistens(), cycles, stale: app.parts.watchdog.stale(), persisted,
     });
   }
+  // this household's held conflicts (app-sync conflicts(): one per record, on this phone only)
+  const held = () => { const ours = new Set(queue.entries().filter(x => x.owner === hid && x.state === 'conflict').map(x => x.key)); return app.conflicts().filter(c => ours.has(c.key)); };
   const offQueue = queue.onChange(() => tell());
-  // saves handed to the engine that it hasn't taken yet: id -> { record } per kind (deliver lays them over)
-  const sending = Object.fromEntries(KINDS.map(k => [k, new Map()]));
-  const heardList = {};   // each kind's last list from the engine, as it came: [list, meta] (handed again once a save leaves `sending`)
+  // The copy a change starts from (`base`), for the HELD kinds: the document as this phone last had it from the engine
+  // (the server's shape), else `before` as it is stored. The commit holds only what changed both here and elsewhere since
+  // then; a base of `{ id }` or none would count every field as changed. Other kinds keep none (last write wins).
+  // A record already waiting for a choice: a change made meanwhile starts from that save's base, so it joins the choice
+  // (the answer carries it); one made "on the shown copy" would set the waiting saves aside, and their uses and adds with them.
+  const baseOf = (kind, id, before) => {
+    if (!HELD.includes(kind)) return null;
+    const waiting = queue.entries().filter(x => x.owner === hid && x.kind === kind && x.record.id === id && x.state === 'conflict').at(-1);
+    if (waiting) return waiting.base ? clean(waiting.base) : null;
+    const had = data[kind]?.find(d => d.id === id);
+    return had ? clean(had) : before ? clean(kind === 'items' ? toStored(before) : before) : null;
+  };
+  // (app-sync 0.7.3 lays a save over the lists from the moment save() is called, so a list heard meanwhile has it)
   function enqueue(kind, record, base, change, info) {
-    const mine = sending[kind] && { record };
-    if (mine) sending[kind].set(record.id, mine);
     return app.save(kind, hid, record, base, { ops: change })
-      .then(() => true, e => { if (queue.error()) { console.warn('outbox', e?.message); onError(e, info); } return false; })
-      .finally(() => { if (mine && sending[kind].get(record.id) === mine) { sending[kind].delete(record.id); if (heardList[kind]) deliver(kind, heardList[kind][0], { ...heardList[kind][1], again: true }); } });
+      .then(() => true, e => { if (queue.error()) { console.warn('outbox', e?.message); onError(e, info); } return false; });
   }
   // the listeners (createApp watch: app-sync watchSaved): each kind's whole list from the engine (this phone's copy, then
   // the server's changes), with this phone's saves not yet sent laid over it, again when a save is done, so the server's
@@ -526,13 +580,8 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
   let offs = [];
   function deliver(k, list, m) {
     if (closed) return;
-    if (!m?.again) heardList[k] = [list, m];
     seen[k].cache = !!m?.fromCache;
-    if (m && m.fromCache === false && !m.again) heard = lastServerAt = Date.now();   // (`again`: the same list handed once more)
-    // (app-sync lays a save over the list only once it is accepted: stored, then sent or 180 ms later. A list heard
-    // before that would take back a change made here a moment ago, and the next change would be worked out from it, so
-    // the saves handed to the engine and not back yet are laid over here too.)
-    if (sending[k].size) { const out = new Map(list.map(d => [d.id, d])); for (const [id, { record }] of sending[k]) { if (record._deleted) out.delete(id); else out.set(id, strip(record)); } list = [...out.values()]; }
+    if (m && m.fromCache === false) heard = lastServerAt = Date.now();
     data[k] = list;
     if (!seen[k].ready) { seen[k].ready = true; ready[k].done(); }
     else if (cb) cb(k, list, ofQueue(k));
@@ -562,14 +611,16 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     },
     // Saves go to the outbox at once and reach the family when there's signal; don't wait for the server. The promise
     // (which callers may ignore) is true once the save is kept on this phone; a refusal comes through onError.
-    put: (kind, obj) => enqueue(kind, clean(kind === 'items' ? toStored(obj) : obj), null, { put: true }, { op: 'put', kind, id: obj.id, ...(kind === 'photos' ? {} : { obj: clean(kind === 'items' ? toStored(obj) : obj) }) }),
+    put: (kind, obj) => enqueue(kind, clean(kind === 'items' ? toStored(obj) : obj), baseOf(kind, obj.id, null), { put: true }, { op: 'put', kind, id: obj.id, ...(kind === 'photos' ? {} : { obj: clean(kind === 'items' ? toStored(obj) : obj) }) }),
     // One document's change as instructions (ops: logic.js), applied to the server's copy. `before` is the document as this
-    // phone has it: with one, a document deleted since is not made again (the save fails: "removed on another phone");
-    // without one the fields are merged into whatever is there (it makes the document).
+    // phone has it: with one, a document deleted since is not made again (a HELD kind asks: Keep mine puts it back; the
+    // others fail: "removed on another phone"); without one the fields are merged into whatever is there (it makes it).
     patch(kind, id, ops, { before = null } = {}) {
       if (!opsValid(ops)) throw new Error('ops overlap');
       const now = before ? (kind === 'items' ? applyOps(before, ops) : applyFieldOps(before, ops)) : applyFieldOps({ id }, ops);
-      return enqueue(kind, { ...clean(kind === 'items' ? toStored(now) : now), id }, before ? { id } : null, { patch: ops }, { op: 'patch', kind, id, ops });
+      // (base: with held kinds the copy it started from; for the others `{ id }`, so one deleted since isn't made again)
+      const base = HELD.includes(kind) ? (before ? baseOf(kind, id, before) : null) : before ? { id } : null;
+      return enqueue(kind, { ...clean(kind === 'items' ? toStored(now) : now), id }, base, { patch: ops }, { op: 'patch', kind, id, ops });
     },
     // Several documents' changes (renaming a place moves every item in it): [{ id, ops, before }], one save each.
     async patchMany(kind, list) { await Promise.all(list.map(x => this.patch(kind, x.id, x.ops, { before: x.before }))); },
@@ -594,12 +645,14 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     // made as signal drops is kept and sent later (it used to be a batch, left in the SDK's own queue). Resolves once
     // they are kept on this phone.
     async delMany(kind, ids) {
+      const bases = ids.map(id => baseOf(kind, id, null));
       if (KINDS.includes(kind)) await hub.drop(hid, kind, ids);
-      await Promise.all(ids.map(id => enqueue(kind, { id, _deleted: true }, null, undefined, { op: 'del', kind, id })));
+      await Promise.all(ids.map((id, i) => enqueue(kind, { id, _deleted: true }, bases[i], undefined, { op: 'del', kind, id })));
     },
     del: (kind, id) => {
+      const base = baseOf(kind, id, null);
       if (KINDS.includes(kind)) void hub.drop(hid, kind, [id]);
-      enqueue(kind, { id, _deleted: true }, null, undefined, { op: 'del', kind, id });
+      enqueue(kind, { id, _deleted: true }, base, undefined, { op: 'del', kind, id });
     },
     // One document (an item's photo, when the item is opened), or null when there is none. Offline it is the
     // phone's copy if it has one; otherwise it throws, and the app tries again next time.
@@ -615,7 +668,7 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     // missing photo), stamped by the adapter. A place made from the old list never overwrites one (mergeSaves).
     putMany: (kind, list) => Promise.all(list.map(o => {
       const doc = clean(kind === 'items' ? toStored(normalizeItem(strip(o))) : strip(o));
-      return enqueue(kind, doc, null, { put: true }, { op: 'put', kind, id: o.id, ...(kind === 'photos' ? {} : { obj: doc }) });
+      return enqueue(kind, doc, baseOf(kind, o.id, null), { put: true }, { op: 'put', kind, id: o.id, ...(kind === 'photos' ? {} : { obj: doc }) });
     })),
     listen(fn) { cb = fn; startListening(); tell(); },   // (until the app has the lists, it hears `cache`: nothing is decided from half a copy)
     // The listener watchdog: `nudge('resume')` at a moment the phone came back (online, visible, pageshow, Sync now); a timer
@@ -636,6 +689,12 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
       if (reached) { heard = Date.now(); tell(); }
       return { ok, cycled, heard: reached };
     },
+    // Held conflicts (app-sync 0.7.1): this phone's changes that met a different change to the same field on another phone.
+    // conflicts() -> [{ key, kind, id, at }]; describe(key) -> both versions of each clashing field, when (SGT) and who;
+    // resolve(key, 'mine' | 'theirs' | { [path]: 'mine' | 'theirs' }) saves the chosen version over the server's.
+    conflicts: () => held(),
+    describe: key => app.describe(key, { timeZone: 'Asia/Singapore' }),
+    resolve: (key, choice) => app.resolve(key, choice),
     close() { closed = true; stopListening(); offQueue(); if (refused === onError) refused = null; },
   };
 }

@@ -230,3 +230,9 @@ body.pa-dragging *{cursor:grabbing!important}
 .pa-datetoggle{flex:none;min-height:32px;padding:0 var(--home-s3)}
 .pa-fulldates .pa-item .ha-row-body{flex-basis:4em}
 .pa-fulldates .ha-badge{white-space:nowrap}
+/* held conflicts: both versions of each clashing field, side by side as two choices (app-sync 0.7.1) */
+.pa-held-field{border:0;margin:0 0 var(--home-s3);padding:0;min-width:0}
+.pa-held-legend{font-weight:600;padding:0 0 var(--home-s1)}
+.pa-held-side{cursor:pointer;gap:var(--home-s3)}
+.pa-held-side input{flex:none;width:20px;height:20px;margin:0;accent-color:var(--home-accent)}
+.pa-held-acts{display:grid;gap:var(--home-s2);margin-top:var(--home-s3)}

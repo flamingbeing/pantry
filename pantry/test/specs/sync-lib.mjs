@@ -47,3 +47,41 @@ export const refused = p => p.evaluate(() => window.__pantry.S.refused.length);
 export const shownPlaces = p => p.evaluate(() => window.__pantry.places());
 // run a block of Firestore calls on a phone (as that person: the rules judge them); fn gets the SDK, the db and arg
 export const asPhone = (p, fn, arg) => p.evaluate(async ([src, arg, u]) => { const F = await import(u); return (0, eval)('(' + src + ')')(F, F.getFirestore(), arg); }, [fn.toString(), arg, FSJS]);
+
+// Held conflicts (app-sync 0.7.1). `settle`: nothing of this phone's is being sent (held saves wait for a person, so they
+// don't count). `answerHeld`: answer every change this phone holds through its popup, as a person would: choose(view) ->
+// 'mine' | 'theirs' | 'each' (then pick(path) per field). -> what was chosen: [{ kind, id, deleted, fields: [{ path, value }] }],
+// so a test can check the server now has exactly that.
+export const settle = p => p.evaluate(async () => {
+  // (saves queued behind a held one wait with it: the answer carries them; `before` is a save from an older version)
+  const free = () => { const held = new Set(window.__pantry.held().map(c => c.kind + ':' + c.id)); return window.__pantry.S.sync.list.filter(x => !held.has(x.kind + ':' + x.id)).length; };
+  for (let i = 0; i < 60; i++) { if (await window.__pantry.synced(500)) return; if (window.__pantry.S.sync.pending === 0 || window.__pantry.held().length && !free()) return; }
+  throw new Error('saves still being sent: ' + JSON.stringify({ pending: window.__pantry.S.sync.pending, held: window.__pantry.S.sync.held, list: window.__pantry.S.sync.list }));
+});
+export async function answerHeld(p, choose, pick = () => 'mine') {
+  const out = [];
+  for (let n = 0; n < 40; n++) {
+    const list = await p.evaluate(() => window.__pantry.held());
+    if (!list.length) return out;
+    const sheet = p.locator('[data-held-key]');
+    if (!(await sheet.count())) await p.evaluate(k => window.__pantry.openHeld(k), list[0].key);
+    await sheet.first().waitFor({ timeout: 5000 });
+    const key = await sheet.first().getAttribute('data-held-key');
+    const view = await p.evaluate(k => window.__pantry.describeHeld(k), key);
+    if (!view) { await p.waitForTimeout(200); continue; }
+    let c = choose(view);
+    const whole = view.deleted.mine || view.deleted.theirs || !view.fields.length;
+    if (c === 'each' && (whole || view.fields.length < 2)) c = whole ? 'mine' : pick(view.fields[0].path);
+    const side = path => c === 'each' ? pick(path) : c;
+    if (c === 'each') for (const [i, f] of view.fields.entries()) await p.locator(`input[name="f${i}"][value="${pick(f.path)}"]`).check();
+    await p.locator(`[data-held="${c}"]`).click();
+    await p.locator(`[data-held-key="${key}"]`).waitFor({ state: 'detached', timeout: 10000 });
+    out.push({ kind: view.kind, id: view.id, choice: c, deleted: whole ? (c === 'mine' ? view.deleted.mine : view.deleted.theirs) : false,
+      fields: view.fields.map(f => ({ path: f.path, side: side(f.path), value: f[side(f.path)].value })) });
+  }
+  throw new Error('held conflicts never ended');
+}
+// a value in a document by its dotted path (as the conflict popup names fields)
+// (a name's key is a whole email, dots and all: names.<email>)
+export const valueAt = (doc, path) => /^names\./.test(path) ? doc?.names?.[path.slice(6)]
+  : path.split('.').reduce((v, k) => v && typeof v === 'object' ? v[k] : undefined, doc);
