@@ -38,8 +38,8 @@ Small fixes, select mode, grip drag and My order, Bulk edit. Index: [../NOTES.md
     now `pending` counts only what the server has not acknowledged: this session's writes whose promise is unresolved, plus the
     documents flagged when the app opened (cleared when `waitForPendingWrites` resolves). The other candidates were checked and
     are fine: a listener that stays `fromCache` only matters with `pending > 0`; `onSyncState`'s 1.5 s grace stays. Not counted
-    on purpose (so the chip can undercount, never overcount): `putMany` (copying the phone's pantry up, restoring, seeding the
-    default places; the caller waits for those itself) and the daily sweep.
+    on purpose (so the chip can undercount, never overcount): the daily sweep's purge. (`putMany`, copying the phone's
+    pantry up, restoring, seeding the default places, goes through the outbox and is counted since 25 Oct 2026.)
   - **"You → Your name" is gone in a family pantry** (the person's own row in Family sharing is the one place for the name; the
     contact sheet's field says "Your name" on your own row). A name saved on this phone is adopted once per household when the
     family has none for the account (one `names.<email>` field operation, flag `pantry:nameAdopted` = `{ <household id>: true }`),

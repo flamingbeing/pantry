@@ -86,7 +86,7 @@ and sessions run only with `--dry` (`pantry/test/run-live-dry.sh`, local emulato
 
 ## Sync engine: app-sync (24 Oct 2026)
 
-Saves and listeners go through app-sync `0.4.1` (`https://core.anawj.com/sync/0.4.1/`, exact pin, precached by `sw.js`):
+Saves and listeners go through app-sync `0.5.1` (`https://core.anawj.com/sync/0.5.1/`, exact pin, precached by `sw.js`):
 every save goes to an outbox on the phone (IndexedDB) and then to the server in a transaction, one document at a time;
 each kind keeps a copy on the phone and listens only for documents changed since the last sync (`updatedAt`, stamped by
 the adapter as the save reaches the server: its default stamp, the later of now and the server copy's stamp plus one,
@@ -98,6 +98,16 @@ one-off backfill (`pantry/tools/backfill-updated-at.mjs`, dry run by default) ha
 in full while any document has no stamp (`unstamped: 'full'`); drop that option once it has run. The SDK's network
 switch doesn't stop a transaction: tests go offline with the browser context as well (`test/specs/sync-lib.mjs net`).
 
+Every write behind the adapter (app-sync `0.5.1`, 25 Oct 2026): a backup restore and copying the phone's pantry up
+(`putMany`) are one whole-document save each through the outbox, as `put` (they were batches, which with no signal
+waited uncounted in the SDK's own queue); the sweep's deletes of a purged item's photo and history (`delMany`) go
+through the outbox too. Left on the SDK on purpose, in `cloud.js` only: sign-in (app-sync has no auth), the household
+document (find, create, members, watch, remove: not a synced kind), merging pantries (`copyHousehold` writes into
+another household and counts on the server straight after, so it stays batches, stamped by `stampFields`), the sweep's
+`purge` (a read-and-delete transaction), reading a photo (`get`: the phone's copy offline; the adapter's `fetchOne` is
+server-only) and the backup's photo list, and the SDK's network switch (`cycleNet`, `syncNow`'s reach check, the
+leftover-writes wait). Tests: `test/specs/sync-restore.spec.mjs`.
+
 What 0.4.0 added, as the app uses it (25 Oct 2026): `aborted` (two phones on one document) is retried by the write queue, not
 by the app; the chip follows `syncStatus({ confirmed, atRiskOnlyOffline: true })` (`cloud.status`, `sync.js syncState`): never
 "Saved" before the server has answered once ("Not checked with the family yet"), and "Only on this phone" only while
@@ -106,8 +116,8 @@ the SDK's cache, then reload; no reload in the emulator). Not used yet: `otherPe
 `onCommit`, `unsent` / `onLeave`.
 
 Server stamps (app-sync `0.3.0`, 24 Oct 2026): the adapter runs `stampMode: 'server'`, so every save also writes
-`serverAt` = the server's time (`serverTimestamp()`), beside `updatedAt`; `writeAll` (backup restore, merging pantries)
-sets it too and drops any copied one. The hub still reads by `updatedAt` (client mode). `serverAt` is the engine's, like
+`serverAt` = the server's time (`serverTimestamp()`), beside `updatedAt`; `writeAll` (merging pantries) sets both with
+the adapter's `stampFields()` and drops any copied one. The hub still reads by `updatedAt` (client mode). `serverAt` is the engine's, like
 `_saves`: `strip` keeps it out of the app's records. The rules allow it (a timestamp must be `request.time`) and still
 take older versions' saves: none, or their JSON copy of one (a map). Next, in order: backfill
 (`pantry/tools/backfill-server-at.mjs`, dry run by default; stamps documents with none or with a copy), then once no
