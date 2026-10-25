@@ -300,3 +300,62 @@ test('stamps: every write carries updatedAt, a change moves it on; history stays
     'a shopping line with no updatedAt': NO, 'a shopping line': OK, 'a photo with no updatedAt': NO,
   });
 });
+
+// Held conflicts (app-sync 0.7.1, 25 Oct 2026): `_edits` says who changed each field and when ({ by, device, at }), for the
+// popup on the phone that holds a clash. Optional; only on items, shopping lines, places and settings; keys are the kind's
+// own fields (items: at most 40 field-like names, values not checked: the 1000-expression limit); elsewhere each value
+// exactly by/device/at with their sizes.
+test('_edits: who changed each field, bounded, only on the held kinds', async ({ phone, fsAdmin, uid }) => {
+  const { mumE, hid } = await members(phone, fsAdmin, uid);
+  const mum = await person(phone, mumE, 'mum');
+  await inFamily(mum, hid);
+  const editRules = await mum.evaluate(async hid => {
+    const F = await import('https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js');
+    const db = F.getFirestore(), d = (k, id) => F.doc(db, 'households', hid, k, id);
+    const out = {};
+    const tryIt = async (name, fn) => { try { await fn(); out[name] = 'ok'; } catch (e) { out[name] = e.code; } };
+    let n = 0;
+    const st = () => ({ updatedAt: `2026-10-25T0${Math.floor(n / 60) % 10}:${String(n++ % 60).padStart(2, '0')}:00.000Z` });
+    const e = (by = 'Mum', device = 'iPhone') => ({ by, device, at: 1761370000000 });
+    const many = k => Object.fromEntries(Array.from({ length: k }, (_, i) => ['field' + i, e()]));
+    const batches = Object.fromEntries(Array.from({ length: 60 }, (_, i) => ['b' + i, { qty: 1, expiry: '2026-12-01' }]));
+    const it = { id: 'i1', name: 'Rice', batches: {} };
+    await tryIt('an item with no _edits', () => F.setDoc(d('items', 'i1'), { ...it, ...st() }));
+    await tryIt('an item with _edits', () => F.setDoc(d('items', 'i1'), { ...it, _edits: { name: e(), batches: e() }, ...st() }));
+    await tryIt('an item with 40 _edits and 60 batches', () => F.setDoc(d('items', 'i1'), { ...it, batches, _edits: many(40), ...st() }));
+    await tryIt('an item with 41 _edits', () => F.setDoc(d('items', 'i1'), { ...it, _edits: many(41), ...st() }));
+    await tryIt('an item _edits key with a space', () => F.setDoc(d('items', 'i1'), { ...it, _edits: { 'my name': e() }, ...st() }));
+    await tryIt('an item _edits not a map', () => F.setDoc(d('items', 'i1'), { ...it, _edits: ['name'], ...st() }));
+    const line = { id: 'l1', name: 'Milk', done: false };
+    await tryIt('a shopping line with _edits', () => F.setDoc(d('shop', 'l1'), { ...line, _edits: { name: e(), done: e(), doneBy: e(), removedAt: e(), removedBy: e(), itemId: e(), at: e(), by: e() }, ...st() }));
+    await tryIt('a shopping line _edits of another field', () => F.setDoc(d('shop', 'l1'), { ...line, _edits: { colour: e() }, ...st() }));
+    await tryIt('a shopping line _edits value with another field', () => F.setDoc(d('shop', 'l1'), { ...line, _edits: { name: { ...e(), x: 1 } }, ...st() }));
+    await tryIt('a shopping line _edits value with a 201-character by', () => F.setDoc(d('shop', 'l1'), { ...line, _edits: { name: e('x'.repeat(201)) }, ...st() }));
+    await tryIt('a shopping line _edits value with an 81-character device', () => F.setDoc(d('shop', 'l1'), { ...line, _edits: { name: e('Mum', 'x'.repeat(81)) }, ...st() }));
+    await tryIt('a shopping line _edits at as text', () => F.setDoc(d('shop', 'l1'), { ...line, _edits: { name: { by: 'Mum', device: '', at: 'now' } }, ...st() }));
+    await tryIt('a shopping line _edits value not a map', () => F.setDoc(d('shop', 'l1'), { ...line, _edits: { name: 'Mum' } , ...st() }));
+    await tryIt('a shopping line _edits, the 9th value bad', () => F.setDoc(d('shop', 'l1'), { ...line, _edits: { name: e(), done: e(), doneBy: e(), removedAt: e(), removedBy: e(), itemId: e(), at: e(), by: e(), id: { by: 1, device: '', at: 1 } }, ...st() }));
+    const place = { id: 'p1', name: 'Fridge', order: 1 };
+    await tryIt('a place with _edits', () => F.setDoc(d('places', 'p1'), { ...place, _edits: { name: e(), order: e(), kind: e(), removedAt: e(), removedBy: e() }, ...st() }));
+    await tryIt('a place _edits of another field', () => F.setDoc(d('places', 'p1'), { ...place, _edits: { colour: e() }, ...st() }));
+    await tryIt('a place _edits by as a number', () => F.setDoc(d('places', 'p1'), { ...place, _edits: { name: { by: 3, device: '', at: 1 } }, ...st() }));
+    await tryIt('names with _edits', () => F.setDoc(d('settings', 'people'), { id: 'people', names: { 'a@example.com': 'A' }, _edits: { names: e() }, ...st() }));
+    await tryIt('names _edits of another field', () => F.setDoc(d('settings', 'people'), { id: 'people', names: {}, _edits: { list: e(), theme: e() }, ...st() }));
+    await tryIt('names by field, with _edits', () => F.updateDoc(d('settings', 'people'), new F.FieldPath('names', 'b@example.com'), 'B', '_edits', { names: e('Dad', 'Pixel') }, 'updatedAt', st().updatedAt));
+    await tryIt('the old list with _edits', () => F.setDoc(d('settings', 'places'), { id: 'places', list: ['Fridge'], _edits: { list: e() }, ...st() }));
+    const ev = { id: 'e1', itemId: 'i1', type: 'bought', at: '2026-10-25T01:00:00.000Z' };
+    await tryIt('a history line with _edits', () => F.setDoc(d('events', 'e1'), { ...ev, _edits: { type: e() }, ...st() }));
+    await tryIt('a photo with _edits', () => F.setDoc(d('photos', 'i1'), { id: 'i1', data: 'data:x', _edits: { data: e() }, ...st() }));
+    return out;
+  }, hid);
+  expect(editRules).toEqual({
+    'an item with no _edits': OK, 'an item with _edits': OK, 'an item with 40 _edits and 60 batches': OK, 'an item with 41 _edits': NO,
+    'an item _edits key with a space': NO, 'an item _edits not a map': NO,
+    'a shopping line with _edits': OK, 'a shopping line _edits of another field': NO, 'a shopping line _edits value with another field': NO,
+    'a shopping line _edits value with a 201-character by': NO, 'a shopping line _edits value with an 81-character device': NO,
+    'a shopping line _edits at as text': NO, 'a shopping line _edits value not a map': NO, 'a shopping line _edits, the 9th value bad': NO,
+    'a place with _edits': OK, 'a place _edits of another field': NO, 'a place _edits by as a number': NO,
+    'names with _edits': OK, 'names _edits of another field': NO, 'names by field, with _edits': OK, 'the old list with _edits': OK,
+    'a history line with _edits': NO, 'a photo with _edits': NO,
+  });
+});
