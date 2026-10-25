@@ -387,7 +387,7 @@ export function mergeSaves(kind) {
   };
 }
 const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
-const SYNC = 'https://core.anawj.com/sync/0.6.1/index.js';
+const SYNC = 'https://core.anawj.com/sync/0.6.3/index.js';
 // A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
 // so the sweep still sees it here first.
 const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };
