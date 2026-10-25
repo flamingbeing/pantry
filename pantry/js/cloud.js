@@ -329,15 +329,16 @@ export function nest(pairs) {
   return out;
 }
 
-// Many documents at once: at most 400 to a batch or about 4 MB (photos are up to 150 KB each; Firestore takes about
-// 10 MB a request).
+// Many documents at once into another household (merging pantries, copyHousehold): at most 400 to a batch or about 4 MB
+// (photos are up to 150 KB each; Firestore takes about 10 MB a request). Merging needs signal and counts what arrived
+// afterwards, so these stay batches; they are stamped by app-sync's adapter (stampFields: updatedAt now, serverAt), as
+// every save through the outbox is.
 async function writeAll(F, db, hid, kind, list) {
   let b = null, n = 0, bytes = 0;
-  const at = new Date().toISOString();
+  const st = await (await sync()).fs.stampFields();
   for (const o of list) {
     const { _saves, serverAt, ...c } = clean(kind === 'items' ? toStored(normalizeItem(o)) : o), size = JSON.stringify(c).length;
-    c.updatedAt = at;   // stamped now, so every phone's delta listener hears it
-    c.serverAt = F.serverTimestamp();   // and the server's own stamp (a copied one is another pantry's, or a backup's)
+    Object.assign(c, st);   // stamped now, so every phone's delta listener hears it, and the server's own stamp (a copied one is another pantry's)
     if (b && (n >= 400 || bytes + size > 4e6)) { await b.commit(); b = null; }
     if (!b) { b = F.writeBatch(db); n = 0; bytes = 0; }
     b.set(F.doc(F.collection(db, 'households', hid, kind), o.id), c); n++; bytes += size;
@@ -439,7 +440,7 @@ export function mergeSaves(kind) {
   };
 }
 const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
-const SYNC = 'https://core.anawj.com/sync/0.5.0/index.js';
+const SYNC = 'https://core.anawj.com/sync/0.5.1/index.js';
 // A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
 // so the sweep still sees it here first.
 const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };
@@ -624,13 +625,12 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
         return gone;
       } catch (e) { console.warn('purge', kind, id, e?.code); return false; }
     },
-    // Several documents at once (a purged item's history): at most 400 to a batch.
+    // Several documents at once (a purged item's photo and history): one delete each through the outbox, so a delete
+    // made as signal drops is kept and sent later (it used to be a batch, left in the SDK's own queue). Resolves once
+    // they are kept on this phone.
     async delMany(kind, ids) {
-      for (let i = 0; i < ids.length; i += 400) {
-        const b = F.writeBatch(db), part = ids.slice(i, i + 400);
-        for (const id of part) b.delete(F.doc(col(kind), id));
-        await b.commit().then(() => KINDS.includes(kind) && hub.drop(hid, kind, part), e => { console.warn('delete', kind, e?.code); });
-      }
+      if (KINDS.includes(kind)) await hub.drop(hid, kind, ids);
+      await Promise.all(ids.map(id => enqueue(kind, { id, _deleted: true }, null, undefined, { op: 'del', kind, id })));
     },
     del: (kind, id) => {
       if (KINDS.includes(kind)) void hub.drop(hid, kind, [id]);
@@ -644,9 +644,14 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     },
     // Every document of one kind (a backup's photos): only when someone asks for it.
     async list(kind) { return (await F.getDocs(col(kind))).docs.map(d => strip(d.data())); },
-    // Write many at once (copying the phone's pantry up, restoring a backup): at most 400 documents or about 4 MB to a
-    // batch, stamped now. Places go through the outbox instead (a place made from the old list must never overwrite one).
-    putMany: (kind, list) => kind === 'places' ? Promise.all(list.map(o => enqueue(kind, clean(o), null, { put: true }, { op: 'put', kind, id: o.id, obj: clean(o) }))) : writeAll(F, db, hid, kind, list),
+    // Write many at once (copying the phone's pantry up, restoring a backup): one whole-document save each through the
+    // outbox, as `put` (they used to be batches, which waited in the SDK's own queue with no signal, uncounted). Resolves
+    // once all are kept on this phone; the queue sends them in the order made (photos first, so no item points at a
+    // missing photo), stamped by the adapter. A place made from the old list never overwrites one (mergeSaves).
+    putMany: (kind, list) => Promise.all(list.map(o => {
+      const doc = clean(kind === 'items' ? toStored(normalizeItem(strip(o))) : strip(o));
+      return enqueue(kind, doc, null, { put: true }, { op: 'put', kind, id: o.id, ...(kind === 'photos' ? {} : { obj: doc }) });
+    })),
     listen(fn) { cb = fn; startListening(); tell(); },   // (until the app has the lists, it hears `cache`: nothing is decided from half a copy)
     // The listener watchdog: `nudge('resume')` at a moment the phone came back (online, visible, pageshow, Sync now); a timer
     // also looks every few seconds for the signs that need no event. Resolves true when it listened again or restarted.
