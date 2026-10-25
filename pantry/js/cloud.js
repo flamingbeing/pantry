@@ -549,13 +549,14 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     return run;
   }
   // the listeners: each kind's whole list from the engine (this phone's copy, then the server's changes), with this
-  // phone's saves not yet sent laid over it; only what changed since the last delivery goes to the app
+  // phone's saves not yet sent laid over it (app-sync watchSaved: again when a save is done, so the server's copy heard
+  // while it was sent shows then); only what changed since the last delivery goes to the app
   const sig = d => JSON.stringify(d);
   let offs = [];
   function deliver(k, list, m) {
     if (closed) return;
     seen[k].cache = !!m?.fromCache;
-    const now = new Map(queue.overlay(k, hid, list).map(d => [d.id, strip(d)]));
+    const now = new Map(list.map(d => [d.id, strip(d)]));
     const docs = [], removed = [];
     for (const [id, d] of now) { const s = sig(d); if (known[k].get(id) !== s) { known[k].set(id, s); docs.push(d); } }
     for (const id of [...known[k].keys()]) if (!now.has(id)) { known[k].delete(id); removed.push(id); }
@@ -564,7 +565,7 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
     else if (cb && (docs.length || removed.length)) cb(k, docs, removed, ofQueue(k));
     tell();
   }
-  const startListening = () => { if (!offs.length && !closed) offs = KINDS.map(k => hub.watch(hid, k, (list, m) => deliver(k, list, m))); };
+  const startListening = () => { if (!offs.length && !closed) offs = KINDS.map(k => AS.watchSaved({ hub, queue, scope: hid, coll: k, kind: k }, (list, m) => deliver(k, list, m))); };
   const stopListening = () => { offs.splice(0).forEach(off => off()); };
   const onMeta = (_kind, m) => { if (closed) return; dog.heard(m); if (!m.fromCache) { heard = lastServerAt = Date.now(); } };
   E.meta.add(onMeta);
