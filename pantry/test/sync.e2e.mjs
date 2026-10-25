@@ -76,7 +76,7 @@ try {
   // (saves go through app-sync's outbox in transactions, which the SDK's network switch doesn't stop: the page goes offline too)
   const sdkNet = (p, on) => p.evaluate(async ([on, u]) => { const F = await import(u); const db = F.getFirestore(); await (on ? F.enableNetwork(db) : F.disableNetwork(db)); if (on) window.__pantry.kick?.(); }, [on, FSJS]);
   const net = async (p, on) => { if (!on) await sdkNet(p, false); await p.context().setOffline(!on); if (on) await sdkNet(p, true); };
-  const drain = p => p.evaluate(async () => { for (let i = 0; i < 30; i++) if (await window.__pantry.synced(1000)) return; throw new Error('saves still waiting'); });
+  const drain = p => p.evaluate(async () => { for (let i = 0; i < 30; i++) if (await window.__pantry.synced(1000)) return; throw new Error('saves still waiting; held: ' + JSON.stringify(window.__pantry.held().map(c => window.__pantry.describeHeld(c.key)))); });
   const act = (p, name, ...args) => p.evaluate(([n, a]) => window.__pantry.act[n](...a), [name, args]);
 
   // ---- stock changes are instructions: two phones never overwrite each other (online or not) ----
