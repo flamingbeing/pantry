@@ -2769,7 +2769,10 @@ async function onClick(e) {
       const ok = await S.cloud.synced(4000);
       haHideToast();
       if (!ok && !(await haConfirm({ title: 'Sign out now?', text: 'Some changes on this phone haven’t reached the family yet (no signal?). Signing out now loses them. Wait for signal, then sign out.', ok: 'Sign out anyway', cancel: 'Wait', danger: true }))) return;
-      try { await S.cloud.signOut(); haToast('Signed out. This phone is back to its own pantry.'); } catch (err) { haToast(S.cloud.explain(err, 'Signing out')); }
+      let out;
+      try { out = await S.cloud.signOut(); } catch (err) { return void haToast(S.cloud.explain(err, 'Signing out')); }
+      haToast('Signed out. This phone is back to its own pantry.');
+      if (out?.reload) setTimeout(() => location.reload(), 400);   // the SDK's cache was cleared and its instance closed: start clean
       return;
     }
     case 'hh-create': {
@@ -2949,10 +2952,12 @@ function onRemote(kind, docs, removed, pending = []) {
 // What the chip says now (only in a family pantry: on this phone alone there is nothing to wait for).
 function syncView() {
   if (S.mode !== 'cloud') return null;
+  const refused = SY.refusedFor(S.refused, S.household?.id || '').length, offline = navigator.onLine === false;
+  const confirmed = !!S.sync.lastServerAt, persisted = S.sync.persisted !== false;   // (confirmed: the server has answered since the app opened)
   return SY.syncState({
-    refused: SY.refusedFor(S.refused, S.household?.id || '').length, pending: S.sync.pending, cache: S.sync.cache,
-    offline: navigator.onLine === false, waited: S.sync.since ? Date.now() - S.sync.since : 0,
-    recent: !!S.sync.lastServerAt && Date.now() - S.sync.lastServerAt < 10000, persisted: S.sync.persisted !== false, stale: !!S.sync.stale,
+    refused, pending: S.sync.pending, cache: S.sync.cache, offline, waited: S.sync.since ? Date.now() - S.sync.since : 0,
+    recent: !!S.sync.lastServerAt && Date.now() - S.sync.lastServerAt < 10000, persisted, stale: !!S.sync.stale, confirmed,
+    status: S.cloud.status?.({ online: !offline, pending: S.sync.pending, attention: refused, persisted, stale: !!S.sync.stale, confirmed }),
   });
 }
 const SYNC_BADGE = { saved: 'ha-badge--ok', waiting: 'ha-badge--warn', attention: 'ha-badge--bad' };
@@ -3335,7 +3340,15 @@ async function start() {
     redraw();
   }
   if ('serviceWorker' in navigator && !EMULATOR) {
-    startUpdates();   // no offline copy in a private window: the app still runs
+    // no offline copy in a private window: the app still runs. A new version reloads the page only when no sheet or form is
+    // open, nobody is typing or dragging and nothing is waiting to be sent.
+    startUpdates({
+      canReload: () => SY.reloadAllowed({
+        pending: S.cloud?.pending?.() || 0, sheet: haSheetOpen(), draft: ['add', 'edit'].includes(screen()), dragging: !!S.dragging,
+        typing: !!document.activeElement?.matches?.('input:not([type=checkbox]):not([type=radio]), textarea, [contenteditable]'),
+      }),
+      beforeReload: () => S.cloud?.synced?.(1500),
+    });
   }
   window.__pantry = { ...(window.__pantry || {}), S, redraw, places: () => placeList().map(e => e.name), ...(EMULATOR ? { act: testActions, synced: ms => S.cloud.synced(ms), kick: () => S.cloud.kick() } : {}) };
   setTimeout(maybeWelcome, 300);

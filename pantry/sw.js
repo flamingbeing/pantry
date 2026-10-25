@@ -1,4 +1,4 @@
-// Pantry offline support, on the shared update module (app-update 0.1.0, core.anawj.com/update/): it installs every
+// Pantry offline support, on the shared update module (app-update 0.2.0, core.anawj.com/update/): it installs every
 // SHELL file or nothing, takes over at once and the page reloads once (js/app-update.js). The deploy stamps VERSION
 // and MANIFEST (tools/stamp-versions.mjs: 'pantry-v1' becomes 'pantry-<date>-<hash>' from every file the app serves,
 // MANIFEST a hash per SHELL file so an update fetches only changed files); never change them by hand. Change the v<N>
@@ -44,23 +44,24 @@ const SHELL = [
   'https://design.flamingbeing.com/v1/app.js',
   'https://design.flamingbeing.com/v1/icons.svg',
   // the sync engine (app-sync), one exact version: the app works offline only with it
-  'https://core.anawj.com/sync/0.3.0/index.js',
-  'https://core.anawj.com/sync/0.3.0/src/sync.js',
-  'https://core.anawj.com/sync/0.3.0/src/writes.js',
-  'https://core.anawj.com/sync/0.3.0/src/conflict.js',
-  'https://core.anawj.com/sync/0.3.0/src/store.js',
-  'https://core.anawj.com/sync/0.3.0/src/outbox.js',
-  'https://core.anawj.com/sync/0.3.0/src/watchdog.js',
-  'https://core.anawj.com/sync/0.3.0/src/persist.js',
-  'https://core.anawj.com/sync/0.3.0/src/status.js',
-  'https://core.anawj.com/sync/0.3.0/src/firestore.js',
+  'https://core.anawj.com/sync/0.4.0/index.js',
+  'https://core.anawj.com/sync/0.4.0/src/sync.js',
+  'https://core.anawj.com/sync/0.4.0/src/writes.js',
+  'https://core.anawj.com/sync/0.4.0/src/conflict.js',
+  'https://core.anawj.com/sync/0.4.0/src/store.js',
+  'https://core.anawj.com/sync/0.4.0/src/outbox.js',
+  'https://core.anawj.com/sync/0.4.0/src/watchdog.js',
+  'https://core.anawj.com/sync/0.4.0/src/persist.js',
+  'https://core.anawj.com/sync/0.4.0/src/status.js',
+  'https://core.anawj.com/sync/0.4.0/src/forget.js',
+  'https://core.anawj.com/sync/0.4.0/src/firestore.js',
   // the page half of the update module (register.js), one exact version: the page starts it offline too
-  'https://core.anawj.com/update/0.1.0/register.js',
+  'https://core.anawj.com/update/0.2.0/register.js',
 ];
 
 const MANIFEST = {};
 
-importScripts('https://core.anawj.com/update/0.1.0/sw-core.js');
+importScripts('https://core.anawj.com/update/0.2.0/sw-core.js');
 AppUpdate.init({
   app: 'pantry', version: VERSION, shell: SHELL, manifest: MANIFEST,
   // "Get the latest version" checks for signal by fetching sw.js: always the network

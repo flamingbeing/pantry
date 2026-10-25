@@ -86,16 +86,24 @@ and sessions run only with `--dry` (`pantry/test/run-live-dry.sh`, local emulato
 
 ## Sync engine: app-sync (24 Oct 2026)
 
-Saves and listeners go through app-sync `0.3.0` (`https://core.anawj.com/sync/0.3.0/`, exact pin, precached by `sw.js`):
+Saves and listeners go through app-sync `0.4.0` (`https://core.anawj.com/sync/0.4.0/`, exact pin, precached by `sw.js`):
 every save goes to an outbox on the phone (IndexedDB) and then to the server in a transaction, one document at a time;
 each kind keeps a copy on the phone and listens only for documents changed since the last sync (`updatedAt`, stamped by
-the adapter as the save reaches the server). Every kind is merged on the server's copy (`cloud.js mergeSaves`): a whole
+the adapter as the save reaches the server: its default stamp, the later of now and the server copy's stamp plus one,
+taken inside the commit, so the app has no stamp function of its own). Every kind is merged on the server's copy (`cloud.js mergeSaves`): a whole
 document replaces it (as setDoc did), a change as instructions is applied to it (as updateDoc did), and `_saves` keeps the
 last 20 save keys so a resent save counts once. The rules require a stamp on every write and a new one on every change;
 app versions from before refuse to update until the phone updates (their change is kept: Settings, Retry). Until the
 one-off backfill (`pantry/tools/backfill-updated-at.mjs`, dry run by default) has stamped old documents, the engine reads
 in full while any document has no stamp (`unstamped: 'full'`); drop that option once it has run. The SDK's network
 switch doesn't stop a transaction: tests go offline with the browser context as well (`test/specs/sync-lib.mjs net`).
+
+What 0.4.0 added, as the app uses it (25 Oct 2026): `aborted` (two phones on one document) is retried by the write queue, not
+by the app; the chip follows `syncStatus({ confirmed, atRiskOnlyOffline: true })` (`cloud.status`, `sync.js syncState`): never
+"Saved" before the server has answered once ("Not checked with the family yet"), and "Only on this phone" only while
+offline; sign-out is `forgetDevice` (stop listening, re-check it is still the same person, wipe the copies, the outbox and
+the SDK's cache, then reload; no reload in the emulator). Not used yet: `otherPending` for photo writes outside the queue,
+`onCommit`, `unsent` / `onLeave`.
 
 Server stamps (app-sync `0.3.0`, 24 Oct 2026): the adapter runs `stampMode: 'server'`, so every save also writes
 `serverAt` = the server's time (`serverTimestamp()`), beside `updatedAt`; `writeAll` (backup restore, merging pantries)

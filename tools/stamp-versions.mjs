@@ -6,7 +6,7 @@
 // same-origin file cache-first and keeps it until VERSION changes, so SHELL alone isn't enough) plus SHELL files
 // outside it. Tests, tools and notes are left out. Without git history the date is today's.
 // It also writes MANIFEST (app-update: a new version fetches only the SHELL files whose hash changed): per SHELL entry
-// a hash of the file ('./' is index.html), 'pinned' for an exact-version address on another host (…/0.2.0/…), and
+// a hash of the file ('./' is index.html), 'pinned' for an exact-version core.anawj.com address (…/update/0.2.0/…), and
 // 'deploy-<hash>' for any other address there (the kit's /v1/: fetched fresh by every deploy).
 // Run: node tools/stamp-versions.mjs [--check]   (--check prints the versions without writing, and fails when a
 // SHELL file is missing: the phones would never install that version)
@@ -29,6 +29,9 @@ const lastChanged = files => {
     return /^\d{4}-\d{2}-\d{2}$/.test(out) ? out : today();
   } catch { return today(); }
 };
+// only an exact-version address on core.anawj.com never changes; any other cross-site file (the kit's /v1/, a number in
+// another host's path) may change under the same address, so it gets a new hash every deploy
+const PINNED = /^https:\/\/core\.anawj\.com\/[a-z0-9-]+\/\d+\.\d+\.\d+\//;
 const SKIP = /(^|\/)(test|tools|node_modules|\.[^/]+)(\/|$)|\.md$/;
 const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(d => {
   const f = path.join(dir, d.name);
@@ -53,7 +56,7 @@ for (const app of fs.readdirSync(ROOT).filter(d => fs.existsSync(path.join(ROOT,
   for (const f of files) { hash.update('\0' + path.relative(ROOT, f) + '\0'); if (fs.existsSync(f)) hash.update(fs.readFileSync(f)); }
   const h8 = hash.digest('hex').slice(0, 8);
   const version = `${base.replace(/-v\d+$/, '')}-${lastChanged(files)}-${h8}`;
-  const manifest = Object.fromEntries(entries.map(u => [u, /^https?:/.test(u) ? (/\/\d+\.\d+\.\d+\//.test(u) ? 'pinned' : 'deploy-' + h8)
+  const manifest = Object.fromEntries(entries.map(u => [u, /^https?:/.test(u) ? (PINNED.test(u) ? 'pinned' : 'deploy-' + h8)
     : sha(fs.readFileSync(path.join(ROOT, app, u === './' ? 'index.html' : u.split(/[?#]/)[0]))).slice(0, 12)]));
   let out = sw.replace(RE, `const VERSION = '${version}'`);
   if (MRE.test(out)) out = out.replace(MRE, () => `const MANIFEST = ${JSON.stringify(manifest)};`);

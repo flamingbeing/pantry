@@ -20,11 +20,12 @@ Where the app is served, how sign-in works, config, the service worker, rules de
   `node pantry/tools/set-config.mjs '<config>'` writes `config.js` and `auth/firebase/init.json` with
   `authDomain: 'pantry.flamingbeing.com'`. These are public client IDs, not secrets.
 
-- **Service worker** (`sw.js`, on the shared update module app-update 0.1.0 from `core.anawj.com/update/`):
+- **Service worker** (`sw.js`, on the shared update module app-update 0.2.0 from `core.anawj.com/update/`):
   `VERSION = 'pantry-v<N>'` and `MANIFEST = {}`, both stamped only at deploy (`tools/stamp-versions.mjs`); never by
   hand. Install is all or nothing (every SHELL file, kit files included; only files whose hash changed are fetched). A new
   version takes over at once and the open page reloads once (owner's choice, 24 Oct 2026: updates are rare and deployed
-  with care), checked on every return to the app and every 3 h (`js/app-update.js`). No update toast. Settings ends with
+  with care), but only when no sheet or add / edit form is open, nobody is typing or dragging and the outbox is empty
+  (`canReload`, `reloadAllowed` in `js/sync.js`; tried again when the tab is hidden or shown), checked on every return to the app and every 3 h (`js/app-update.js`). No update toast. Settings ends with
   the version line and "Not updating? Get the latest version". Activate deletes only this app's `pantry-` shell caches.
   The Firebase SDK, the barcode reader and other same-origin files are cached on first use (`pantry-rt-*`). `/__/`
   (sign-in pages) and `sw.js` always go to the network.
