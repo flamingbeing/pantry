@@ -8,7 +8,7 @@
 // SHELL; the Firebase SDK (gstatic), the barcode reader (jsDelivr) and other same-origin files are kept once fetched,
 // so sharing and scanning keep working with no signal. Firebase's sign-in pages (/__/), sw.js itself and everything
 // else (Firestore, Google, Open Food Facts) always go to the network.
-const VERSION = 'pantry-v4';
+const VERSION = 'pantry-v5';
 const SHELL = [
   './',
   'pantry.css',
@@ -44,17 +44,19 @@ const SHELL = [
   'https://design.flamingbeing.com/v1/app.js',
   'https://design.flamingbeing.com/v1/icons.svg',
   // the sync engine (app-sync), one exact version: the app works offline only with it
-  'https://core.anawj.com/sync/0.4.1/index.js',
-  'https://core.anawj.com/sync/0.4.1/src/sync.js',
-  'https://core.anawj.com/sync/0.4.1/src/writes.js',
-  'https://core.anawj.com/sync/0.4.1/src/conflict.js',
-  'https://core.anawj.com/sync/0.4.1/src/store.js',
-  'https://core.anawj.com/sync/0.4.1/src/outbox.js',
-  'https://core.anawj.com/sync/0.4.1/src/watchdog.js',
-  'https://core.anawj.com/sync/0.4.1/src/persist.js',
-  'https://core.anawj.com/sync/0.4.1/src/status.js',
-  'https://core.anawj.com/sync/0.4.1/src/forget.js',
-  'https://core.anawj.com/sync/0.4.1/src/firestore.js',
+  'https://core.anawj.com/sync/0.5.0/index.js',
+  'https://core.anawj.com/sync/0.5.0/src/sync.js',
+  'https://core.anawj.com/sync/0.5.0/src/writes.js',
+  'https://core.anawj.com/sync/0.5.0/src/conflict.js',
+  'https://core.anawj.com/sync/0.5.0/src/store.js',
+  'https://core.anawj.com/sync/0.5.0/src/outbox.js',
+  'https://core.anawj.com/sync/0.5.0/src/watchdog.js',
+  'https://core.anawj.com/sync/0.5.0/src/persist.js',
+  'https://core.anawj.com/sync/0.5.0/src/status.js',
+  'https://core.anawj.com/sync/0.5.0/src/forget.js',
+  'https://core.anawj.com/sync/0.5.0/src/firestore.js',
+  'https://core.anawj.com/sync/0.5.0/src/registry.js',
+  'https://core.anawj.com/sync/0.5.0/src/report.js',
   // the page half of the update module (register.js), one exact version: the page starts it offline too
   'https://core.anawj.com/update/0.2.0/register.js',
 ];

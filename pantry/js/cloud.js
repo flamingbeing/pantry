@@ -439,7 +439,7 @@ export function mergeSaves(kind) {
   };
 }
 const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
-const SYNC = 'https://core.anawj.com/sync/0.4.1/index.js';
+const SYNC = 'https://core.anawj.com/sync/0.5.0/index.js';
 // A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
 // so the sweep still sees it here first.
 const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };
@@ -464,11 +464,18 @@ async function sync() {
     onSnapshotMeta: (kind, m) => { for (const fn of meta) fn(kind, m); },
   });
   const stores = AS.createStores({ prefix: 'pantry-sync:', colls: KINDS, metaOnly: [] });
-  const hub = AS.createSyncHub({ openStore: stores.openStore, listen: fs.listen, fetchOne: fs.fetchOne, bin: null, unstamped: 'full', expire: { items: EXPIRE, shop: EXPIRE, places: EXPIRE }, onError: e => console.warn('sync', e?.code || e?.message) });
+  // nothing-lost report (app-sync report.js): counts only (saves waiting over an hour, refused, in conflict, sync
+  // errors by code) and versions, at most once an hour and when the page is hidden; never an item, a household or an id
+  let appVersion = 'unknown';
+  import('https://core.anawj.com/update/0.2.0/register.js').then(m => m.version()).then(v => { if (v) appVersion = v; }).catch(() => {});
+  const report = AS.createReport({ app: 'pantry', version: () => appVersion, storage: (() => { try { return localStorage; } catch { return null; } })() });
+  report.start();
+  const hub = AS.createSyncHub({ openStore: stores.openStore, listen: fs.listen, fetchOne: fs.fetchOne, bin: null, unstamped: 'full', expire: { items: EXPIRE, shop: EXPIRE, places: EXPIRE }, onError: e => { report.error(e?.code); console.warn('sync', e?.code || e?.message); } });
   AS.replanOnWake(hub);
   // (the queue keeps a failed save's message only: its code, for the plain words, is kept here)
   const queue = AS.createWriteQueue({
     store: AS.createOutbox({ name: 'pantry-outbox' }), getOwner: () => owner, online: () => globalThis.navigator?.onLine !== false,
+    report,
     // ('aborted', two phones' transactions on one document at once, is retried by the queue itself (app-sync 0.4.0).
     // 'permission-denied' is tried once more on a fresh read: the server judges the rules before it notices the copy read
     // was stale, so a write racing another phone's in the same millisecond can be refused for the same stamp.)
