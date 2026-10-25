@@ -81,7 +81,7 @@ service cloud.firestore {
     // (when added), by and doneBy (names), and the two removal fields. Nothing else. Old phones still write the whole line;
     // that stays allowed, and so does a change by field (ticking, renaming, removing): the rules see the line as it will be.
     function shopOk(d, id) {
-      return d.keys().hasOnly(['id', 'name', 'itemId', 'done', 'at', 'by', 'doneBy', 'removedAt', 'removedBy', 'updatedAt', 'serverAt', '_saves'])
+      return d.keys().hasOnly(['id', 'name', 'itemId', 'done', 'at', 'by', 'doneBy', 'removedAt', 'removedBy', 'updatedAt', 'serverAt', '_saves', '_edits'])
         && d.keys().hasAll(['id', 'name', 'done'])
         && d.id == id
         && d.name is string && d.name.size() <= 80
@@ -90,7 +90,8 @@ service cloud.firestore {
         && (!('at' in d) || (d.at is string && d.at.size() <= 40))
         && (!('by' in d) || (d.by is string && d.by.size() <= 200))
         && (!('doneBy' in d) || (d.doneBy is string && d.doneBy.size() <= 200))
-        && removedOk(d) && savesOk(d);
+        && removedOk(d) && savesOk(d)
+        && editsOk(d, ['id', 'name', 'itemId', 'done', 'at', 'by', 'doneBy', 'removedAt', 'removedBy']);
     }
     // A place (16 Oct 2026, PR-C): one document each, { id, name, order, updatedAt } and, as removed items, removedAt / removedBy.
     // `id` is the document id (1 to 40 letters, digits, - or _), `name` one line of 1 to 40 characters (one pattern), `order`
@@ -102,7 +103,7 @@ service cloud.firestore {
     // They can't count the place documents (no 40-place cap here; the app keeps to it): each document is small and members-only.
     // `kind` (21 Oct 2026): optional, 'fridge', 'freezer' or 'other' (none: the app guesses from the name).
     function placeOk(d, id) {
-      return d.keys().hasOnly(['id', 'name', 'order', 'updatedAt', 'removedAt', 'removedBy', 'kind', 'serverAt', '_saves'])
+      return d.keys().hasOnly(['id', 'name', 'order', 'updatedAt', 'removedAt', 'removedBy', 'kind', 'serverAt', '_saves', '_edits'])
         && (!('kind' in d) || d.kind in ['fridge', 'freezer', 'other'])
         && d.keys().hasAll(['id', 'name', 'order', 'updatedAt'])
         && d.id == id
@@ -110,7 +111,8 @@ service cloud.firestore {
         && d.name is string && d.name.matches('[^\\n\\r]{1,40}')
         && d.order is number && d.order > -1000000 && d.order < 1000000
         && d.updatedAt is string && d.updatedAt.size() <= 40
-        && removedOk(d) && savesOk(d);
+        && removedOk(d) && savesOk(d)
+        && editsOk(d, ['id', 'name', 'order', 'removedAt', 'removedBy', 'kind']);
     }
     // Stamps (24 Oct 2026, app-sync): every write carries `updatedAt` (the app writes an ISO time), and a change moves it on (any new
     // value: phones' clocks differ, so it isn't required to grow), because the phones listen only for documents changed
@@ -136,6 +138,34 @@ service cloud.firestore {
     // `_saves`: the keys of the last saves applied (at most 20 strings), so a save sent twice counts once (app-sync's mark).
     function savesOk(d) {
       return !('_saves' in d) || (d._saves is list && d._saves.size() <= 20 && (d._saves.size() == 0 || d._saves[0] is string));
+    }
+    // `_edits` (25 Oct 2026, app-sync 0.7.1 held conflicts): who last changed each field and when, for the popup on the
+    // phone that holds a clash: { <field>: { by, device, at } }, written by the engine beside the change. Optional, and only
+    // on the kinds saved with held conflicts (items, shop, places, settings; never history or photos). Shop lines, places
+    // and settings: the keys are the kind's own fields, and each value is exactly `by` (the signed-in name, at most 200
+    // characters), `device` (this phone's name, at most 80) and `at` (a time in ms); rules have no loops, so one check per
+    // index, up to 12 (the most fields any of them has). Items: at most 40 keys, each 1 to 40 letters, digits or _ (one
+    // pattern over the keys joined with newlines: the placeNames trick); their values are not checked one by one, because
+    // an item's 60 batches already spend the rules' 1000-expression limit (tested), and an item limits no other field's
+    // shape either.
+    function editOk(e) {
+      return e is map && e.keys().hasOnly(['by', 'device', 'at'])
+        && e.get('by', '') is string && e.get('by', '').size() <= 200
+        && e.get('device', '') is string && e.get('device', '').size() <= 80
+        && e.get('at', 0) is number;
+    }
+    function editValues(v, n) {
+      return n <= 12 && (n == 0 || (
+          (n <= 0 || editOk(v[0])) && (n <= 1 || editOk(v[1])) && (n <= 2 || editOk(v[2])) && (n <= 3 || editOk(v[3]))
+          && (n <= 4 || editOk(v[4])) && (n <= 5 || editOk(v[5])) && (n <= 6 || editOk(v[6])) && (n <= 7 || editOk(v[7]))
+          && (n <= 8 || editOk(v[8])) && (n <= 9 || editOk(v[9])) && (n <= 10 || editOk(v[10])) && (n <= 11 || editOk(v[11]))));
+    }
+    function editsOk(d, fields) {
+      return !('_edits' in d) || (d._edits is map && d._edits.keys().hasOnly(fields) && editValues(d._edits.values(), d._edits.size()));
+    }
+    function itemEditsOk(d) {
+      return !('_edits' in d) || (d._edits is map && d._edits.size() <= 40
+        && (d._edits.size() == 0 || d._edits.keys().join('\n').matches('[A-Za-z0-9_]{1,40}(\\n[A-Za-z0-9_]{1,40}){0,39}')));
     }
     function member(hid) {
       return signedIn() && email() in get(/databases/$(database)/documents/households/$(hid)).data.members;
@@ -168,7 +198,7 @@ service cloud.firestore {
       // nothing edits one. Writing a line again as it is (restoring a backup, re-running a merge) is allowed, with a new
       // stamp or the same.
       match /events/{id} {
-        allow create: if member(hid) && stampOk() && savesOk(request.resource.data);
+        allow create: if member(hid) && stampOk() && savesOk(request.resource.data) && !('_edits' in request.resource.data);
         allow update: if member(hid) && (request.resource.data == resource.data
           || (stampOk() && savesOk(request.resource.data) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['updatedAt', 'serverAt', '_saves'])));
       }
@@ -177,7 +207,7 @@ service cloud.firestore {
       // photos/{id}), but no item may gain or change one (an empty `photo`, from older app versions, is fine).
       match /items/{id} {
         allow create, update: if member(hid)
-          && stampOk() && savesOk(request.resource.data)
+          && stampOk() && savesOk(request.resource.data) && itemEditsOk(request.resource.data)
           && stockOk(request.resource.data)
           && removedOk(request.resource.data)
           && orderOk(request.resource.data)
@@ -196,15 +226,15 @@ service cloud.firestore {
       // { id, list, updatedAt }, the list 1 to 40 names of 1 to 40 characters; and the names members give each other
       // (16 Oct 2026), settings/people = { id, names: { email: name }, updatedAt }, exactly those three fields.
       match /settings/{id} {
-        allow create, update: if member(hid) && stampOk() && savesOk(request.resource.data) && (
+        allow create, update: if member(hid) && stampOk() && savesOk(request.resource.data) && editsOk(request.resource.data, ['id', 'list', 'names']) && (
           (id == 'places'
-            && request.resource.data.keys().hasOnly(['id', 'list', 'updatedAt', 'serverAt', '_saves'])
+            && request.resource.data.keys().hasOnly(['id', 'list', 'updatedAt', 'serverAt', '_saves', '_edits'])
             && request.resource.data.id == 'places'
             && request.resource.data.list is list
             && placeNames(request.resource.data.list))
           || (id == 'people'
             && request.resource.data.keys().hasAll(['id', 'names', 'updatedAt'])
-            && request.resource.data.keys().hasOnly(['id', 'names', 'updatedAt', 'serverAt', '_saves'])
+            && request.resource.data.keys().hasOnly(['id', 'names', 'updatedAt', 'serverAt', '_saves', '_edits'])
             && request.resource.data.id == 'people'
             && request.resource.data.updatedAt is string
             && request.resource.data.names is map
