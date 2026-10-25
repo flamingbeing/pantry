@@ -32,7 +32,7 @@
 // Two tests (two seeds, so two workers can run them side by side); each repeat of a run uses other seeds.
 // Run: npx playwright test multidevice
 import { test, expect } from './fixtures.mjs';
-import { person, seedFamily, inFamily } from './sync-lib.mjs';
+import { person, seedFamily, inFamily, drain } from './sync-lib.mjs';
 import * as Ord from '../../js/order.js';
 
 const STEPS = Number(process.env.STEPS || 36);
@@ -42,7 +42,7 @@ const jitter = (p, R) => p.evaluate(ms => new Promise(r => setTimeout(r, ms)), M
 
 const FSJS = 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 const net = async (p, on) => { try { await p.evaluate(async ([on, u]) => { const F = await import(u); const db = F.getFirestore(); await (on ? F.enableNetwork(db) : F.disableNetwork(db)); }, [on, FSJS]); } catch (e) { console.error('network switch failed on', p.who, on, e.message); throw e; } };
-const drain = async p => { try { await p.evaluate(async u => { const F = await import(u); await F.waitForPendingWrites(F.getFirestore()); }, FSJS); } catch (e) { console.error('drain failed on', p.who, e.message); throw e; } };
+// (drain is sync-lib's: it waits for the app's own outbox to be confirmed; the SDK's waitForPendingWrites no longer sees the app's saves)
 const act = (p, name, ...args) => p.evaluate(([n, a]) => window.__pantry.act[n](...a), [name, args]);
 const local = (p, id) => p.evaluate(id => { const it = window.__pantry.S.items.get(id); return it && { name: it.name, removed: !!it.removedAt, batches: it.batches.map(b => [b.id, b.qty]) }; }, id);
 const localPlaces = (p, ids) => p.evaluate(ids => [...window.__pantry.S.places.values()].filter(d => ids.includes(d.id)).map(d => ({ id: d.id, name: d.name, removed: !!d.removedAt })), ids);

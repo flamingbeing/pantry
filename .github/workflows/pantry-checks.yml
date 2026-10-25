@@ -41,9 +41,15 @@ jobs:
       - run: node pantry/test/live-guards.test.mjs
   specs:
     # Playwright Test (playwright.config.mjs): fully parallel, 4 workers, each test with its own server, accounts and
-    # household ids; the emulators start from the config. Specs replace the old scripts one by one.
+    # household ids; the emulators start from the config. Specs replace the old scripts one by one. Two shards side by
+    # side (each with its own emulator): the specs were the longest job.
+    name: specs (${{ matrix.shard }}/2)
     runs-on: ubuntu-24.04
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v4
       - uses: flamingbeing/app-devkit/setup-node@v1.1.0   # npm ci (package-lock.json)
@@ -54,11 +60,11 @@ jobs:
         with:
           firebase-tools-version: '13.29.1'   # same as playwright.config.mjs
           emulators: firestore
-      - run: npx playwright test
+      - run: npx playwright test --shard=${{ matrix.shard }}/2
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
-          name: pantry-specs-results
+          name: pantry-specs-results-${{ matrix.shard }}
           path: test-results
           if-no-files-found: ignore
   sync:
