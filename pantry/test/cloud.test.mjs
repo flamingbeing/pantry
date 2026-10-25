@@ -106,7 +106,7 @@ assert.throws(() => updatePairs(F, null, L.mergeOps(PP.nameOps('a@b.c', 'A'), { 
   assert.equal((await import('../js/cloud.js')).stampAfter, undefined, 'stampAfter is gone');
   assert.ok(!/\bstamp:\s*doc\s*=>/.test(cloudSrc) && !/stampAfter/.test(cloudSrc), 'the adapter gets no stamp function of its own');
   assert.ok(!/code\s*===\s*'aborted'/.test(cloudSrc), 'no retry of aborted: the queue does it');
-  assert.ok(/const SYNC = 'https:\/\/core\.anawj\.com\/sync\/0\.4\.1\/index\.js'/.test(cloudSrc), 'app-sync 0.4.1, exact pin');
+  assert.ok(/const SYNC = 'https:\/\/core\.anawj\.com\/sync\/0\.5\.0\/index\.js'/.test(cloudSrc), 'app-sync 0.5.0, exact pin');
   assert.equal(items(server, { id: 'i1', name: 'N', batches: [] }, null, [{ put: true }]).updatedAt, server.updatedAt, 'a whole document keeps the server stamp');
   // field updates as the server does them
   assert.deepEqual(applyPairs({ a: { b: 1 }, n: 'x' }, [[['a', 'b'], { __inc: 2 }], [['n'], { __inc: 1 }], [['a', 'c'], { __del: true }]]), { a: { b: 3 }, n: 1 });
