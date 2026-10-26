@@ -26,7 +26,7 @@ pointers like "ask the owner" are fine).
   The kit's four files are in its `SHELL` list by full address, so the app works offline.
 - **Google sign-in** happens on the app's own address (`authDomain` is `pantry.flamingbeing.com`; Firebase's helper
   pages in `__/auth/`, `init.json` in `pantry/auth/firebase/`). Never add `*.workers.dev` previews to Firebase.
-- **Firebase is live family data:** never sign in to, read or change the live project; the local emulator with a `demo-*`
+- **Firebase is live family data:** never sign in to, read or change the live project (the one exception: the "Live smoke" workflow signs in the no-household test user from Actions secrets; no real data); the local emulator with a `demo-*`
   project is fine. Rules deploy on merge (`.github/workflows/deploy-firestore-rules.yml`): run the rules tests, merge
   only when Checks are green, confirm the deploy run, and say what the rules now allow or deny. Never loosen rules to
   pass a test.

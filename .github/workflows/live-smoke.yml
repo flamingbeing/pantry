@@ -1,0 +1,49 @@
+# Live sign-in smoke test (pantry/test/live-smoke): signs the test user in on the deployed site and checks the signed-in,
+# no-household shell. Runs by hand and after each successful Deploy. The test user is in no household and reads no app
+# data. Needs repo secrets PANTRY_TEST_EMAIL and PANTRY_TEST_PASSWORD; without them the run says so and skips.
+name: Live smoke
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Deploy]
+    types: [completed]
+    branches: [main]
+permissions:
+  contents: read
+concurrency:
+  group: live-smoke
+  cancel-in-progress: true
+jobs:
+  smoke:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PANTRY_TEST_EMAIL: ${{ secrets.PANTRY_TEST_EMAIL }}
+      PANTRY_TEST_PASSWORD: ${{ secrets.PANTRY_TEST_PASSWORD }}
+    steps:
+      - name: Check secrets
+        id: secrets
+        run: |
+          if [ -n "$PANTRY_TEST_EMAIL" ] && [ -n "$PANTRY_TEST_PASSWORD" ]; then echo "ready=true" >> "$GITHUB_OUTPUT"
+          else echo "::notice::PANTRY_TEST_EMAIL / PANTRY_TEST_PASSWORD are not set; skipping the live smoke test."; fi
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.ref }}
+      - uses: flamingbeing/app-devkit/setup-node@v1.1.0   # npm ci (package-lock.json)
+        if: steps.secrets.outputs.ready == 'true'
+      - uses: flamingbeing/app-devkit/setup-browser@v1.1.0
+        if: steps.secrets.outputs.ready == 'true'
+        with:
+          playwright-version: '1.56.1'
+          devkit-dir: ''   # the project's own Playwright (npx playwright)
+      - name: Sign-in smoke test
+        if: steps.secrets.outputs.ready == 'true'
+        run: npx playwright test -c playwright.live.config.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: live-smoke-report
+          path: test-results/
+          retention-days: 7
