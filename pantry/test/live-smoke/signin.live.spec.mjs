@@ -1,21 +1,17 @@
-// Live sign-in smoke test (playwright.live.config.mjs; workflow "Live smoke"). Signs the test user in through the
+// Live sign-in smoke test (app-devkit live-smoke workflow "Live smoke"). Signs the test user in through the
 // app's own email + password sheet on the deployed site and checks the signed-in shell. The test user is in no household
 // and Firestore refuses it every read, so this never touches app data and writes nothing. Skips without the secrets.
-// Run: PANTRY_TEST_EMAIL=... PANTRY_TEST_PASSWORD=... npx playwright test -c playwright.live.config.mjs
+// Run: LIVE_URL=https://pantry.flamingbeing.com LIVE_SPEC=pantry/test/live-smoke LIVE_TEST_EMAIL=... LIVE_TEST_PASSWORD=...
+//   npx playwright test -c .devkit/playwright/live.config.mjs   (CI: the app-devkit live-smoke workflow)
 import { test, expect } from '@playwright/test';
+import { liveUser, watchConsole } from '../../../.devkit/playwright/live.mjs';
 
-const email = process.env.PANTRY_TEST_EMAIL;
-const password = process.env.PANTRY_TEST_PASSWORD;
+const { email, password } = liveUser();
 
-test.skip(!email || !password, 'PANTRY_TEST_EMAIL / PANTRY_TEST_PASSWORD not set');
+test.skip(!email || !password, 'no test user (LIVE_TEST_EMAIL / LIVE_TEST_PASSWORD)');
 
 test('the test user signs in on the live site: signed-in shell, no household, no console errors', async ({ page }) => {
-  const errors = [];
-  page.on('pageerror', e => errors.push(`pageerror: ${e.message}`));
-  // Firestore refusing the no-household user is expected (403 / permission-denied), so that one is not an error here
-  page.on('console', m => {
-    if (m.type() === 'error' && !/Failed to load resource|permission-denied|Missing or insufficient permissions/i.test(m.text())) errors.push(`console: ${m.text()}`);
-  });
+  const errors = watchConsole(page);   // Firestore refusing the no-household user is expected, so it is ignored
 
   await page.goto('/pantry/#/settings');
   await page.locator('[data-act="email-open"]').click();
