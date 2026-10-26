@@ -27,12 +27,14 @@ test('the test user signs in on the live site: signed-in shell, no household, no
   await sheet.locator('button[type=submit]').click();
   await expect(sheet).toHaveCount(0);
 
-  // signed in: the sign-in card is gone and the account's address is shown, with no family data and no way to a pantry
+  // signed in: the sign-in card is gone and the account's address is shown, in no family pantry and with no family data
+  // (the app offers "Start our family pantry" to a signed-in account with none; the test never taps it)
   const main = page.locator('#main');
   await expect(main).toContainText(email, { ignoreCase: true });
   await expect(page.locator('[data-act="signin"]')).toHaveCount(0);
   await expect(page.locator('[data-act="signout"]').first()).toBeVisible();
-  await expect(main).not.toContainText(/Our pantry|Start our family pantry/);
+  await expect(main).toContainText(/Not in a family pantry yet|Can.t check right now/);
+  await expect(main).not.toContainText(/Check your email|Our pantry/);
 
   // a reload keeps the session (Firebase Auth persists it), still no household
   await page.reload();
