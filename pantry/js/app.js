@@ -2995,12 +2995,14 @@ function onSyncState(st) {
 // The server refused a write (info says which; none: a listener failed). The SDK has already put the screen back, so the
 // change would vanish: keep a copy on this phone and say "Needs attention" until it is retried or discarded.
 function onWriteError(err, info) {
-  if (!info || !SY.keepable(info)) { S.syncError = S.cloud.explain(err, 'Saving'); redraw(); return; }
+  if (!info || !SY.keepable(info)) { S.cloud.discardRefused?.(info?.key); S.syncError = S.cloud.explain(err, 'Saving'); redraw(); return; }
   keepRefused(err, info);
 }
 function keepRefused(err, info) {
   const name = S[info.kind]?.get?.(info.id)?.name || info.obj?.name || '';
-  S.refused = SY.addRefused(S.refused, { n: L.uid(), hid: S.household?.id || '', kind: info.kind, id: info.id, op: info.op, ops: info.ops, obj: info.obj, code: err?.code || '', at: new Date().toISOString(), name });
+  const was = S.refused;
+  S.refused = SY.addRefused(S.refused, { n: L.uid(), key: info.key || '', hid: S.household?.id || '', kind: info.kind, id: info.id, op: info.op, ops: info.ops, obj: info.obj, code: err?.code || '', at: new Date().toISOString(), name });
+  for (const r of was) if (!S.refused.includes(r)) S.cloud.discardRefused?.(r.key);   // (the oldest ones dropped from a full list)
   prefs.set('refused', S.refused);
   drawSync(); redraw();
 }
@@ -3019,6 +3021,7 @@ function settleRefused(n, retry) {
   const r = S.refused.find(x => x.n === n); if (!r) return;
   S.refused = SY.dropRefused(S.refused, n);
   prefs.set('refused', S.refused);
+  S.cloud.discardRefused?.(r.key);
   if (retry && !replay(r)) haToast('That item was removed on another phone, so there is nothing to change.');
   else if (retry) haToast('Sent again');
   else haToast('Dropped');

@@ -282,7 +282,7 @@ export function nest(pairs) {
 // every save through the outbox is.
 async function writeAll(F, db, hid, kind, list) {
   let b = null, n = 0, bytes = 0;
-  const st = await (await sync()).parts.adapter.stampFields();
+  const st = await (await sync()).sync.parts.adapter.stampFields();
   for (const o of list) {
     const { _saves, serverAt, ...c } = clean(kind === 'items' ? toStored(normalizeItem(o)) : o), size = JSON.stringify(c).length;
     Object.assign(c, st);   // stamped now, so every phone's delta listener hears it, and the server's own stamp (a copied one is another pantry's)
@@ -387,7 +387,9 @@ export function mergeSaves(kind) {
   };
 }
 const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
-const SYNC = 'https://core.anawj.com/sync/0.6.3/index.js';
+// app-sync, one exact version (sw.js SHELL has the same files): the modules (app.js, auth.js, sync.js) and index.js for
+// the helpers the page draws with (syncStatus, persistGuard, createReport)
+const SYNC = 'https://core.anawj.com/sync/1.5.1/';
 // A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
 // so the sweep still sees it here first.
 const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };
@@ -398,26 +400,29 @@ const strip = d => { if (!d || !('_saves' in d || 'serverAt' in d)) return d; co
 // what a queued save was, for the app's words and its Retry/Discard list: { op, kind, id, obj | ops }
 const infoOf = x => {
   const op = x.record._deleted ? 'del' : (x.ops || []).some(o => o.put) ? 'put' : 'patch', patch = (x.ops || []).filter(o => o.patch).map(o => o.patch);
-  return { op, kind: x.kind, id: x.record.id, ...(op === 'put' && x.kind !== 'photos' ? { obj: x.record } : {}), ...(op === 'patch' ? { ops: patch.length === 1 ? patch[0] : mergeAll(patch) } : {}) };
+  return { op, key: x.key, kind: x.kind, id: x.record.id, ...(op === 'put' && x.kind !== 'photos' ? { obj: x.record } : {}), ...(op === 'patch' ? { ops: patch.length === 1 ? patch[0] : mergeAll(patch) } : {}) };
 };
 
-// The engine, once a page (app-sync createApp): sign-in, the device copy, the outbox and the queue (they outlive a switch
-// between households: the scope is the household's id), the hub, the listener watchdog and sign-out (forgetDevice). Saves
-// the server refused go to the open household's `onError`.
+// The engine, once a page (app-sync 1.x createApp({ config, modules: [auth(), sync()] })): sign-in (app.auth), the device
+// copy, the outbox and the queue (they outlive a switch between households: the scope is the household's id), the hub and
+// the listener watchdog (app.sync), and sign-out (app.auth.forget: wipes this phone). Saves the server refused go to the
+// open household's `onError`.
 let engine = null, current = null, AS = null, refused = null;   // (current: the engine once up, so pending() answers at once)
 function sync() {
   if (engine) return engine;
   engine = (async () => {
-    AS = await import(SYNC);
+    const [{ createApp }, { auth }, { sync: syncModule }, index] = await Promise.all(['app.js', 'auth.js', 'sync.js', 'index.js'].map(f => import(SYNC + f)));
+    AS = index;
     // nothing-lost report (app-sync report.js): counts only (saves waiting over an hour, refused, in conflict, sync
     // errors by code) and versions, at most once an hour and when the page is hidden; never an item, a household or an id
     let appVersion = 'unknown';
     import('https://core.anawj.com/update/0.2.0/register.js').then(m => m.version()).then(v => { if (v) appVersion = v; }).catch(() => {});
     const report = AS.createReport({ app: 'pantry', version: () => appVersion, storage: (() => { try { return localStorage; } catch { return null; } })() });
     report.start();
-    const app = AS.createApp({
-      name: 'pantry', colls: KINDS, path: (hid, kind) => ['households', hid, kind],
-      sdk: async () => ({ ...await sdk(), emulator: usingEmulator }),
+    const app = createApp({ config: { name: 'pantry', sdk: async () => ({ ...await sdk(), emulator: usingEmulator }) }, modules: [
+      auth({ redirectFirst: () => redirectFirst({ standalone: installedApp(), ua: globalThis.navigator?.userAgent || '' }) }),
+      syncModule({
+      colls: KINDS, path: (hid, kind) => ['households', hid, kind],
       // stampMode 'server' (app-sync 0.3.0): every save also sets `serverAt` to the server's time, beside `updatedAt`. The
       // hub still reads by `updatedAt` (its stampMode 'client' below) until the backfill (tools/backfill-server-at.mjs)
       // and the rules require the stamp. `updatedAt` is the adapter's default stamp (0.4.0): max(now, the server copy's
@@ -430,47 +435,49 @@ function sync() {
       // 'permission-denied' is tried once more on a fresh read: the server judges the rules before it notices the copy read
       // was stale, so a write racing another phone's in the same millisecond can be refused for the same stamp.)
       commit: (hid, kind, record, base, extra) => {
-        const once = () => app.parts.adapter.commit(hid, kind, record, base, extra);
+        const once = () => app.sync.parts.adapter.commit(hid, kind, record, base, extra);
         return once().catch(async e => { if (e?.code !== 'permission-denied') throw e; await new Promise(r => setTimeout(r, 50 + Math.random() * 100)); return once(); });
       },
       // a save the server refused: kept in the app's list (Settings, Retry or Discard) and set aside in the queue, so a
       // Retry is a new save and nothing is sent twice
       onRefused: (err, x) => { const info = infoOf(x); console.warn('save failed', info.op, x.kind, err.code); refused?.(err, info); return 'archive'; },
-      redirectFirst: () => redirectFirst({ standalone: installedApp(), ua: globalThis.navigator?.userAgent || '' }),
-    });
+      }),
+    ] });
+    await app.ready;   // (app.auth and app.sync exist from here)
     return app;
   })();
   engine.catch(() => { engine = null; });
   return engine;
 }
-export async function onUser(cb) { return (await sync()).onUser(cb); }
-export async function signIn() { return (await sync()).signIn(); }
+export async function onUser(cb) { return (await sync()).auth.onUser(cb); }
+export async function signIn() { return (await sync()).auth.signIn(); }
 // True when every change made on this phone has reached the family within ms (false offline, on a timeout, or while
 // a save waits in another tab), so signing out doesn't silently drop changes still waiting for signal.
 export async function synced(ms = 4000) {
   const { F, db } = await sdk();
   const sdkDone = Promise.race([F.waitForPendingWrites(db).then(() => true, () => false), new Promise(r => setTimeout(() => r(false), ms))]);
-  return (engine ? await (await engine).flush(ms) : true) && await sdkDone;
+  return (engine ? await (await engine).sync.flush(ms) : true) && await sdkDone;
 }
 // Send what waits in the outbox now (tests: after the SDK's network is switched back on).
-export function kick() { engine?.then(a => a.queue.kick(), () => {}); }
-// Signing out wipes this phone's family copy, in app-sync's order (createApp: forgetDevice): stop every listener, check
-// the person is still the one signing out and nothing is unsent, then the copy of every kind (in every tab), the outbox,
-// and the SDK's own cache (terminated, so that instance can't be used again: the app reloads, `reload`). The sign-out
+export function kick() { engine?.then(a => a.sync.queue.kick(), () => {}); }
+// Signing out wipes this phone's family copy (app-sync 1.x app.auth.forget): refused while anything is unsent, then Auth
+// signs out and the sync module wipes the copy of every kind (in every tab), the outbox, and the SDK's own cache
+// (terminated, so that instance can't be used again: the app reloads, `reload`). The sign-out
 // check (`synced`) came first; `anyway` (the person chose "Sign out anyway") sets this phone's unsent saves aside first,
 // so they are lost as the dialog said.
 export async function signOut({ anyway = false } = {}) {
-  const app = await sync();
-  if (anyway) for (const x of app.queue.entries()) if (x.state !== 'synced' && x.state !== 'archived') await app.queue.archive(x.key);
-  const r = await app.signOut();
-  if (!r.ok) {
-    if (r.reason === 'changed') throw Object.assign(new Error('Signing out was stopped: someone signed in on this phone meanwhile.'), { code: 'signout-stopped' });
-    throw Object.assign(new Error('Changes on this phone are still unsent.'), { code: 'signout-unsent' });
-  }
-  if (r.failed.length) console.warn('sign-out steps that failed', r.failed);
-  if (r.reload) fb = null;
-  return { reload: r.reload };   // (the SDK instance is closed outside the emulator: the page starts clean)
+  const app = await sync(), { queue } = app.sync;
+  if (anyway) for (const x of queue.entries()) if (x.state !== 'synced' && x.state !== 'archived') await queue.archive(x.key);
+  const r = await app.auth.forget({ force: anyway });
+  if (!r.ok) throw Object.assign(new Error('Changes on this phone are still unsent.'), { code: 'signout-unsent' });
+  if (r.failed?.length) console.warn('sign-out steps that failed', r.failed);
+  const reload = !usingEmulator;   // (the SDK instance is closed outside the emulator: the page starts clean)
+  if (reload) fb = null;
+  return { reload };
 }
+// A refused save the person retried or dropped (or the app didn't keep): given up in the queue too, which counts a
+// refused save as unsent until then (app-sync 1.x: it keeps the sign-out check and synced() false).
+export async function discardRefused(key) { if (key && engine) await (await engine).sync.queue.discard(key); }
 // How many of this phone's changes the outbox still holds (the update reload waits for none).
 export function pending() { return current ? current.queue.pending() : 0; }
 // The chip's state by app-sync's rules (a chip drawn by app.js): never Saved before the server has answered once, and
@@ -481,7 +488,7 @@ export function status(input) { return AS ? AS.syncStatus({ atRiskOnlyOffline: t
 // `onSync(state)` of how many of this phone's changes the server hasn't confirmed yet ({ pending, cache, list, heard, stale, persisted }).
 export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
   const { F, db } = await sdk();
-  const app = current = await sync(), { hub, queue } = app;
+  const app = current = (await sync()).sync, { hub, queue } = app;
   await app.open(hid);
   refused = onError;
   let persisted = true;
@@ -496,6 +503,8 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
   const data = Object.fromEntries(KINDS.map(k => [k, []]));   // each kind's list, as last delivered (load)
   const ready = Object.fromEntries(KINDS.map(k => { let done; const p = new Promise(r => { done = r; }); return [k, { p, done }]; }));
   const ofQueue = kind => queue.entries().filter(x => x.owner === hid && x.kind === kind && x.state === 'pending').map(x => x.record.id);
+  // saves handed to the engine that it hasn't taken yet: id -> { record } per kind (deliver lays them over)
+  const sending = Object.fromEntries(KINDS.map(k => [k, new Map()]));
   function tell() {
     if (closed) return;
     const mine = queue.entries().filter(x => x.owner === hid && x.state === 'pending' && counts(x));
@@ -503,21 +512,22 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
       const patch = (x.ops || []).filter(o => o.patch).at(-1);
       return { kind: x.kind, id: x.record.id, op: x.record._deleted ? 'del' : patch && !(x.ops || []).some(o => o.put) ? 'patch' : 'put', ...(patch ? { ops: patch.patch } : {}), name: x.record.name || '' };
     });
+    // (app-sync 1.x stores a save before it joins the queue: one handed to it and not in the queue yet counts too)
+    const queued = new Set(mine.map(x => x.kind + ':' + x.record.id));
+    const storing = KINDS.filter(k => counts({ kind: k })).reduce((n, k) => n + [...sending[k].keys()].filter(id => !queued.has(k + ':' + id)).length, 0);
     onSync({
-      pending: mine.length + (leftover ? 1 : 0), cache: !cb || KINDS.some(k => seen[k].cache), list: [...list, ...(leftover ? [{ kind: 'items', id: '', op: 'before' }] : [])],
+      pending: mine.length + storing + (leftover ? 1 : 0), cache: !cb || KINDS.some(k => seen[k].cache), list: [...list, ...(leftover ? [{ kind: 'items', id: '', op: 'before' }] : [])],
       heard, lastServerAt, relistens: app.relistens(), cycles, stale: app.parts.watchdog.stale(), persisted,
     });
   }
   const offQueue = queue.onChange(() => tell());
-  // saves handed to the engine that it hasn't taken yet: id -> { record } per kind (deliver lays them over)
-  const sending = Object.fromEntries(KINDS.map(k => [k, new Map()]));
   const heardList = {};   // each kind's last list from the engine, as it came: [list, meta] (handed again once a save leaves `sending`)
   function enqueue(kind, record, base, change, info) {
     const mine = sending[kind] && { record };
-    if (mine) sending[kind].set(record.id, mine);
+    if (mine) { sending[kind].set(record.id, mine); tell(); }
     return app.save(kind, hid, record, base, { ops: change })
       .then(() => true, e => { if (queue.error()) { console.warn('outbox', e?.message); onError(e, info); } return false; })
-      .finally(() => { if (mine && sending[kind].get(record.id) === mine) { sending[kind].delete(record.id); if (heardList[kind]) deliver(kind, heardList[kind][0], { ...heardList[kind][1], again: true }); } });
+      .finally(() => { if (mine && sending[kind].get(record.id) === mine) { sending[kind].delete(record.id); if (heardList[kind]) deliver(kind, heardList[kind][0], { ...heardList[kind][1], again: true }); else tell(); } });
   }
   // the listeners (createApp watch: app-sync watchSaved): each kind's whole list from the engine (this phone's copy, then
   // the server's changes), with this phone's saves not yet sent laid over it, again when a save is done, so the server's
