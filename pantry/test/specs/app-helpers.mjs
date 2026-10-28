@@ -48,7 +48,7 @@ export async function open(phone, name, url = BASE, { width = 390, height = 844,
     if (!(await page.evaluate(() => window.__swAtStart))) await page.reload();
     await page.waitForFunction(() => window.__swAtStart === true);
   }
-  await expect(page.locator('.ha-large-title').first()).toBeVisible();
+  await expect(page.locator('.ui-large-title').first()).toBeVisible();
   return page;
 }
 // finite animations (sheets, toasts, view transitions) have run out
@@ -61,9 +61,9 @@ export const go = async (page, h) => {
   await expect(page.locator('#main')).toBeVisible();
   await quiet(page);
 };
-export const toast = page => page.locator('.ha-toast.is-visible');
-export const undo = async page => { await toast(page).locator('.ha-toast-action').click(); };
-export const sheetOpen = page => page.locator('dialog.ha-sheet[open]');
+export const toast = page => page.locator('.toasts .toast');
+export const undo = async page => { await toast(page).locator('.toast-action').click(); };
+export const sheetOpen = page => page.locator('dialog.ui-sheet[open]');
 export const ymdPlus = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE'); };
 // the app has decided about the welcome by now: it runs on a 300 ms timer set as the app starts, and a timer set after
 // that one, with the same delay, fires after it
@@ -73,7 +73,7 @@ export async function welcomeDecided(page) {
 }
 
 // ---- the welcome ----
-export const welcomeSheet = page => page.locator('dialog.ha-sheet.pa-wsheet[open]');
+export const welcomeSheet = page => page.locator('dialog.ui-sheet.pa-wsheet[open]');
 export const card = (page, title) => expect(welcomeSheet(page).locator('.pa-wtitle')).toHaveText(new RegExp(`^(Step \\d+ of \\d+: )?${title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`));
 export const nextCard = page => welcomeSheet(page).locator('[data-pa-w="next"]').click();
 
@@ -90,7 +90,7 @@ export async function noSideways(page, what) {
   expect(r.sw, `${what}: no sideways scroll (scrollWidth ${r.sw} > ${r.w})`).toBeLessThanOrEqual(r.w);
 }
 export async function sheetFits(page, what) {
-  const r = await sheetOpen(page).evaluate(d => ({ sw: d.querySelector('.ha-sheet-body').scrollWidth, cw: d.querySelector('.ha-sheet-body').clientWidth }));
+  const r = await sheetOpen(page).evaluate(d => ({ sw: d.querySelector('.ui-sheet-body').scrollWidth, cw: d.querySelector('.ui-sheet-body').clientWidth }));
   expect(r.sw, `${what}: no sideways scroll in the sheet`).toBeLessThanOrEqual(r.cw);
 }
 export const bigText = (page, on = true) => page.evaluate(on => { document.documentElement.style.fontSize = on ? '212.5%' : ''; }, on);
@@ -98,10 +98,10 @@ export const bigText = (page, on = true) => page.evaluate(on => { document.docum
 export async function barApart(page, what) {
   const r = await page.evaluate(() => {
     const box = e => { const b = e.getBoundingClientRect(); return { l: b.left, r: b.right, t: b.top, b: b.bottom, w: b.width, h: b.height }; };
-    const title = document.querySelector('.ha-bar-title');
-    const parts = [...document.querySelectorAll('.ha-bar-lead > *, .ha-bar-trail > *')].filter(e => e.getClientRects().length)
-      .map(e => ({ side: e.closest('.ha-bar-lead') ? 'lead' : 'trail', ...box(e) }));
-    const back = document.querySelector('.ha-back');
+    const title = document.querySelector('#bar-title');
+    const parts = [...document.querySelectorAll('#bar-lead > *, #bar-trail > *')].filter(e => e.getClientRects().length)
+      .map(e => ({ side: e.closest('#bar-lead') ? 'lead' : 'trail', ...box(e) }));
+    const back = document.querySelector('.pa-back');
     return { title: title && title.textContent.trim() ? box(title) : null, parts, back: back && { ...box(back), name: back.textContent.trim() } };
   });
   const hit = (a, b) => Math.min(a.r, b.r) - Math.max(a.l, b.l) > 0.5 && Math.min(a.b, b.b) - Math.max(a.t, b.t) > 0.5;
@@ -114,16 +114,16 @@ export async function barApart(page, what) {
 }
 
 // ---- screens ----
-export const TAB = (page, h) => page.locator(`.ha-tabbar a[href="${h}"]`);
+export const TAB = (page, h) => page.locator(`.ui-tabbar a[href="${h}"]`);
 // Add (catalogue) -> Light soy sauce x2, a year; leaves the phone on the new item's screen
 export async function addSoy(page) {
-  await page.click('.ha-tab--action');
+  await page.click('[data-act="go-add"]');
   await expect.poll(() => hash(page)).toBe('#/add');
   await page.fill('#pa-find', 'kikkoman soy');
   await page.locator('#pa-sugg [data-act="sugg"]').first().click();
   await expect(page.locator('#pa-form [name="name"]')).toHaveValue('Light soy sauce');
   await page.click('#pa-qty [data-step="1"]');
-  await expect(page.locator('#pa-qty output')).toHaveText('2');
+  await expect(page.locator('#pa-qty input')).toHaveValue('2');
   await page.click('.pa-dates [data-act="date"]:has-text("1 year")');
   await expect(page.locator('#pa-form [name="expiry"]')).toHaveValue(ymdPlus(365));
   await page.click('#pa-save');

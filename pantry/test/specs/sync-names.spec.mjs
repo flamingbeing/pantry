@@ -49,7 +49,7 @@ test('Mum names Gran while Dad, offline, stops sharing with her: Gran’s name g
   await go(dad, '#/settings');
   await net(dad, false);
   await dad.click(`#main [data-act="person"][data-v="${granE}"]`);
-  await dad.click('dialog.ha-sheet[open] [data-pp="remove"]');
+  await dad.click('dialog.ui-sheet[open] [data-pp="remove"]');
   await dad.locator('dialog[open] button', { hasText: /^Stop sharing$/ }).last().click();   // (the app waits for the server: it can't, offline)
   await act(mum, 'namePerson', granE, 'Granny'); await drain(mum);
   expect((await serverNames(fsAdmin, hid))[granE], 'Mum’s save arrived while Dad was offline').toBe('Granny');
@@ -57,5 +57,5 @@ test('Mum names Gran while Dad, offline, stops sharing with her: Gran’s name g
   await expect.poll(async () => granE in await serverNames(fsAdmin, hid), { message: 'Gran’s name went with her' }).toBe(false);
   expect((await fsAdmin.get(`households/${hid}`)).members.includes(granE), 'and she is out of the family').toBe(false);
   expect(await serverNames(fsAdmin, hid), 'the others stay').toEqual({ [mumE]: 'Mum again', [dadE]: 'Dad again' });
-  await expect(dad.locator('.ha-toast', { hasText: 'Stopped sharing' })).toBeVisible();
+  await expect(dad.locator('.toast', { hasText: 'Stopped sharing' })).toBeVisible();
 });

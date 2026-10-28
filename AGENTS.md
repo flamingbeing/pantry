@@ -14,16 +14,18 @@ pointers like "ask the owner" are fine).
 
 ## Rules that bite
 
-- **Design kit by URL:** the family home design kit lives in another repo and is linked at
-  `https://design.flamingbeing.com/v1/` (`tokens.css`, `app.css`, `app.js`, `icons.svg`); never copy it here. Icon
-  markup writes `<use href="#i-<name>"/>` (the kit puts its sprite in the page). `/v1/` never breaks; a breaking kit
-  change would come as `/v2/`.
+- **Kits by URL:** the screens use the shared kit (`@core/ui`, `@core/theme` from app-ui) at one exact
+  `https://core.anawj.com/ui/<version>/` (the same version in `index.html`, `js/ui.js` and `sw.js`); the brand tokens
+  and icons come from `https://design.flamingbeing.com/v1/` (`tokens.css`, `icons.svg`). Never copy either here; a kit
+  gap is fixed in app-ui and pantry bumps. `js/ui.js` is pantry's glue on the kit (routes, sheets, toasts) and puts
+  the icon sprite in the page, so icon markup writes `<use href="#i-<name>"/>`.
 - **Apps stay unlisted:** every page has `<meta name="robots" content="noindex, nofollow">`; never link the app publicly.
 - **Service workers:** `sw.js` has `const VERSION = 'pantry-v<N>'`; never stamp it by hand (the deploy runs
   `tools/stamp-versions.mjs`, which also fills `MANIFEST`). Change `<N>` only when the worker's own logic changes. The
   logic lives in the shared update module (`importScripts` of one exact `core.anawj.com/update/<x.y.z>/` version; the
   page's `js/app-update.js` loads the same version); never copy it here. Delete only `pantry-` caches.
-  The kit's four files are in its `SHELL` list by full address, so the app works offline.
+  The kits' files are in its `SHELL` list by full address (re-list the core kit's files at each bump), so the app
+  works offline.
 - **Google sign-in** happens on the app's own address (`authDomain` is `pantry.flamingbeing.com`; Firebase's helper
   pages in `__/auth/`, `init.json` in `pantry/auth/firebase/`). Never add `*.workers.dev` previews to Firebase.
 - **Firebase is live family data:** never sign in to, read or change the live project (the one exception: the "Live smoke" workflow signs in the no-household test user from Actions secrets; no real data); the local emulator with a `demo-*`

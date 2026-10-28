@@ -36,8 +36,9 @@ test('a rename on one phone shows on the other: the list, the items in it, and t
   await expect(dad.locator('[data-act="place-open"][data-v="Fridge"]'), 'dad sees the rename').toHaveCount(0);
   await expect.poll(() => dad.evaluate(() => [...window.__pantry.S.items.values()].filter(i => /fridge/i.test(i.location || '')).map(i => i.location)), { message: 'and his items moved with it' }).toEqual(['Kitchen fridge']);
   // (PR-C: every place is a document of its own; the first change wrote the defaults as documents, and the rename is one field)
+  // (Dad can show the new name from the moved item, under "Not in your list", before the place document lands)
+  await expect.poll(async () => (await placeDocs(fsAdmin, hid)).map(d => d.name).slice(0, 3), { message: 'the defaults became place documents, the rename kept its position' }).toEqual(['Kitchen cabinet', 'Kitchen fridge', 'Level 1 fridge']);
   const docs = await placeDocs(fsAdmin, hid);
-  expect(docs.map(d => d.name).slice(0, 3), 'the defaults became place documents, the rename kept its position').toEqual(['Kitchen cabinet', 'Kitchen fridge', 'Level 1 fridge']);
   expect(docs.length, 'one document each, none twice').toBe(11);
   expect(Object.keys(docs[1]).sort()).toEqual(['_saves', 'id', 'name', 'order', 'serverAt', 'updatedAt']);
   // (app-sync stamps every save as it reaches the server, the migration's too, so other phones' delta listeners hear it;
@@ -87,7 +88,7 @@ test('one phone removes a place while the other, offline, renames it: it stays h
   const aDoc = (await placeDocs(fsAdmin, hid)).find(d => d.id === idA);
   expect(aDoc.removedAt && aDoc.name === 'Shelf Ay', 'hidden, with the rename kept').toBeTruthy();
   await go(mum, '#/removed');
-  const row = mum.locator('#pa-removed-places .ha-row', { hasText: 'Shelf Ay' });
+  const row = mum.locator('#pa-removed-places .ui-row', { hasText: 'Shelf Ay' });
   await row.locator('[data-act="restore"]').click();
   await same(fsAdmin, hid, [mum, dad], 'restored with the rename', [...before, 'Shelf Ay']);
   expect((await placeDocs(fsAdmin, hid)).find(d => d.id === idA).removedAt, 'markers cleared').toBeUndefined();
@@ -124,11 +125,11 @@ test('a rename moves the items in the place; an item added offline under the old
   for (const p of [mum, dad]) {
     await go(p, '#/places');
     await expect(p.locator('#pa-places-other [data-act="place-open"][data-v="Level 1 freezer"]'), '"Not in your list": the item is still found').toBeVisible();
-    await expect(p.locator('#pa-places-other .ha-row', { hasText: 'Level 1 freezer' }).locator('.ha-row-value')).toHaveText(/^\D*1\D*$/);
+    await expect(p.locator('#pa-places-other .ui-row', { hasText: 'Level 1 freezer' }).locator('.pa-row-value')).toHaveText(/^\D*1\D*$/);
   }
   // and the way out of "Not in your list": move its items to the renamed place
   await mum.locator('#pa-places-other [data-act="place-open"][data-v="Level 1 freezer"]').click();
-  await mum.locator('dialog.ha-sheet[open] [data-pl="remove"]').click();
+  await mum.locator('dialog.ui-sheet[open] [data-pl="remove"]').click();
   await mum.selectOption('#pa-mv-to', 'Cellar freezer'); await mum.locator('#pa-mv-go').click(); await drain(mum);
   await expect.poll(async () => (await fsAdmin.list(`households/${hid}/items`)).find(i => i.name === 'Late ice cream').location).toBe('Cellar freezer');
   // the old phones keep writing the single list: the rules take it; new phones ignore it

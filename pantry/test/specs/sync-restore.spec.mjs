@@ -28,7 +28,7 @@ test('a backup restored with no signal waits in the outbox and reaches the famil
   await net(mum, false);
   const t0 = Date.now();
   await mum.setInputFiles('#pa-restore', { name: 'pantry-backup.json', mimeType: 'application/json', buffer: Buffer.from(backup(uid)) });
-  await expect(mum.locator('.ha-toast')).toContainText('Restored 2 items');
+  await expect(mum.locator('.toast')).toContainText('Restored 2 items');
   // kept on this phone and counted: two items and a line (history and photos ride along, uncounted)
   await expect.poll(() => pending(mum), { message: 'the restore waits in the outbox' }).toBeGreaterThanOrEqual(3);
   expect(await raw(`households/${hid}/items/rs-jam-${uid}`), 'nothing reached the server offline').toBeNull();
@@ -63,7 +63,7 @@ test('copying this phone’s own pantry up goes through the outbox (no signal: k
   await expect(mum.locator('[data-act="copy-up"]')).toBeVisible();
   await net(mum, false);
   await mum.click('[data-act="copy-up"]');
-  await expect(mum.locator('.ha-toast')).toContainText('Copied 1 item');
+  await expect(mum.locator('.toast')).toContainText('Copied 1 item');
   await expect.poll(() => pending(mum), { message: 'the copy waits in the outbox' }).toBeGreaterThanOrEqual(1);
   await net(mum, true);
   await drain(mum);

@@ -24,13 +24,13 @@ test('the welcome in the demo (?welcome): every card, Back, Close, Pick what you
   await axe(page, 'welcome card 2');
   await shot(page, 'w2-fill');
   await expect(welcomeSheet(page).locator('[data-pa-w="next"]'), 'no Next on the last card').toHaveCount(0);
-  await expect(welcomeSheet(page).locator('.ha-sheet-head [data-ha-close]'), 'the last card says Close, not Skip').toHaveText('Close');
+  await expect(welcomeSheet(page).locator('.ui-sheet-head [data-pa-close]'), 'the last card says Close, not Skip').toHaveText('Close');
   await welcomeSheet(page).locator('[data-pa-w="prev"]').click();
   await card(page, 'Welcome to the pantry');   // Back shows the previous card
   await nextCard(page);
   await expect(welcomeSheet(page).locator('[data-pa-w="done"]'), 'a quiet Look around first').toHaveText('Look around first');
   await welcomeSheet(page).locator('[data-pa-w="start"]').click();
-  await expect(sheetOpen(page).locator('.ha-sheet-title'), 'Pick what you have opens the quick start').toHaveText('What do you have?');
+  await expect(sheetOpen(page).locator('.pa-sheet-title'), 'Pick what you have opens the quick start').toHaveText('What do you have?');
   expect(await page.evaluate(() => localStorage.getItem('pantry:welcomed')), 'the demo saves no flag').toBeNull();
 });
 

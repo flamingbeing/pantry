@@ -46,7 +46,7 @@ async function oldItem(page) {
   });
   await idb(page, 'items/legacy1', { id: 'legacy1', name: 'Old photo item', brand: '', size: '', category: 'Other', location: 'Kitchen cabinet', openDays: null, lowAt: 0, barcode: '', photo: legacy, batches: [], createdAt: '2026-10-01T00:00:00Z' });
   await page.reload();
-  await expect(page.locator('.ha-large-title')).toBeVisible();
+  await expect(page.locator('.ui-large-title')).toBeVisible();
   await page.waitForFunction(() => { const i = window.__pantry?.S?.items.get('legacy1'); return i && !('photo' in i) && i.hasPhoto; });
   // the moved photo has been written too
   await expect.poll(() => idb(page, 'photos/legacy1')).not.toBeNull();
@@ -100,14 +100,14 @@ test('add an item with a camera picture: a thumbnail on the item, the photo on i
   await shot(page, '30-item-photo');
   // lists use the thumbnail
   await go(page, '#/items');
-  await expect(page.locator('#pa-items-list a.ha-row', { hasText: 'Photo test sauce' }).locator('img.ha-row-thumb'), 'the list shows the thumbnail').toHaveAttribute('src', added.thumb);
-  await expect(page.locator('#pa-items-list a.ha-row', { hasText: 'Old photo item' }).locator('img.ha-row-thumb'), 'and the moved item its thumbnail').toHaveAttribute('src', migrated.thumb);
+  await expect(page.locator('#pa-items-list a.ui-row', { hasText: 'Photo test sauce' }).locator('img.pa-row-thumb'), 'the list shows the thumbnail').toHaveAttribute('src', added.thumb);
+  await expect(page.locator('#pa-items-list a.ui-row', { hasText: 'Old photo item' }).locator('img.pa-row-thumb'), 'and the moved item its thumbnail').toHaveAttribute('src', migrated.thumb);
   await go(page, '#/');
   expect(await page.evaluate(() => [...document.querySelectorAll('img')].every(i => !i.src.startsWith('data:') || i.src.length <= 12288)), 'Home has no full photos').toBe(true);
 
   // a fresh start reads the photo only when the item opens
   await page.reload();
-  await expect(page.locator('.ha-large-title')).toBeVisible();
+  await expect(page.locator('.ui-large-title')).toBeVisible();
   await page.waitForFunction(() => !!window.__pantry?.S);
   expect(await page.evaluate(() => window.__pantry.S.pics.size), 'nothing but thumbnails loaded at start').toBe(0);
   await go(page, '#/item/' + id);

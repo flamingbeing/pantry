@@ -12,7 +12,7 @@ const onList = (page, test) => page.evaluate(`(() => [...window.__pantry.S.shop.
 // a staple: Plenty / Low / Out instead of a count
 async function makeStaple(page, id) {
   await go(page, '#/edit/' + id);
-  await page.click('.pa-track .ha-seg:has(input[value="level"])');
+  await page.click('.pa-track .pa-seg:has(input[value="level"])');
   await page.click('#pa-save');
   await expect(page.locator('.pa-level input[value="plenty"]'), 'a staple shows Plenty / Low / Out').toBeChecked();
 }
@@ -20,7 +20,7 @@ async function makeStaple(page, id) {
 test('Home: Since you last looked, and "use this week" as a WhatsApp message', async ({ phone, axe }) => {
   const page = await demo(phone, 'since');
   const since = sectionOf(page, 'h-since');
-  await expect(since.locator('.ha-row-title'), 'Since you last looked: three things Dad did').toHaveCount(3);
+  await expect(since.locator('.pa-row-title'), 'Since you last looked: three things Dad did').toHaveCount(3);
   await expect(since, 'in words, with names').toContainText('Dad threw away Wholemeal bread');
   await expect(since).toContainText('Dad bought Eggs (10)');
   const wa = await page.locator('#pa-wa-week').getAttribute('href');
@@ -37,31 +37,31 @@ test('names for the family: the list, a contact sheet per person, Stop sharing',
   await go(page, '#/settings');
   const fam = sectionOf(page, 'h-family');
   const row = who => fam.locator(`[data-act="person"][data-v="${who}"]`);
-  await expect(row('dad@example.com').locator('.ha-row-title'), 'a named member shows the name').toHaveText('Dad');
-  await expect(row('dad@example.com').locator('.ha-row-sub'), 'with the email under it').toContainText('dad@example.com');
-  await expect(row('grandma@example.com').locator('.ha-row-title'), 'no name: the email').toHaveText('grandma@example.com');
+  await expect(row('dad@example.com').locator('.pa-row-title'), 'a named member shows the name').toHaveText('Dad');
+  await expect(row('dad@example.com').locator('.ui-row-sub'), 'with the email under it').toContainText('dad@example.com');
+  await expect(row('grandma@example.com').locator('.pa-row-title'), 'no name: the email').toHaveText('grandma@example.com');
   await axe(page, 'settings with the family');
   await shot(page, 'n02-family-list');
   await row('grandma@example.com').click();
   const person = sheetOpen(page);
-  await expect(person.locator('.ha-sheet-title'), 'the contact sheet').toHaveText('Family member');
+  await expect(person.locator('.pa-sheet-title'), 'the contact sheet').toHaveText('Family member');
   expect(await person.locator('a', { hasText: 'Email an invite' }).getAttribute('href'), 'Email an invite').toMatch(/^mailto:grandma%40example\.com/);
   await expect(person.locator('[data-pp="remove"]'), 'Stop sharing for someone else').toHaveCount(1);
   await page.fill('#pa-person-name', '  Grandma   Lim ');
   await axe(page, 'contact sheet');
   await shot(page, 'n03-contact-sheet');
   await person.locator('button[type=submit]').click();
-  await expect(row('grandma@example.com').locator('.ha-row-title'), 'the name shows in the list').toHaveText('Grandma Lim');
+  await expect(row('grandma@example.com').locator('.pa-row-title'), 'the name shows in the list').toHaveText('Grandma Lim');
   await until(() => page.evaluate(() => window.__pantry.S.settings.get('people').names['grandma@example.com'] === 'Grandma Lim'), 'saved in settings/people');
   await row('mum@example.com').click();
-  await expect(sheetOpen(page).locator('.ha-sheet-title')).toHaveText('Mum');
+  await expect(sheetOpen(page).locator('.pa-sheet-title')).toHaveText('Mum');
   await expect(sheetOpen(page).locator('[data-pp="remove"]'), 'your own sheet: no Stop sharing').toHaveCount(0);
   await expect(sheetOpen(page).locator('a', { hasText: 'Email an invite' }), 'no invite').toHaveCount(0);
   await page.goBack();
   await expect(sheetOpen(page)).toHaveCount(0);
   await row('grandma@example.com').click();
-  await page.click('dialog.ha-sheet[open] [data-pp="remove"]');
-  await page.locator('dialog.ha-sheet[open] .ha-btn--danger', { hasText: 'Stop sharing' }).click();
+  await page.click('dialog.ui-sheet[open] [data-pp="remove"]');
+  await page.locator('dialog.modal[open] .ui-danger', { hasText: 'Stop sharing' }).click();
   await expect(row('grandma@example.com'), 'Stop sharing removes her').toHaveCount(0);
   await until(() => page.evaluate(() => !('grandma@example.com' in window.__pantry.S.settings.get('people').names)), 'and her name');
 });
@@ -107,8 +107,8 @@ test('Freeze and Thaw on a batch: which freezer, till when, Undo, Not frozen, mo
   await expect(toast(page), 'Freeze says where and till when').toHaveText(/^1 frozen: moved to Freezer, keeps till/);
   await until(async () => { const x = await m(); return x.location === 'Freezer' && x.batches[0].frozenAt === ymdPlus(0) && x.batches[0].expiry === ymdPlus(365) && x.batches[0].packPlace === 'Fridge'; }, 'frozen: in the freezer, a year, frozen today, the packaging date kept');
   const packDate = (await m()).batches[0].packExpiry;
-  await expect(page.locator('.pa-batch .ha-row-title').first(), 'the batch says frozen').toHaveText('1 frozen');
-  await expect(page.locator('.pa-batch .ha-row-sub').first(), 'and when').toHaveText(/^Frozen /);
+  await expect(page.locator('.pa-batch .pa-row-title').first(), 'the batch says frozen').toHaveText('1 frozen');
+  await expect(page.locator('.pa-batch .ui-row-sub').first(), 'and when').toHaveText(/^Frozen /);
   await axe(page, 'item frozen');
   await shot(page, 'n05-item-frozen');
   await page.click('[data-act="thaw"]');
@@ -138,7 +138,7 @@ test('Freeze and Thaw on a batch: which freezer, till when, Undo, Not frozen, mo
   await go(page, '#/item/' + dump);
   const db = (await itemById(page, dump)).batches[0];
   await page.click(`[data-act="thaw"][data-b="${db.id}"]`);
-  await expect(cold.locator('#pa-cold-qty output'), 'how many starts at all of them').toHaveText('2');
+  await expect(cold.locator('#pa-cold-qty input'), 'how many starts at all of them').toHaveValue('2');
   await expect(cold.locator('#pa-cold-where'), 'with the fridges').toBeVisible();
   await cold.locator('#pa-cold-qty [data-step="-1"]').click();
   await expect(cold.locator('#pa-cold-where'), 'one of two: no place to pick').toBeHidden();
@@ -146,7 +146,7 @@ test('Freeze and Thaw on a batch: which freezer, till when, Undo, Not frozen, mo
   await axe(page, 'thaw some');
   await cold.locator('#pa-cold-go').click();
   await until(async () => { const d = await itemById(page, dump); return d.location === 'Level 1 freezer' && d.batches.some(b => b.id === db.id && b.qty === 1) && d.batches.some(b => b.thawedAt === ymdPlus(0) && b.qty === 1 && b.expiry === ymdPlus(3)); }, 'split: one thawed, one still frozen');
-  await expect.poll(async () => (await page.locator('.pa-batch .ha-row-title').allTextContents()).sort().join(), 'the rows say which').toBe('1 frozen,1 in stock');
+  await expect.poll(async () => (await page.locator('.pa-batch .pa-row-title').allTextContents()).sort().join(), 'the rows say which').toBe('1 frozen,1 in stock');
   await undo(page);
   await go(page, '#/item/' + await idOf(page, 'Laundry liquid'));
   await expect(page.locator('[data-act="freeze"]'), 'no Freeze for laundry liquid').toHaveCount(0);
@@ -156,16 +156,16 @@ test('Leftovers: a name, the fridge, three days, never on the list', async ({ ph
   const page = await demo(phone, 'leftovers');
   await page.click('.pa-quickrow [data-act="leftovers"]');
   const left = sheetOpen(page);
-  await expect(left.locator('.ha-sheet-title')).toHaveText('Leftovers');
+  await expect(left.locator('.pa-sheet-title')).toHaveText('Leftovers');
   await expect(left.locator('[name="location"]'), 'Leftovers: the fridge already chosen').toHaveValue('Fridge');
-  await left.locator('.ha-sheet-foot .ha-btn--primary').click();
+  await left.locator('.pa-sheet-foot .ui-primary').click();
   await expect(page.locator('#pa-left-err'), 'a name is needed').toBeVisible();
   await page.fill('#pa-left-name', 'Chicken curry');
   await axe(page, 'leftovers sheet');
   await shot(page, 'n07-leftovers');
-  await left.locator('.ha-sheet-foot .ha-btn--primary').click();
+  await left.locator('.pa-sheet-foot .ui-primary').click();
   await until(async () => { const c = await itemNamed(page, 'Chicken curry'); return !!c && c.category === 'Leftovers' && c.location === 'Fridge' && !!c.noRestock && c.batches[0].expiry === ymdPlus(3); }, 'in the fridge, use within 3 days, never on the list');
-  await expect(sectionOf(page, 'h-use-soon').locator('.ha-row', { hasText: 'Chicken curry' }), 'under Use soon').toHaveCount(1);
+  await expect(sectionOf(page, 'h-use-soon').locator('.ui-row', { hasText: 'Chicken curry' }), 'under Use soon').toHaveCount(1);
 });
 
 test('a staple shows Plenty / Low / Out: Low puts it on the list, Undo, Out', async ({ phone, axe }) => {
@@ -173,8 +173,8 @@ test('a staple shows Plenty / Low / Out: Low puts it on the list, Undo, Out', as
   const rice = await idOf(page, 'Thai hom mali rice');
   await makeStaple(page, rice);
   await expect(page.locator('[data-act="bought"]'), 'no Bought more').toHaveCount(0);
-  await expect(page.locator('#h-stock .ha-num'), 'no count').toHaveCount(0);
-  await page.click('.pa-level .ha-seg:has(input[value="low"])');
+  await expect(page.locator('#h-stock .pa-num'), 'no count').toHaveCount(0);
+  await page.click('.pa-level .pa-seg:has(input[value="low"])');
   await expect(toast(page), 'Low puts it on the list').toContainText('low, on the shopping list');
   await until(() => page.evaluate(id => [...window.__pantry.S.shop.values()].some(x => x.itemId === id && !x.done && !x.removedAt), rice), 'a line on the list');
   await expect(sectionOf(page, 'h-history'), 'the history says Marked low').toContainText('Marked low');
@@ -183,24 +183,24 @@ test('a staple shows Plenty / Low / Out: Low puts it on the list, Undo, Out', as
   await undo(page);
   await until(async () => await page.evaluate(id => !window.__pantry.S.items.get(id).level || window.__pantry.S.items.get(id).level === 'plenty', rice)
     && await page.evaluate(id => ![...window.__pantry.S.shop.values()].some(x => x.itemId === id && !x.removedAt), rice), 'Undo: plenty again, off the list');
-  await page.click('.pa-level .ha-seg:has(input[value="out"])');
+  await page.click('.pa-level .pa-seg:has(input[value="out"])');
   await go(page, '#/items');
-  await expect(page.locator('#pa-items-list .ha-row', { hasText: 'Thai hom mali rice' }).locator('.ha-row-sub'), 'Items says Out').toHaveText(/^Out/);
+  await expect(page.locator('#pa-items-list .ui-row', { hasText: 'Thai hom mali rice' }).locator('.ui-row-sub'), 'Items says Out').toHaveText(/^Out/);
 });
 
 test('the shopping list: Buy again, the mic, aisles, Going shopping, Put away takes a staple back to plenty', async ({ phone, axe }) => {
   const page = await demo(phone, 'list');
   const rice = await idOf(page, 'Thai hom mali rice');
   await makeStaple(page, rice);
-  await page.click('.pa-level .ha-seg:has(input[value="out"])');
+  await page.click('.pa-level .pa-seg:has(input[value="out"])');
   await until(() => page.evaluate(id => [...window.__pantry.S.shop.values()].some(x => x.itemId === id && !x.done && !x.removedAt), rice), 'out puts it on the list');
   await go(page, '#/shop');
-  const chips = page.locator('.pa-again .ha-chip');
+  const chips = page.locator('.pa-again .ui-chip');
   await expect.poll(() => chips.count(), 'Buy again chips').toBeGreaterThanOrEqual(2);
   const again = (await chips.first().textContent()).trim();
   await chips.first().click();
-  await expect(page.locator('#pa-shop .ha-row-title', { hasText: again }), 'a Buy again chip adds it').toHaveCount(1);
-  await expect(page.locator('.pa-again .ha-chip', { hasText: again }), 'and leaves the chips').toHaveCount(0);
+  await expect(page.locator('#pa-shop .pa-row-title', { hasText: again }), 'a Buy again chip adds it').toHaveCount(1);
+  await expect(page.locator('.pa-again .ui-chip', { hasText: again }), 'and leaves the chips').toHaveCount(0);
   await page.evaluate(() => { window.__said = 'bananas, cream crackers and dishwashing liquid'; });
   await page.click('#pa-shop-mic');
   await expect(toast(page), 'the mic adds each thing said, once').toContainText('Added 3 things to the list');
@@ -232,7 +232,7 @@ test('Scan many: Bought, Used up, Add to list, a barcode not in the pantry, one 
   await go(page, '#/');
   await page.click('.pa-quickrow [data-act="scan-many"]');
   const sm = sheetOpen(page);
-  await expect(sm.locator('.ha-sheet-title')).toHaveText('Scan many');
+  await expect(sm.locator('.pa-sheet-title')).toHaveText('Scan many');
   await expect(sm.locator('[name="pa-sm-mode"][value="add"]'), 'Scan many opens on Bought').toBeChecked();
   // the fake reader takes the code on its next look; wait until it has
   const scanOne = async c => { await page.evaluate(x => { window.__scanCode = x; }, c); await page.waitForFunction(() => window.__scanCode === null); };
@@ -243,16 +243,16 @@ test('Scan many: Bought, Used up, Add to list, a barcode not in the pantry, one 
   await expect(sm.locator('#pa-sm-n'), 'the tally counts four scans').toHaveText('4');
   await expect(sm.locator('#pa-sm-tally'), 'kaya × 2').toContainText('× 2');
   await expect(sm.locator('[data-sm-new="5555555555555"]'), 'and the new barcode waits with Add it').toHaveCount(1);
-  await sm.locator('.ha-seg:has(input[value="use"])').click();
+  await sm.locator('.pa-seg:has(input[value="use"])').click();
   await scanOne('4900000000011');
   await expect.poll(() => qtyOf(page, kaya), 'Used up takes one out').toBe(q0 + 1);
-  await sm.locator('.ha-seg:has(input[value="list"])').click();
+  await sm.locator('.pa-seg:has(input[value="list"])').click();
   await scanOne('4900000000028');
   await until(() => onList(page, `x.name.includes('Fresh milk') && !x.done && !x.removedAt`), 'Add to list puts it on the list');
   await axe(page, 'scan many');
   await noSideways(page, 'scan many');
   await shot(page, 'n11-scan-many');
-  await sm.locator('.ha-sheet-foot [data-ha-close]').click();
+  await sm.locator('.pa-sheet-foot [data-pa-close]').click();
   await expect(toast(page), 'Done: one toast for every scan (the new barcode waits)').toContainText('Saved 5 scans');
   await undo(page);
   await until(async () => (await qtyOf(page, kaya)) === q0 && !(await onList(page, `x.name.includes('Fresh milk') && !x.done && !x.removedAt`)), 'one Undo takes every scan back');

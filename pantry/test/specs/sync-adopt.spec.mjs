@@ -56,7 +56,7 @@ test('“Sign out anyway” with a change still unsent signs out and drops it, a
   await mum.click('[data-act="signout"]');
   const ask = mum.locator('dialog[open]', { hasText: 'Sign out now?' });
   await expect(ask).toBeVisible({ timeout: 15_000 });
-  await ask.locator('button[value="yes"]').click();
+  await ask.locator('button', { hasText: 'Sign out anyway' }).click();
   await expect.poll(() => mum.evaluate(() => window.__pantry.S.mode), { timeout: 20_000 }).toBe('local');
   await net(mum, true);
   await mum.waitForTimeout(1500);   // (a save left in the outbox would be sent now)

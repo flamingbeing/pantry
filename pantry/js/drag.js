@@ -1,7 +1,7 @@
 // Dragging by the grip (16 Oct 2026, Items list PR). Adapted from the anawj.com logbook's best drag (Reflections: a ghost that
 // follows the pointer, the heading under it lit, auto-scroll at the edges, pointer events so touch works on iOS) with what a pantry
 // phone needs: the ghost is lifted ABOVE the finger so it isn't hidden, a label says where it will land, a tick on every new
-// target (the kit's haHaptic: Android only, never with reduced motion), and Escape, a cancelled pointer or a drop on nothing puts
+// target (the kit's haptic: Android only, never with reduced motion), and Escape, a cancelled pointer or a drop on nothing puts
 // everything back. Every drag starts from a grip button (`touch-action: none` in the CSS, so the browser never scrolls from it); a
 // tap on the grip, without moving, is left alone (the app opens its Move sheet).
 //
@@ -84,8 +84,8 @@ export function startDrag(e, o = {}) {
   // auto-scroll near the top or bottom edge (above the tab bar and the selection bar, below the top bar)
   const tick = () => {
     if (!active || ended) return;
-    const topEdge = (doc.querySelector('.ha-bar')?.getBoundingClientRect().bottom || 0) + EDGE * 0.5;
-    const bars = [doc.querySelector('.ha-tabbar'), doc.querySelector('#pa-selbar')].filter(Boolean).map(b => b.getBoundingClientRect()).filter(r => r.width > 100 && r.top > win.innerHeight / 2);
+    const topEdge = (doc.querySelector('.ui-bar')?.getBoundingClientRect().bottom || 0) + EDGE * 0.5;
+    const bars = [doc.querySelector('.ui-tabbar'), doc.querySelector('#pa-selbar')].filter(Boolean).map(b => b.getBoundingClientRect()).filter(r => r.width > 100 && r.top > win.innerHeight / 2);
     const bottomEdge = Math.min(win.innerHeight, ...bars.map(r => r.top)) - EDGE * 0.5;
     let v = 0;
     if (y < topEdge + EDGE * 0.5) v = -Math.ceil((topEdge + EDGE * 0.5 - y) / 3);
