@@ -414,6 +414,8 @@ body.pa-dragging *{cursor:grabbing!important}
 .pa-side-count{margin-left:auto;min-width:20px;padding:0 6px;border-radius:999px;background:var(--danger);color:#fff;font-size:.75rem;line-height:20px;text-align:center}
 .ui-tab-icon{position:relative}
 .pa-bar-btn{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+/* on a phone, Add is the tab bar's centre + (the kit's .ui-tab-action), as the old pantry's; from 600 px (side bar, no tab bar) it stays in the top bar */
+@media (max-width:599.98px){.pa-bar-btn[data-act="go-add"]{display:none}}
 /* the trail keeps its buttons' room (the bar's title, hidden until it scrolls, gives way) */
 #bar-lead,#bar-trail{flex:1 0 auto}
 #bar-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

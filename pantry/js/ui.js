@@ -4,8 +4,8 @@
 // thing. Icons come from the brand kit's sprite (design.flamingbeing.com/v1/icons.svg, the same shapes as before).
 import {
   detentSheet, sheetsSettled, tabBarRoom, confirmModal, toaster, stepper as kitStepper, haptic as kitHaptic, largeTitle as kitLargeTitle,
-} from 'https://core.anawj.com/ui/1.0.0-rc.28/ui/index.js';
-import { applyTheme, themeSwitch } from 'https://core.anawj.com/ui/1.0.0-rc.28/theme/index.js';
+} from 'https://core.anawj.com/ui/1.0.0-rc.31/ui/index.js';
+import { applyTheme, themeSwitch } from 'https://core.anawj.com/ui/1.0.0-rc.31/theme/index.js';
 
 const doc = document;
 
