@@ -940,7 +940,7 @@ function openMoveTo(list) {
   go.addEventListener('click', async () => {
     const v = $('input[name="pa-moveto"]:checked', s.el)?.value;
     if (!v) return;
-    await closeSheet(s.el);
+    closeSheet(s.el);   // (not awaited: the write lands now, as the sheet goes)
     bulkMove(list.filter(it => S.items.has(it.id) && itemById(it.id)), v);
   });
   return s;
@@ -1684,7 +1684,7 @@ function openBought(it, { shopId = null } = {}) {
     const res = restock(cur, { qty: n, expiry: f.expiry.value || null });
     const ticked = shopLines().filter(m => m.itemId === it.id && !m.done && m.id !== shopId);
     for (const m of ticked) patchLine(m.id, { set: { done: true }, inc: {}, del: [] });
-    await closeSheet(s.el);
+    closeSheet(s.el);   // (not awaited: the write lands now, as the sheet goes)
     apply(res, `Added ${n} ${it.name}`);
   });
 }
@@ -1735,7 +1735,7 @@ function openCold(it, batchId, kind) {
   sync(qty.get());
   go.addEventListener('click', async () => {
     const n = qty.get(), place = $('input[name="pa-cold"]:checked', s.el)?.value || places[0];
-    await closeSheet(s.el);
+    closeSheet(s.el);   // (not awaited: the write lands now, as the sheet goes)
     doCold(it, batchId, kind, n, place);
   });
   return s;
@@ -2237,7 +2237,7 @@ function openPlace(name) {
     if (to === name) return closeSheet(el);
     const problem = P.placeProblem(placeNames(), inp.value, name);
     if (problem) { err.innerHTML = `${icon('alert')}${esc(problem)}`; err.hidden = false; inp.setAttribute('aria-invalid', 'true'); inp.focus(); return; }
-    await closeSheet(el);
+    closeSheet(el);   // (not awaited: the write lands now, as the sheet goes)
     renamePlace(name, to);
   });
   el.addEventListener('click', async e => {
@@ -2299,7 +2299,7 @@ function openMovePlace(name) {
   $('#pa-mv-go', s.el).addEventListener('click', async () => {
     const to = $('#pa-mv-to', s.el).value;
     const e = placeByName(name), moved = items().filter(it => it.location === name);
-    await closeSheet(s.el);
+    closeSheet(s.el);   // (not awaited: the write lands now, as the sheet goes)
     patchMany(moved.map(it => ({ id: it.id, ops: { set: { location: P.cleanPlace(to) }, inc: {}, del: [] } })));
     if (e) removePlace(e);
     if (S.place === name) S.place = '';

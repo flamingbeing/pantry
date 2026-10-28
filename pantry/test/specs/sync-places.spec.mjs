@@ -36,8 +36,9 @@ test('a rename on one phone shows on the other: the list, the items in it, and t
   await expect(dad.locator('[data-act="place-open"][data-v="Fridge"]'), 'dad sees the rename').toHaveCount(0);
   await expect.poll(() => dad.evaluate(() => [...window.__pantry.S.items.values()].filter(i => /fridge/i.test(i.location || '')).map(i => i.location)), { message: 'and his items moved with it' }).toEqual(['Kitchen fridge']);
   // (PR-C: every place is a document of its own; the first change wrote the defaults as documents, and the rename is one field)
+  // (Dad can show the new name from the moved item, under "Not in your list", before the place document lands)
+  await expect.poll(async () => (await placeDocs(fsAdmin, hid)).map(d => d.name).slice(0, 3), { message: 'the defaults became place documents, the rename kept its position' }).toEqual(['Kitchen cabinet', 'Kitchen fridge', 'Level 1 fridge']);
   const docs = await placeDocs(fsAdmin, hid);
-  expect(docs.map(d => d.name).slice(0, 3), 'the defaults became place documents, the rename kept its position').toEqual(['Kitchen cabinet', 'Kitchen fridge', 'Level 1 fridge']);
   expect(docs.length, 'one document each, none twice').toBe(11);
   expect(Object.keys(docs[1]).sort()).toEqual(['_saves', 'id', 'name', 'order', 'serverAt', 'updatedAt']);
   // (app-sync stamps every save as it reaches the server, the migration's too, so other phones' delta listeners hear it;
