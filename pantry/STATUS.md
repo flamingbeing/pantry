@@ -3,6 +3,7 @@
 Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner's plans are in the owner's private notes.
 
 ## Now
+- Centre + back (28 Oct 2026): on a phone, Add is the tab bar's raised round + again (app-ui rc.31's `.ui-tab-action`); the top bar keeps Add only from 600 px, where the side bar replaces the tab bar.
 - Live on its own subdomain. Working: family sharing, email and Google sign-in, places and names, sync safety, select
   mode, Group by place, grip drag, My order, Bulk edit, Sync now, the listener watchdog, expiry in words on every dated
   item (amber within 3 days, red once past).

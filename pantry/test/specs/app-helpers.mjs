@@ -117,7 +117,7 @@ export async function barApart(page, what) {
 export const TAB = (page, h) => page.locator(`.ui-tabbar a[href="${h}"]`);
 // Add (catalogue) -> Light soy sauce x2, a year; leaves the phone on the new item's screen
 export async function addSoy(page) {
-  await page.click('[data-act="go-add"]');
+  await page.click('[data-act="go-add"]:visible');
   await expect.poll(() => hash(page)).toBe('#/add');
   await page.fill('#pa-find', 'kikkoman soy');
   await page.locator('#pa-sugg [data-act="sugg"]').first().click();

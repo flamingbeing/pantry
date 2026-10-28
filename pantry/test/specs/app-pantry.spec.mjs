@@ -42,7 +42,7 @@ test('first open: the welcome once per phone, the Getting started list, the empt
 
 test('add from the Singapore catalogue: the form fills, the item opens', async ({ phone, axe }) => {
   const page = await open(phone, 'add', undefined, { init: WELCOMED });
-  await page.click('[data-act="go-add"]');
+  await page.click('[data-act="go-add"]:visible');
   await expect.poll(() => hash(page), 'Add opens the add screen').toBe('#/add');
   await expect(page.locator('.ui-tabbar'), 'a task swaps the tab bar for a toolbar').toBeHidden();
   await expect(page.locator('#pa-toolbar')).toBeVisible();
@@ -103,7 +103,7 @@ test('an item: open one, Used 1 and Undo, Buy online links, Bought more, the sho
 
 test('Use soon on Home, an empty name is refused in words, Cancel goes back', async ({ phone }) => {
   const page = await open(phone, 'soon', undefined, { init: WELCOMED });
-  await page.click('[data-act="go-add"]');
+  await page.click('[data-act="go-add"]:visible');
   await page.fill('#pa-form [name="name"]', 'Baby spinach');
   await page.selectOption('#pa-form [name="category"]', 'Fresh produce');
   await page.selectOption('#pa-form [name="location"]', 'Fridge');
@@ -115,7 +115,7 @@ test('Use soon on Home, an empty name is refused in words, Cancel goes back', as
   await expect(row, 'expiring item under Use soon').toHaveCount(1);
   await expect(page.locator('.ui-row', { hasText: 'Baby spinach' }).locator('.pa-badge--warn'), 'with an in 2 days badge').toHaveText('in 2 days');
   // an empty name is refused in words
-  await page.click('[data-act="go-add"]');
+  await page.click('[data-act="go-add"]:visible');
   await page.click('#pa-save');
   await expect(page.locator('#pa-name-err'), 'empty name shows an error').toBeVisible();
   await page.click('[data-act="back"]');
@@ -297,7 +297,7 @@ test('the version lines; no signal says so and keeps the caches', async ({ phone
 
 test('offline: the app and its data still open through the service worker', async ({ phone }) => {
   const page = await open(phone, 'offline', undefined, { init: WELCOMED, sw: true });
-  await page.click('[data-act="go-add"]');
+  await page.click('[data-act="go-add"]:visible');
   await page.fill('#pa-form [name="name"]', 'Baby spinach');
   await page.click('#pa-save');
   await expect.poll(() => hash(page)).toMatch(/^#\/item\//);

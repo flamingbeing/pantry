@@ -20,17 +20,17 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <!-- the shared kit (app-ui, exact version; the same in js/ui.js and sw.js): the early theme marks first, then the
      brand tokens, the kit's styles in order, and pantry's own last -->
-<script src="https://core.anawj.com/ui/1.0.0-rc.28/theme/early.js"></script>
+<script src="https://core.anawj.com/ui/1.0.0-rc.31/theme/early.js"></script>
 <link rel="stylesheet" href="https://design.flamingbeing.com/v1/tokens.css">
-<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.28/theme/theme.css">
-<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.28/ui/ui.css">
-<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.28/theme/glass.css">
-<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.28/ui/gestures.css">
-<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.28/ui/shell/shell.css">
-<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.28/ui/layout.css">
+<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.31/theme/theme.css">
+<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.31/ui/ui.css">
+<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.31/theme/glass.css">
+<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.31/ui/gestures.css">
+<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.31/ui/shell/shell.css">
+<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.31/ui/layout.css">
 <link rel="stylesheet" href="pantry.css">
-<link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.28/ui/index.js">
-<link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.28/theme/index.js">
+<link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.31/ui/index.js">
+<link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.31/theme/index.js">
 </head>
 <body>
 <a class="pa-skip" href="#main">Skip to content</a>
@@ -65,6 +65,7 @@
 <nav class="ui-tabbar" aria-label="Tabs">
   <a class="ui-tab" href="#/"><span class="ui-tab-icon" aria-hidden="true"><svg class="ui-icon" aria-hidden="true"><use href="#i-home"/></svg></span><span class="pa-tab-label">Pantry</span></a>
   <a class="ui-tab" href="#/items"><span class="ui-tab-icon" aria-hidden="true"><svg class="ui-icon" aria-hidden="true"><use href="#i-list"/></svg></span><span class="pa-tab-label">Items</span></a>
+  <button type="button" class="ui-tab ui-tab-action" data-act="go-add"><span class="ui-tab-icon" aria-hidden="true"><svg class="ui-icon" aria-hidden="true"><use href="#i-plus"/></svg></span><span class="pa-tab-label">Add an item</span></button>
   <a class="ui-tab" href="#/shop"><span class="ui-tab-icon" aria-hidden="true"><svg class="ui-icon" aria-hidden="true"><use href="#i-cart"/></svg><span class="pa-tab-badge" id="pa-shop-badge" aria-hidden="true" hidden></span></span><span class="pa-tab-label">Shopping</span></a><span class="pa-sr" id="pa-shop-sr"></span>
   <a class="ui-tab" href="#/settings"><span class="ui-tab-icon" aria-hidden="true"><svg class="ui-icon" aria-hidden="true"><use href="#i-settings"/></svg></span><span class="pa-tab-label">Settings</span></a>
 </nav>
