@@ -25,6 +25,9 @@ Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner
   handed over laid over it). App-sync `0.6.3` (25 Oct 2026): pin only; its held conflicts stay off here, because every
   kind saves through pantry's own merge function (`mergeSaves`), which 0.6.3's held mode skips. Held conflicts for pantry
   wait on app-sync supporting them for merge collections, then a rules change for `_edits` first.
+  App-sync `1.5.1` (28 Oct 2026): the 1.x module runner; `js/cloud.js` makes one `createApp({ config, modules:
+  [auth(), sync()] })`, sign out through `app.auth.forget()`, `sw.js` precaches the 1.5.1 files (NOTES.md, "Sync engine").
+  The held-conflicts work on 0.7.3 (#29) is closed; it can be redone on 1.x.
   Rules for `_edits` (25 Oct 2026): optional `{ <field>: { by, device, at } }` on items, shop lines, places and settings
   (keys their own fields; items at most 40 keys); never on history or photos. Held conflicts themselves come next.
   Next: the backfill (`tools/backfill-server-at.mjs`, owner's go), then rules require it, then the hub reads by it

@@ -87,7 +87,7 @@ and sessions run only with `--dry` (`pantry/test/run-live-dry.sh`, local emulato
 
 ## Sync engine: app-sync (24 Oct 2026)
 
-Saves and listeners go through app-sync `0.6.3` (`https://core.anawj.com/sync/0.6.3/`, exact pin, precached by `sw.js`):
+Saves and listeners go through app-sync `1.5.1` (`https://core.anawj.com/sync/1.5.1/`, exact pin, precached by `sw.js`):
 every save goes to an outbox on the phone (IndexedDB) and then to the server in a transaction, one document at a time;
 each kind keeps a copy on the phone and listens only for documents changed since the last sync (`updatedAt`, stamped by
 the adapter as the save reaches the server: its default stamp, the later of now and the server copy's stamp plus one,
