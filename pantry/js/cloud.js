@@ -503,6 +503,8 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
   const data = Object.fromEntries(KINDS.map(k => [k, []]));   // each kind's list, as last delivered (load)
   const ready = Object.fromEntries(KINDS.map(k => { let done; const p = new Promise(r => { done = r; }); return [k, { p, done }]; }));
   const ofQueue = kind => queue.entries().filter(x => x.owner === hid && x.kind === kind && x.state === 'pending').map(x => x.record.id);
+  // saves handed to the engine that it hasn't taken yet: id -> { record } per kind (deliver lays them over)
+  const sending = Object.fromEntries(KINDS.map(k => [k, new Map()]));
   function tell() {
     if (closed) return;
     const mine = queue.entries().filter(x => x.owner === hid && x.state === 'pending' && counts(x));
@@ -510,21 +512,22 @@ export async function openCloud(hid, onError = () => {}, onSync = () => {}) {
       const patch = (x.ops || []).filter(o => o.patch).at(-1);
       return { kind: x.kind, id: x.record.id, op: x.record._deleted ? 'del' : patch && !(x.ops || []).some(o => o.put) ? 'patch' : 'put', ...(patch ? { ops: patch.patch } : {}), name: x.record.name || '' };
     });
+    // (app-sync 1.x stores a save before it joins the queue: one handed to it and not in the queue yet counts too)
+    const queued = new Set(mine.map(x => x.kind + ':' + x.record.id));
+    const storing = KINDS.filter(k => counts({ kind: k })).reduce((n, k) => n + [...sending[k].keys()].filter(id => !queued.has(k + ':' + id)).length, 0);
     onSync({
-      pending: mine.length + (leftover ? 1 : 0), cache: !cb || KINDS.some(k => seen[k].cache), list: [...list, ...(leftover ? [{ kind: 'items', id: '', op: 'before' }] : [])],
+      pending: mine.length + storing + (leftover ? 1 : 0), cache: !cb || KINDS.some(k => seen[k].cache), list: [...list, ...(leftover ? [{ kind: 'items', id: '', op: 'before' }] : [])],
       heard, lastServerAt, relistens: app.relistens(), cycles, stale: app.parts.watchdog.stale(), persisted,
     });
   }
   const offQueue = queue.onChange(() => tell());
-  // saves handed to the engine that it hasn't taken yet: id -> { record } per kind (deliver lays them over)
-  const sending = Object.fromEntries(KINDS.map(k => [k, new Map()]));
   const heardList = {};   // each kind's last list from the engine, as it came: [list, meta] (handed again once a save leaves `sending`)
   function enqueue(kind, record, base, change, info) {
     const mine = sending[kind] && { record };
-    if (mine) sending[kind].set(record.id, mine);
+    if (mine) { sending[kind].set(record.id, mine); tell(); }
     return app.save(kind, hid, record, base, { ops: change })
       .then(() => true, e => { if (queue.error()) { console.warn('outbox', e?.message); onError(e, info); } return false; })
-      .finally(() => { if (mine && sending[kind].get(record.id) === mine) { sending[kind].delete(record.id); if (heardList[kind]) deliver(kind, heardList[kind][0], { ...heardList[kind][1], again: true }); } });
+      .finally(() => { if (mine && sending[kind].get(record.id) === mine) { sending[kind].delete(record.id); if (heardList[kind]) deliver(kind, heardList[kind][0], { ...heardList[kind][1], again: true }); else tell(); } });
   }
   // the listeners (createApp watch: app-sync watchSaved): each kind's whole list from the engine (this phone's copy, then
   // the server's changes), with this phone's saves not yet sent laid over it, again when a save is done, so the server's
