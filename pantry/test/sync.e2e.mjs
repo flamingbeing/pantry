@@ -59,16 +59,16 @@ async function axe(page, what) {
 }
 const SYNC_REFUSED = list => list.length;
 const go = async (p, h) => { await p.evaluate(x => { location.hash = x; }, h); await settle(p); };
-const sub = (p, name) => p.locator('#pa-items-list .ha-row', { hasText: name }).locator('.ha-row-sub');
+const sub = (p, name) => p.locator('#pa-items-list .ui-row', { hasText: name }).locator('.ui-row-sub');
 try {
   const mum = await person('mum@example.com');
   await mum.click('[data-act="hh-create"]');
-  await mum.locator('#main .ha-row-title', { hasText: 'Our pantry' }).waitFor();
+  await mum.locator('#main .pa-row-title', { hasText: 'Our pantry' }).waitFor();
   await mum.fill('#pa-member-email', 'Dad@Example.com');
   await mum.click('#pa-member-add button[type=submit]');
-  await mum.locator('#main .ha-row-title', { hasText: 'dad@example.com' }).waitFor();
+  await mum.locator('#main .pa-row-title', { hasText: 'dad@example.com' }).waitFor();
   const dad = await person('dad@example.com');
-  await dad.locator('#main .ha-row-title', { hasText: 'Our pantry' }).waitFor();
+  await dad.locator('#main .pa-row-title', { hasText: 'Our pantry' }).waitFor();
   const hid = await mum.evaluate(() => window.__pantry.S.household.id);
   const stranger = await person('stranger@example.com');
   await stranger.locator('[data-act="hh-create"]').waitFor();
@@ -384,11 +384,11 @@ try {
   assert.equal(await mum.locator('#pa-landed').count(), 0, 'the phone that removed it is not told');
   if (process.env.SHOTS) await dad.screenshot({ path: process.env.SHOTS + '/r02-removed-note-live.png' });
   await dad.click('#pa-landed'); await settle(dad);
-  const row1 = dad.locator('#pa-removed .ha-row', { hasText: 'Rice rm' });
-  assert.match(await row1.locator('.ha-row-sub').textContent(), /Fridge · Removed by .* · (30|29) days left · Your change is kept/);
+  const row1 = dad.locator('#pa-removed .ui-row', { hasText: 'Rice rm' });
+  assert.match(await row1.locator('.ui-row-sub').textContent(), /Fridge · Removed by .* · (30|29) days left · Your change is kept/);
   await go(dad, '#/'); assert.equal(await dad.locator('#pa-landed').count(), 0, 'the note goes once Recently removed has been opened');
   await go(dad, '#/removed');
-  await dad.locator('#pa-removed .ha-row', { hasText: 'Rice rm' }).locator('[data-act="restore"]').click(); await settle(dad);
+  await dad.locator('#pa-removed .ui-row', { hasText: 'Rice rm' }).locator('[data-act="restore"]').click(); await settle(dad);
   await liveOn(mum, 'rm1'); await quiet();
   const rm1b = await rawAt('items/rm1');
   assert.ok(!('removedAt' in rm1b) && !('removedBy' in rm1b), 'Restore clears both fields'); assert.equal(rm1b.batches.a.qty, 3, 'with the use');
@@ -412,7 +412,7 @@ try {
   await mum.click('[data-act="delete"]'); await settle(mum);
   await hiddenOn(dad, 'rm4');
   await act(dad, 'use', 'rm4', 'a'); await drain(dad);   // B hasn't been told in time: it uses one on the hidden item
-  await mum.locator('.ha-toast-action').click(); await settle(mum); await quiet();
+  await mum.locator('.toast-action').click(); await settle(mum); await quiet();
   await liveOn(dad, 'rm4');
   const rm4 = await rawAt('items/rm4');
   assert.ok(!('removedAt' in rm4)); assert.equal(rm4.batches.a.qty, 3, 'Undo kept the other phone’s use');
@@ -441,12 +441,12 @@ try {
   assert.equal((await rawAt('shop/' + added)).name, 'New line while removing'); assert.equal(typeof (await rl('l4')).removedAt, 'string');
   // lines with a marker are hidden everywhere (the list, the badge, the share text) and Restore puts them back, ticked as they were
   await go(mum, '#/shop');
-  assert.equal(await mum.locator('#main label.ha-row', { hasText: 'Line l1' }).count(), 0, 'a removed line is not on the list');
-  assert.equal(await mum.locator('#main label.ha-row', { hasText: 'Line l3' }).count(), 1);
+  assert.equal(await mum.locator('#main label.ui-row', { hasText: 'Line l1' }).count(), 0, 'a removed line is not on the list');
+  assert.equal(await mum.locator('#main label.ui-row', { hasText: 'Line l3' }).count(), 1);
   assert.ok(!(await mum.evaluate(() => document.querySelector('#pa-wa-going')?.href || '')).includes('Line%20l1'), 'nor in the WhatsApp text');
   await go(mum, '#/removed');
-  assert.equal(await mum.locator('#pa-removed-lines .ha-row').count(), 3, 'the three removed lines are in Recently removed');
-  await mum.locator('#pa-removed-lines .ha-row', { hasText: 'Line l1' }).locator('[data-act="restore"]').click(); await settle(mum); await quiet();
+  assert.equal(await mum.locator('#pa-removed-lines .ui-row').count(), 3, 'the three removed lines are in Recently removed');
+  await mum.locator('#pa-removed-lines .ui-row', { hasText: 'Line l1' }).locator('[data-act="restore"]').click(); await settle(mum); await quiet();
   await liveOn(dad, lines.l1, 'shop');
   assert.ok(!(await rl('l1')).removedAt && (await rl('l1')).done === true, 'Restore keeps the tick');
   // renaming a line is a field too
@@ -455,11 +455,11 @@ try {
   assert.equal((await rl('l5')).name, 'Line five');
   // the line on the screen: Undo of a remove is Restore
   await go(mum, '#/shop');
-  await mum.locator('#main label.ha-row', { hasText: 'Line five' }).locator('[data-act="shop-del"]').click(); await settle(mum);
-  assert.equal(await mum.locator('#main label.ha-row', { hasText: 'Line five' }).count(), 0);
+  await mum.locator('#main label.ui-row', { hasText: 'Line five' }).locator('[data-act="shop-del"]').click(); await settle(mum);
+  assert.equal(await mum.locator('#main label.ui-row', { hasText: 'Line five' }).count(), 0);
   if (process.env.SHOTS) await mum.screenshot({ path: process.env.SHOTS + '/r03-shop-live.png' });
-  await mum.locator('.ha-toast-action').click(); await settle(mum); await quiet();
-  assert.ok(!(await rl('l5')).removedAt, 'Undo cleared the marker'); assert.equal(await mum.locator('#main label.ha-row', { hasText: 'Line five' }).count(), 1);
+  await mum.locator('.toast-action').click(); await settle(mum); await quiet();
+  assert.ok(!(await rl('l5')).removedAt, 'Undo cleared the marker'); assert.equal(await mum.locator('#main label.ui-row', { hasText: 'Line five' }).count(), 1);
   // 6. the sweep: only what was removed more than 30 days ago, and a second phone's sweep is harmless   (35 days: past the sweep's 30, inside the 37 phones keep a removed thing)
   const oldAt = new Date(Date.now() - 35 * 86400000).toISOString(), recent = new Date(Date.now() - 5 * 86400000).toISOString();
   await seedRm('sw-old', 'Swept', { removedAt: oldAt, removedBy: 'Mum', hasPhoto: true, thumb: 'data:image/jpeg;base64,AAAA' });
@@ -598,7 +598,7 @@ try {
   await twin.locator('a.pa-alert', { hasText: 'more than one family pantry' }).waitFor();
   await go(twin, '#/settings');
   await twin.click('[data-act="merge-open"]'); await settle(twin);
-  const sheet = twin.locator('dialog.ha-sheet[open]');
+  const sheet = twin.locator('dialog.ui-sheet[open]');
   assert.equal(await sheet.locator('input[name="pa-keep"]').count(), 2);
   assert.equal(await sheet.locator('input[name="pa-keep"]:checked').getAttribute('value'), 'dupB', 'most people preselected');
   assert.match(await sheet.textContent(), /3 people/);
@@ -606,7 +606,7 @@ try {
   if (process.env.SHOTS) await twin.screenshot({ path: process.env.SHOTS + '/m07-merge.png' });
   await sheet.locator('[data-pm="go"]').click(); await settle(twin);
   await twin.locator('dialog[open] button', { hasText: /^Merge$/ }).click();
-  await twin.locator('.ha-toast', { hasText: 'Merged' }).waitFor();
+  await twin.locator('.toast', { hasText: 'Merged' }).waitFor();
   await settle(twin);
   assert.equal(await admin.get('households/dupA'), null, 'the other household is gone');
   for (const k of [...KINDS5, 'places', 'settings']) assert.equal((await admin.list(`households/dupA/${k}`)).length, 0, 'dupA ' + k + ' deleted');
@@ -639,7 +639,7 @@ try {
   const twin2 = await person('twin2@example.com');
   await twin2.locator('#main [data-act="merge-open"]').waitFor();
   await twin2.click('[data-act="merge-open"]'); await settle(twin2);
-  const sh2 = twin2.locator('dialog.ha-sheet[open]');
+  const sh2 = twin2.locator('dialog.ui-sheet[open]');
   await sh2.locator('input[name="pa-keep"][value="dupD"]').check(); await settle(twin2);
   assert.match(await sh2.textContent(), /Only whoever started a pantry can merge it away\. Ask C:boss to merge them/);
   assert.equal(await sh2.locator('[data-pm="go"]').isDisabled(), true);
@@ -649,7 +649,7 @@ try {
   });
   assert.equal(denyDelete, 'permission-denied', 'a member who isn’t the owner can’t delete the household');
   assert.ok(await admin.get('households/dupC'), 'still there');
-  await sh2.locator('[data-ha-close]').click(); await settle(twin2);
+  await sh2.locator('[data-pa-close]').click(); await settle(twin2);
 
   // a copy that fails deletes nothing: an item the rules refuse (thumbnail over 12 KB) stops the merge
   await seedPantry('dupE', 'twin3@example.com', ['twin3@example.com'], 'E', { extra: { thumb: 'A'.repeat(13000) } });
@@ -657,7 +657,7 @@ try {
   const twin3 = await person('twin3@example.com');
   await twin3.locator('#main [data-act="merge-open"]').waitFor();
   await twin3.click('[data-act="merge-open"]'); await settle(twin3);
-  await twin3.locator('dialog.ha-sheet[open] [data-pm="go"]').click(); await settle(twin3);
+  await twin3.locator('dialog.ui-sheet[open] [data-pm="go"]').click(); await settle(twin3);
   await twin3.locator('dialog[open] button', { hasText: /^Merge$/ }).click();
   await twin3.locator('#pa-merge-msg', { hasText: 'Nothing was lost' }).waitFor();
   assert.ok(await admin.get('households/dupE'), 'the other pantry is still there');
@@ -674,7 +674,7 @@ try {
     if (process.env.PROGRESS) console.log('  chip block a');
     assert.equal(await sy.locator('#pa-name').count(), 1, 'signed in but in no pantry yet: the field is still there');
     await sy.click('[data-act="hh-create"]');
-    await sy.locator('#main .ha-row-title', { hasText: 'Our pantry' }).waitFor();
+    await sy.locator('#main .pa-row-title', { hasText: 'Our pantry' }).waitFor();
     const shid = await sy.evaluate(() => window.__pantry.S.household.id);
     assert.equal(await sy.locator('#pa-name').count(), 0, 'no “Your name” field in Settings');
     assert.equal(await sy.locator('#h-you').count(), 0, 'no You section');
@@ -683,8 +683,8 @@ try {
     await sy.waitForFunction(() => window.__pantry.S.sync.pending === 0);
     assert.equal((await admin.get(`households/${shid}/settings/people`)).names['syncy@example.com'], 'Jun', 'adopted as the family name');
     assert.deepEqual(await sy.evaluate(() => JSON.parse(localStorage.getItem('pantry:nameAdopted'))), { [shid]: true }, 'adopted once: the flag is kept');
-    await sy.locator('[data-act="person"][data-v="syncy@example.com"] .ha-row-title', { hasText: 'Jun' }).waitFor();
-    if (process.env.SHOTS) { await sy.evaluate(() => { document.querySelector('.ha-toast')?.classList.remove('is-visible'); scrollTo(0, document.querySelector('section[aria-labelledby="h-family"]').offsetTop - 70); }); await settle(sy); await sy.screenshot({ path: process.env.SHOTS + '/p02-family.png' }); await sy.screenshot({ path: process.env.SHOTS + '/p02-family-full.png', fullPage: true }); }
+    await sy.locator('[data-act="person"][data-v="syncy@example.com"] .pa-row-title', { hasText: 'Jun' }).waitFor();
+    if (process.env.SHOTS) { await sy.evaluate(() => { document.querySelector('.toast')?.classList.remove('is-visible'); scrollTo(0, document.querySelector('section[aria-labelledby="h-family"]').offsetTop - 70); }); await settle(sy); await sy.screenshot({ path: process.env.SHOTS + '/p02-family.png' }); await sy.screenshot({ path: process.env.SHOTS + '/p02-family-full.png', fullPage: true }); }
     // cleared by the family, it is not adopted again, even after a reload
     await act(sy, 'namePerson', 'syncy@example.com', '');
     await sy.waitForFunction(() => window.__pantry.S.sync.pending === 0);
@@ -729,7 +729,7 @@ try {
     // must still say Saved with the listener cut off)
     assert.notEqual(await sy.evaluate(() => window.__flag), undefined, 'the listener is there');
     await settle(sy); await settle(sy); await sy.waitForTimeout(1200);
-    assert.equal(await sy.locator('[data-sync] .ha-badge').first().textContent(), 'Saved', 'acknowledged, so Saved, whatever the listener says');
+    assert.equal(await sy.locator('[data-sync] .pa-badge').first().textContent(), 'Saved', 'acknowledged, so Saved, whatever the listener says');
     assert.equal((await admin.get(`households/${shid}/items/sy1`)).notes, 'one', 'the server has it');
     proxy.set({ listen: false });
     await sy.waitForFunction(() => window.__pantry.S.items.get('sy1')?.notes === 'one');
@@ -741,11 +741,11 @@ try {
     await act(sy, 'namePerson', 'syncy@example.com', 'Jun');
     await act(sy, 'addPlace', 'Shed');
     await sy.waitForFunction(() => window.__pantry.S.sync.pending === 3, null, { timeout: 8000 });
-    await sy.locator('[data-sync] .ha-badge--warn', { hasText: /(Waiting for signal|Only on this phone) \(3 changes\)/ }).waitFor({ timeout: 8000 });
+    await sy.locator('[data-sync] .pa-badge--warn', { hasText: /(Waiting for signal|Only on this phone) \(3 changes\)/ }).waitFor({ timeout: 8000 });
     await go(sy, '#/settings');
     await sy.click('#pa-syncnow');
     await sy.locator('.pa-syncnow-result--waiting', { hasText: 'Still waiting: this phone can’t reach the family right now' }).waitFor({ timeout: 20000 });
-    const lines = await sy.locator('.pa-waiting .ha-row-title').allTextContents();
+    const lines = await sy.locator('.pa-waiting .pa-row-title').allTextContents();
     assert.deepEqual(lines.sort(), ['A change to Rice (new)', 'Added place Shed', 'Name for Jun'], 'each waiting change in words');
     assert.equal(await sy.locator('#pa-heard').count(), 1);
     assert.match(await sy.locator('#pa-heard').textContent(), /^Last heard from the family: (just now|at \d)/, 'last heard from the family');
@@ -758,7 +758,7 @@ try {
     // Reconnect and try again: one switch off and on; nothing breaks, and still nothing is heard back
     await sy.click('[data-act="sync-cycle"]');
     await sy.locator('.pa-syncnow-result--waiting').waitFor({ timeout: 30000 });
-    await sy.locator('#pa-syncnow .ha-row-title', { hasText: 'Sync now' }).waitFor();
+    await sy.locator('#pa-syncnow .pa-row-title', { hasText: 'Sync now' }).waitFor();
     assert.equal(await sy.locator('[data-act="sync-cycle"]').count(), 0, 'only one reconnect is offered');
     // the acknowledgements arrive: Saved, the list empties
     proxy.set({ write: false });
@@ -766,7 +766,7 @@ try {
     await sy.click('#pa-syncnow');
     await sy.locator('.pa-syncnow-result--saved', { hasText: 'Everything is saved' }).waitFor({ timeout: 20000 });
     assert.equal(await sy.locator('.pa-waiting').count(), 0, 'nothing waiting any more');
-    assert.equal(await sy.locator('[data-sync] .ha-badge').first().textContent(), 'Saved');
+    assert.equal(await sy.locator('[data-sync] .pa-badge').first().textContent(), 'Saved');
     await axe(sy, 'Settings: Sync now, everything saved');
     // a change the server refuses is Needs attention (not "Everything is saved")
     await sy.evaluate(() => { window.__pantry.S.refused.push({ n: 'x1', hid: window.__pantry.S.household.id, kind: 'items', id: 'sy1', op: 'patch', ops: { set: { a: 1 }, inc: {}, del: [] }, code: 'permission-denied', at: new Date().toISOString(), name: 'Rice' }); });
@@ -784,7 +784,7 @@ try {
     const wUrl = srv.url + `/pantry/?emulator=${proxy.port}:9099`;
     const wa = await person('watcha@example.com', wUrl);   // the phone behind the proxy
     await wa.click('[data-act="hh-create"]');
-    await wa.locator('#main .ha-row-title', { hasText: 'Our pantry' }).waitFor();
+    await wa.locator('#main .pa-row-title', { hasText: 'Our pantry' }).waitFor();
     const wid = await wa.evaluate(() => window.__pantry.S.household.id);
     await admin.put(`households/${wid}`, { name: 'Our pantry', owner: 'watcha@example.com', members: ['watcha@example.com', 'watchb@example.com'], createdAt: '2026-10-16T00:00:00.000Z' });
     const base2 = { category: 'Other', location: 'Fridge', brand: '', size: '', barcode: '', lowAt: 0, openDays: 7, createdAt: '2026-10-16T00:00:00.000Z', createdBy: 'Mum' };
@@ -849,18 +849,18 @@ try {
     lostB.on('console', m => { if (/permission-denied|insufficient permissions|missing or insufficient/i.test(m.text()) && m.text() !== 'household permission-denied') bRules.push(m.type() + ': ' + m.text()); });
     assert.equal(await lostB.evaluate(() => window.__pantry.S.household.id), 'goneX', 'B opens the bigger pantry');
     await go(lostB, '#/items');
-    await lostB.locator('#pa-items-list .ha-row', { hasText: 'GX item 0' }).waitFor();
+    await lostB.locator('#pa-items-list .ui-row', { hasText: 'GX item 0' }).waitFor();
     await lostB.evaluate(() => { window.__sameDocument = true; });
     const lostA = await person('losta@example.com');
     assert.equal(await lostA.evaluate(() => window.__pantry.S.household.id), 'goneX');
     // A, the owner, merges it away (the same call the merge sheet makes last)
     await lostA.evaluate(() => window.__pantry.S.cloud.removeHousehold('goneX'));
     await lostB.waitForFunction(() => window.__pantry.S.household?.id === 'goneY', null, { timeout: 30000 });
-    await lostB.locator('#pa-items-list .ha-row', { hasText: 'Survivor rice' }).waitFor();
-    assert.equal(await lostB.locator('#pa-items-list .ha-row', { hasText: 'GX item' }).count(), 0, 'the deleted pantry’s items are gone from the list');
+    await lostB.locator('#pa-items-list .ui-row', { hasText: 'Survivor rice' }).waitFor();
+    assert.equal(await lostB.locator('#pa-items-list .ui-row', { hasText: 'GX item' }).count(), 0, 'the deleted pantry’s items are gone from the list');
     assert.equal(await lostB.evaluate(() => window.__sameDocument === true), true, 'no reload');
     assert.equal(await lostB.evaluate(() => window.__pantry.S.mode), 'cloud');
-    await lostB.locator('.ha-toast', { hasText: 'Your pantry changed' }).waitFor();
+    await lostB.locator('.toast', { hasText: 'Your pantry changed' }).waitFor();
     // the old listeners are stopped: nothing changes the screen after, and a change made now reaches the surviving pantry
     await act(lostB, 'set', 'gy1', 'notes', 'after the switch');
     await lostB.waitForFunction(() => window.__pantry.S.refused.length === 0 && window.__pantry.S.sync.pending === 0);
@@ -884,12 +884,12 @@ try {
     assert.equal(await lostE.evaluate(() => window.__pantry.S.mode), 'local');
     assert.equal(await lostE.evaluate(() => window.__pantry.S.household), null);
     await go(lostE, '#/settings');
-    await lostE.locator('#main .ha-row-title', { hasText: 'Your pantry changed' }).waitFor();
+    await lostE.locator('#main .pa-row-title', { hasText: 'Your pantry changed' }).waitFor();
     await axe(lostE, 'Settings: Your pantry changed');
     assert.equal(await lostE.locator('[data-act="hh-check"]').count(), 1, 'a Try again');
     assert.equal((await admin.list('households')).filter(h => h.owner === 'loste@example.com').length, 0, 'nothing was started for them');
     await lostE.click('[data-act="hh-check"]');
-    await lostE.locator('.ha-toast', { hasText: 'Not added yet' }).waitFor();
+    await lostE.locator('.toast', { hasText: 'Not added yet' }).waitFor();
     assert.equal(await lostE.evaluate(() => window.__pantry.S.household), null, 'still nothing to open');
     await admin.put('households/goneW', { name: 'Our pantry', owner: 'lostd@example.com', members: ['lostd@example.com', 'loste@example.com'], createdAt: iso });
     await lostE.click('[data-act="hh-check"]');
@@ -913,7 +913,7 @@ try {
   assert.equal(await off.locator('[data-act="hh-check"]').count(), 1, 'a Try again instead');
   assert.equal(await owned('off@example.com'), 1, 'nothing was created');
   await off.click('[data-act="hh-check"]');
-  await off.locator('.ha-toast').waitFor();
+  await off.locator('.toast').waitFor();
   assert.equal(await off.locator('[data-act="hh-create"]').count(), 0, 'still offline: still no Start');
   await offCtx.unroute(/:8085\//);
   await off.click('[data-act="hh-check"]');
@@ -922,7 +922,7 @@ try {
   // a double tap on Start our family pantry makes one pantry, not two
   const quick = await person('quick@example.com');
   await quick.locator('[data-act="hh-create"]').dblclick();
-  await quick.locator('#main .ha-row-title', { hasText: 'Our pantry' }).waitFor();
+  await quick.locator('#main .pa-row-title', { hasText: 'Our pantry' }).waitFor();
   await settle(quick);
   assert.equal(await owned('quick@example.com'), 1, 'one pantry after a double tap');
 
@@ -931,7 +931,7 @@ try {
   await mum.click('[data-act="signout"]');
   await mum.locator('[data-act="signin"]').waitFor();
   await go(mum, '#/');
-  assert.equal(await mum.locator('.ha-large-sub').textContent(), 'Saved on this phone');
+  assert.equal(await mum.locator('.pa-large-sub').textContent(), 'Saved on this phone');
   assert.deepEqual(errors, []);
   console.log('pantry sync e2e: ok');
 } finally {

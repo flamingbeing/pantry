@@ -7,8 +7,8 @@ import { BASE, open, go, hash, undo, sheetOpen, noSideways, sheetFits, barApart,
 const DEFAULTS = ['Kitchen cabinet', 'Fridge', 'Level 1 fridge', 'Freezer', 'Level 1 freezer', 'Store room', 'Basement store', 'Bathroom', 'Laundry', 'Medicine box', 'Other'];
 const state = page => page.evaluate(() => ({ list: window.__pantry.places(), items: [...window.__pantry.S.items.values()].filter(i => !i.removedAt).map(i => ({ id: i.id, name: i.name, location: i.location })) }));
 const list = page => page.evaluate(() => window.__pantry.places());
-const rows = page => page.locator('#pa-places .ha-row-title');
-const countOf = (page, name) => page.locator('#pa-places .ha-row, #pa-places-other .ha-row').filter({ has: page.locator('.ha-row-title', { hasText: new RegExp(`^${name}$`) }) }).locator('.ha-row-value').textContent().then(t => t.replace(/\D+/g, ''));
+const rows = page => page.locator('#pa-places .pa-row-title');
+const countOf = (page, name) => page.locator('#pa-places .ui-row, #pa-places-other .ui-row').filter({ has: page.locator('.pa-row-title', { hasText: new RegExp(`^${name}$`) }) }).locator('.pa-row-value').textContent().then(t => t.replace(/\D+/g, ''));
 const openPlace = async (page, name) => { await page.locator(`[data-act="place-open"][data-v="${name}"]`).click(); await expect(sheetOpen(page)).toBeVisible(); };
 const kindOf = (page, n) => page.evaluate(x => [...window.__pantry.S.places.values()].find(p => p.name === x && !p.removedAt)?.kind, n);
 const placeOptions = page => page.locator('#pa-form [name="location"] option').allTextContents();
@@ -33,8 +33,8 @@ test('Places opens from Settings with the defaults and their counts', async ({ p
   await page.click('#main a[href="#/places"]');
   await expect.poll(() => hash(page)).toBe('#/places');
   await expect(page.locator('h1'), 'Places opens from Settings').toHaveText('Places');
-  await expect(page.locator('.ha-back span'), 'its back button names Settings').toHaveText('Settings');
-  await expect(page.locator('.ha-tab[aria-current="page"]'), 'Settings stays the tab').toHaveAttribute('href', '#/settings');
+  await expect(page.locator('.pa-back span'), 'its back button names Settings').toHaveText('Settings');
+  await expect(page.locator('.ui-tab[aria-current="page"]'), 'Settings stays the tab').toHaveAttribute('href', '#/settings');
   await expect(rows(page), 'the default places, the owner’s three included').toHaveText(DEFAULTS);
   const st = await state(page);
   for (const p of ['Fridge', 'Level 1 freezer', 'Basement store', 'Bathroom']) {
@@ -78,7 +78,7 @@ test('rename a place: its items move with it, Undo; the kind of a place', async 
   expect(fridgeIds.length, 'several things in the Fridge').toBeGreaterThanOrEqual(3);
   const sheet = sheetOpen(page);
   await openPlace(page, 'Fridge');
-  await expect(sheet.locator('.ha-sheet-title')).toHaveText('Fridge');
+  await expect(sheet.locator('.pa-sheet-title')).toHaveText('Fridge');
   await expect(sheet.locator('#pa-pl-pos'), 'a place opens in a sheet with its position').toHaveText('2 of 12 in your list');
   await axe(page, 'place sheet');
   await shot(page, 'place-sheet');
@@ -105,7 +105,7 @@ test('rename a place: its items move with it, Undo; the kind of a place', async 
   await axe(page, 'place kind');
   await sheet.locator('.pa-pl-kind label', { hasText: 'Fridge' }).click();
   await expect.poll(() => kindOf(page, 'Level 2 fridge'), 'and back').toBe('fridge');
-  await sheet.locator('[data-ha-close]').first().click();
+  await sheet.locator('[data-pa-close]').first().click();
   await expect(sheet).toHaveCount(0);
   await go(page, '#/items');
   await expect(page.locator('[data-act="place"][data-v="Fridge"]'), 'Items filters by the place').toHaveCount(1);
@@ -150,7 +150,7 @@ test('remove a place: with items it asks where they go; empty ones go at once; U
   const sheet = sheetOpen(page);
   await openPlace(page, 'Basement store');
   await sheet.locator('[data-pl="remove"]').click();
-  await expect(sheet.locator('.ha-sheet-title'), 'removing a place with items asks where they go').toHaveText('Remove Basement store');
+  await expect(sheet.locator('.pa-sheet-title'), 'removing a place with items asks where they go').toHaveText('Remove Basement store');
   expect(await sheet.locator('#pa-mv-to option').allTextContents(), 'not back into itself').not.toContain('Basement store');
   await axe(page, 'remove a place with items');
   await shot(page, 'place-remove-with-items');
@@ -159,7 +159,7 @@ test('remove a place: with items it asks where they go; empty ones go at once; U
   expect((await state(page)).list, 'nothing removed').toContain('Basement store');
   await openPlace(page, 'Basement store');
   await sheet.locator('[data-pl="remove"]').click();
-  await expect(sheet.locator('.ha-sheet-title')).toHaveText('Remove Basement store');
+  await expect(sheet.locator('.pa-sheet-title')).toHaveText('Remove Basement store');
   const moving = (await state(page)).items.filter(i => i.location === 'Basement store').map(i => i.id);
   const listBefore = (await state(page)).list;
   await page.selectOption('#pa-mv-to', 'Store room');
@@ -217,7 +217,7 @@ test('Say or type knows the household’s places', async ({ phone }) => {
   await go(page, '#/');
   await page.click('[data-act="quick"]');
   await page.fill('#pa-quick-text', '2 jars of jam in the level 2 fridge and tissue in the basement');
-  const said = page.locator('#pa-quick-list .ha-row-sub');
+  const said = page.locator('#pa-quick-list .ui-row-sub');
   await expect(said.nth(0), 'Say or type finds Level 2 fridge').toContainText('Level 2 fridge');
   await expect(said.nth(1), 'and the basement').toContainText('Basement store');
 });

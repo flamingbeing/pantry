@@ -6,7 +6,7 @@ import { BASE, open, go, hash, undo, noSideways, barApart, bigText, shot, idOf }
 const screens = id => ['#/', '#/items', '#/item/' + id, '#/add', '#/edit/' + id, '#/shop', '#/settings', '#/guide'];
 const demo = async (phone, name, width, height) => {
   const page = await open(phone, name, BASE + '?demo', { width, height });
-  await expect(page.locator('.ha-large-sub'), 'says it is a demo').toContainText('Demo');
+  await expect(page.locator('.pa-large-sub'), 'says it is a demo').toContainText('Demo');
   expect(await page.evaluate(() => window.__pantry.S.mode), 'memory only').toBe('demo');
   return page;
 };

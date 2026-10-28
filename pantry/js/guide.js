@@ -7,8 +7,8 @@
 //    the sheet down all close it, and it never comes back on its own ("Show the welcome again" in Settings).
 // 2. The guide screen (#/guide, "How to use the pantry"): short grouped sections, linked from Settings and from the
 //    empty Home screen.
-// Everything is kit components (https://design.flamingbeing.com/v1/); the few own styles are pa-w* and pa-dots in pantry.css.
-import { haSheet, haCloseSheet, haIcon as icon, haEsc as esc, haAnnounce } from 'https://design.flamingbeing.com/v1/app.js';
+// Everything is shared-kit parts (js/ui.js on app-ui); the few own styles are pa-w* and pa-dots in pantry.css.
+import { sheet, closeSheet, icon, esc, announce } from './ui.js';
 import { prefs } from './store.js';
 
 const FLAG = 'welcomed';   // prefs key: localStorage 'pantry:welcomed'
@@ -19,10 +19,10 @@ export function installed() {
   try { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch { return false; }
 }
 
-const row = (iconName, title, sub = '', trail = '') => `<li><div class="ha-row"><span class="ha-row-icon">${icon(iconName)}</span>
-  <span class="ha-row-body"><span class="ha-row-title">${title}</span>${sub ? `<span class="ha-row-sub">${sub}</span>` : ''}</span>${trail}</div></li>`;
-const plainRow = (title, sub = '', trail = '') => `<li><div class="ha-row"><span class="ha-row-body"><span class="ha-row-title">${title}</span>${sub ? `<span class="ha-row-sub">${sub}</span>` : ''}</span>${trail ? `<span class="ha-row-trail">${trail}</span>` : ''}</div></li>`;
-const list = rows => `<ul class="ha-list">${rows.join('')}</ul>`;
+const row = (iconName, title, sub = '', trail = '') => `<li><div class="ui-row"><span class="pa-row-icon">${icon(iconName)}</span>
+  <span class="ui-row-main"><span class="pa-row-title">${title}</span>${sub ? `<span class="ui-row-sub">${sub}</span>` : ''}</span>${trail}</div></li>`;
+const plainRow = (title, sub = '', trail = '') => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">${title}</span>${sub ? `<span class="ui-row-sub">${sub}</span>` : ''}</span>${trail ? `<span class="pa-row-trail">${trail}</span>` : ''}</div></li>`;
+const list = rows => `<ul class="ui-list">${rows.join('')}</ul>`;
 
 // ---------- the welcome ----------
 
@@ -92,48 +92,48 @@ export function welcomeCards({ invited = false, signedIn = false, isInstalled = 
 export function openWelcome({ invited = false, signedIn = false, save = true, onDone } = {}) {
   const ids = welcomeCards({ invited, signedIn });
   let at = 0;
-  const s = haSheet({
+  const s = sheet({
     title: 'Getting started', closeLabel: 'Skip', grey: true, detent: 'large',
-    lead: `<button type="button" class="ha-btn ha-btn--plain ha-btn--compact" data-pa-w="prev" hidden>Back</button>`,
+    lead: `<button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-pa-w="prev" hidden>Back</button>`,
     body: `<div class="pa-welcome" id="pa-welcome"></div>`,
-    footer: `<div class="pa-dots" aria-hidden="true">${ids.map(() => '<span class="pa-dot"></span>').join('')}</div><div class="ha-btn-stack pa-wbtns" id="pa-wbtns"></div>`,
+    footer: `<div class="pa-dots" aria-hidden="true">${ids.map(() => '<span class="pa-dot"></span>').join('')}</div><div class="pa-btn-stack pa-wbtns" id="pa-wbtns"></div>`,
     onClose: v => { if (save) markWelcomed(); onDone?.(v); },
   });
   const el = s.el;
   el.classList.add('pa-wsheet');
   const card = el.querySelector('#pa-welcome'), btns = el.querySelector('#pa-wbtns');
-  const prev = el.querySelector('[data-pa-w="prev"]'), skip = el.querySelector('.ha-sheet-head [data-ha-close]');
+  const prev = el.querySelector('[data-pa-w="prev"]'), skip = el.querySelector('.ui-sheet-head [data-pa-close]');
   const draw = (focus = false) => {
     const id = ids[at], c = CARDS[id], last = at === ids.length - 1;
     card.dataset.card = id;
     card.innerHTML = `<div class="pa-wtop"><span class="pa-wicon">${icon(c.icon)}</span>
-      <h3 class="pa-wtitle" tabindex="-1"><span class="ha-sr">Step ${at + 1} of ${ids.length}: </span>${esc(c.title)}</h3>
+      <h3 class="pa-wtitle" tabindex="-1"><span class="pa-sr">Step ${at + 1} of ${ids.length}: </span>${esc(c.title)}</h3>
       <p class="pa-wtext">${esc(c.text)}</p></div>${c.body}`;
     el.querySelectorAll('.pa-dot').forEach((d, i) => d.classList.toggle('is-current', i === at));
     prev.hidden = at === 0;
     skip.textContent = last ? 'Close' : 'Skip';
     btns.innerHTML = !last
-      ? `<button type="button" class="ha-btn ha-btn--primary ha-btn--block" data-pa-w="next">Next</button>`
+      ? `<button type="button" class="pa-btn ui-primary pa-btn--block" data-pa-w="next">Next</button>`
       : invited
-        ? `<button type="button" class="ha-btn ha-btn--primary ha-btn--block" data-pa-w="signin">Go to sign in</button>
-           <button type="button" class="ha-btn ha-btn--plain ha-btn--block" data-pa-w="done">Look around first</button>`
-        : `<button type="button" class="ha-btn ha-btn--primary ha-btn--block" data-pa-w="start">Pick what you have</button>
-           <button type="button" class="ha-btn ha-btn--plain ha-btn--block" data-pa-w="done">Look around first</button>`;
-    el.querySelector('.ha-sheet-body').scrollTop = 0;
+        ? `<button type="button" class="pa-btn ui-primary pa-btn--block" data-pa-w="signin">Go to sign in</button>
+           <button type="button" class="pa-btn pa-btn--plain pa-btn--block" data-pa-w="done">Look around first</button>`
+        : `<button type="button" class="pa-btn ui-primary pa-btn--block" data-pa-w="start">Pick what you have</button>
+           <button type="button" class="pa-btn pa-btn--plain pa-btn--block" data-pa-w="done">Look around first</button>`;
+    el.querySelector('.ui-sheet-body').scrollTop = 0;
     if (focus) { el.querySelector('.pa-wtitle').focus({ preventScroll: true }); }
   };
   const step = d => {
     const n = Math.min(ids.length - 1, Math.max(0, at + d));
     if (n === at) return;
     at = n; draw(true);
-    haAnnounce(`Step ${at + 1} of ${ids.length}`);
+    announce(`Step ${at + 1} of ${ids.length}`);
   };
   el.addEventListener('click', e => {
     const b = e.target.closest('[data-pa-w]'); if (!b) return;
     const a = b.dataset.paW;
     if (a === 'next') step(1);
     else if (a === 'prev') step(-1);
-    else haCloseSheet(el, a === 'done' ? undefined : a);
+    else closeSheet(el, a === 'done' ? undefined : a);
   });
   // swipe sideways between cards (optional; the buttons do the same)
   let x0 = null, y0 = 0;
@@ -150,14 +150,14 @@ export function openWelcome({ invited = false, signedIn = false, save = true, on
 
 // ---------- the guide screen ----------
 
-const badge = (text, tone = '') => `<span class="ha-badge${tone ? ' ha-badge--' + tone : ''}">${esc(text)}</span>`;
+const badge = (text, tone = '') => `<span class="pa-badge${tone ? ' pa-badge--' + tone : ''}">${esc(text)}</span>`;
 function section(id, title, rows, footer = '') {
-  return `<section class="ha-section" aria-labelledby="h-g-${id}"><h2 class="ha-section-header" id="h-g-${id}"><span>${esc(title)}</span></h2>${list(rows)}${footer ? `<p class="ha-section-footer">${footer}</p>` : ''}</section>`;
+  return `<section class="pa-section" aria-labelledby="h-g-${id}"><h2 class="pa-section-header" id="h-g-${id}"><span>${esc(title)}</span></h2>${list(rows)}${footer ? `<p class="pa-section-footer">${footer}</p>` : ''}</section>`;
 }
 
 export function viewGuide() {
-  return `<h1 class="ha-large-title">How to use the pantry</h1>
-    <p class="ha-large-sub">Everything it does, in a few words each.</p>
+  return `<h1 class="ui-large-title">How to use the pantry</h1>
+    <p class="pa-large-sub">Everything it does, in a few words each.</p>
     ${section('adding', 'Adding things', [
       row('search', 'Search the list', 'Tap + and type a name, like soy sauce or Milo. Picking a common Singapore product fills in the brand, size and where it’s kept.'),
       row('mic', 'Say or type a list', 'Tap the microphone on Home, or Say or type a list on Add. Say “2 Meiji milk in the fridge expires 25 Oct and 3 tins of sardines”, check the list it makes, then Add.'),
@@ -216,5 +216,5 @@ export function viewGuide() {
       row('refresh', 'Not sure it reached the family?', 'Settings, Sync now: it sends anything waiting, lists each change and says if everything is saved.'),
       row('refresh', 'Looks out of date?', 'At the bottom of Settings, tap Get the latest version. Your items are kept.'),
     ])}
-    <ul class="ha-list pa-gagain"><li><button type="button" class="ha-row ha-row--action ha-row--center" data-act="welcome"><span class="ha-row-body"><span class="ha-row-title">Show the welcome again</span></span></button></li></ul>`;
+    <ul class="ui-list pa-gagain"><li><button type="button" class="ui-row pa-row--action pa-row--center" data-act="welcome"><span class="ui-row-main"><span class="pa-row-title">Show the welcome again</span></span></button></li></ul>`;
 }

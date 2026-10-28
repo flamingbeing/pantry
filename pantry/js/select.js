@@ -55,7 +55,7 @@ export const HOLD_SLOP = 10;     // more than this many px of movement is a swip
 //   row: selector of a row (default '.pa-item'): the row's own link is NOT excluded (a row is an <a>); only `guard` is,
 //   guard: selector of things inside a row that keep their own press (default the grip, buttons, inputs),
 //   start(rowEl, e): called once when the hold completes; returns nothing,
-//   cue(rowEl): the visible cue (a class), haptic(): the buzz (Android only; the kit's haHaptic), announce(text),
+//   cue(rowEl): the visible cue (a class), haptic(): the buzz (Android only; the kit's haptic), announce(text),
 //   ms, slop, win: for tests }
 // It cancels if the finger moves more than HOLD_SLOP, the page scrolls, or the pointer is cancelled (a scroll starting on a
 // touch screen, a call, a gesture), swallows the click that follows lifting the finger (so the row's link does not open), and

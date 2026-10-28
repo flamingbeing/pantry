@@ -55,7 +55,14 @@ assert.ok(fs.readFileSync(new URL('../js/app-update.js', import.meta.url), 'utf8
 assert.ok(!/'index\.html'/.test(sw.match(/const SHELL = \[([\s\S]*?)\];/)[1]), 'no index.html in SHELL (pages come from ./)');
 assert.ok(sw.includes("never: [/\\/sw\\.js$/]"), 'sw.js never cached');
 assert.ok(!/take-over|Update ready/.test(fs.readFileSync(new URL('../js/app.js', import.meta.url), 'utf8')), 'no update toast');
-for (const f of ['tokens.css', 'app.css', 'app.js', 'icons.svg'].map(f => 'https://design.flamingbeing.com/v1/' + f)) assert.ok(sw.includes(`'${f}'`), f);
+for (const f of ['tokens.css', 'icons.svg'].map(f => 'https://design.flamingbeing.com/v1/' + f)) assert.ok(sw.includes(`'${f}'`), f);
+// the shared kit: one exact version in index.html, js/ui.js and sw.js, and every file the page links in SHELL
+const uiPins = new Set([...sw.matchAll(/core\.anawj\.com\/ui\/(\d[0-9a-z.-]*)\//g)].map(m => m[1]));
+assert.equal(uiPins.size, 1, 'one kit version in sw.js');
+const [ui] = uiPins;
+const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8'), uijs = fs.readFileSync(new URL('../js/ui.js', import.meta.url), 'utf8');
+for (const [name, text] of [['index.html', html], ['js/ui.js', uijs]]) for (const m of text.matchAll(/core\.anawj\.com\/ui\/(\d[0-9a-z.-]*)\//g)) assert.equal(m[1], ui, name + ' loads the same kit version');
+for (const m of html.matchAll(/(?:href|src)="(https:\/\/core\.anawj\.com\/ui\/[^"]+)"/g)) assert.ok(sw.includes(`'${m[1]}'`), m[1] + ' in SHELL');
 // one exact app-sync version, the same in the page and the worker, with every module of the index precached
 const syncPins = new Set([...sw.matchAll(/core\.anawj\.com\/sync\/(\d+\.\d+\.\d+)\//g)].map(m => m[1]));
 assert.deepEqual([...syncPins], ['1.5.1'], 'app-sync 1.5.1 only in sw.js');

@@ -8,7 +8,7 @@
 import { test, expect } from './fixtures.mjs';
 
 const TAGS = ['wcag2a', 'wcag2aa'];
-const sheet = p => p.locator('dialog.ha-sheet[open]');
+const sheet = p => p.locator('dialog.ui-sheet[open]');
 const err = p => sheet(p).locator('#pa-em-err');
 const S = p => p.evaluate(() => { const s = window.__pantry.S; return { user: s.user, pending: s.pending?.email, household: s.household?.id || null, items: s.items.size, mode: s.mode }; });
 const inFamily = (p, hid) => p.waitForFunction(h => window.__pantry.S.household?.id === h, hid);
@@ -21,7 +21,7 @@ async function settings(phone, name) {
 }
 async function openEmailSheet(p) {
   await p.locator('[data-act="email-open"]').click();
-  await expect(sheet(p).locator('.ha-sheet-title')).toBeVisible();
+  await expect(sheet(p).locator('.pa-sheet-title')).toBeVisible();
 }
 // a family pantry with one item, for this test's own made-up accounts
 async function family(fsAdmin, uid, members) {
@@ -39,11 +39,11 @@ async function openLink(p, c, hash = '#/settings') {
 
 test('the sign-in card: Google first, email as the quiet second way, plain words for bad input', async ({ phone, axe }) => {
   const a = await settings(phone, 'card');
-  await expect(a.locator('[data-act="signin"] .ha-row-title')).toHaveText('Continue with Google');
+  await expect(a.locator('[data-act="signin"] .pa-row-title')).toHaveText('Continue with Google');
   await expect(a.locator('[data-act="email-open"]')).toHaveText('Use email instead');
   await axe(a, 'sign-in card', TAGS);
   await openEmailSheet(a);
-  await expect(sheet(a).locator('.ha-sheet-title')).toHaveText('Sign in with email');
+  await expect(sheet(a).locator('.pa-sheet-title')).toHaveText('Sign in with email');
   await expect(sheet(a).locator('[data-pe="link"]')).toHaveText('Email me a sign-in link');
   await expect(sheet(a).locator('[data-pe="pw"]')).toHaveText('Use a password');
   await axe(a, 'email sheet', TAGS);
@@ -87,11 +87,11 @@ test('password: create account, verify by email, sign out and in, wrong password
   expect((await S(a)).household).toBeNull();
   // "I've verified" too early: asked to tap the link first
   await a.click('[data-act="verified"]');
-  await expect(a.locator('.ha-toast', { hasText: 'Not yet' })).toBeVisible();
+  await expect(a.locator('.toast', { hasText: 'Not yet' })).toBeVisible();
   expect((await S(a)).household).toBeNull();
   // Send it again
   await a.click('[data-act="verify-resend"]');
-  await expect(a.locator('.ha-toast', { hasText: 'Sent again' })).toBeVisible();
+  await expect(a.locator('.toast', { hasText: 'Sent again' })).toBeVisible();
   await expect.poll(async () => (await oob.codes(email, 'VERIFY_EMAIL')).length, { message: 'sent again' }).toBe(2);
   // tap the link, come back, "I've verified": the family pantry opens
   await oob.tap((await oob.codes(email, 'VERIFY_EMAIL')).at(-1));
@@ -153,10 +153,10 @@ test('email link: asked for here, opened here, then used a second time', async (
   await b.click('[data-act="signout"]');
   await expect(b.locator('[data-act="email-open"]')).toBeVisible();
   await openLink(b, signin);
-  await expect(sheet(b).locator('.ha-sheet-title', { hasText: 'Finish signing in' })).toBeVisible();   // nothing saved any more: asks
+  await expect(sheet(b).locator('.pa-sheet-title', { hasText: 'Finish signing in' })).toBeVisible();   // nothing saved any more: asks
   await b.fill('#pa-em-email', email);
   await b.press('#pa-em-email', 'Enter');
-  await expect(b.locator('.ha-toast', { hasText: /expired or was already used|isn’t valid any more/ })).toBeVisible();
+  await expect(b.locator('.toast', { hasText: /expired or was already used|isn’t valid any more/ })).toBeVisible();
   expect(await b.evaluate(() => window.__pantry.S.user)).toBeNull();
   await expect.poll(() => new URL(b.url()).search).toBe('?emulator');
 });
@@ -173,7 +173,7 @@ test('email link opened where the address wasn’t saved (Safari instead of the 
   const [link] = await oob.codes(email, 'EMAIL_SIGNIN');
   const c = await phone('other');
   await openLink(c, link);
-  await expect(sheet(c).locator('.ha-sheet-title', { hasText: 'Finish signing in' })).toBeVisible();
+  await expect(sheet(c).locator('.pa-sheet-title', { hasText: 'Finish signing in' })).toBeVisible();
   expect(new URL(c.url()).search, 'the link stays until it is used').toMatch(/oobCode/);
   await axe(c, 'confirm email', TAGS);
   await c.fill('#pa-em-email', `someone.else-${uid}@example.com`);

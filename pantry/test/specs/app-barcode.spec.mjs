@@ -23,7 +23,7 @@ async function scanner(phone, name) {
     await page.evaluate(c => { window.__scanCode = c; }, code);
     await page.click('[data-act="scan"]');
   };
-  const unknown = page.locator('dialog.ha-sheet[open]', { has: page.locator('#pa-unk-find') });
+  const unknown = page.locator('dialog.ui-sheet[open]', { has: page.locator('#pa-unk-find') });
   return { page, asked, scan, unknown };
 }
 
@@ -52,12 +52,12 @@ test('an unknown barcode opens the sheet: search field focused, barcode already 
   await go(page, '#/add');
   await scan(UNKNOWN);
   await expect(unknown).toBeVisible();
-  await expect(unknown.locator('.ha-sheet-title'), 'unknown barcode: the sheet says so').toHaveText('We don’t know this barcode yet');
+  await expect(unknown.locator('.pa-sheet-title'), 'unknown barcode: the sheet says so').toHaveText('We don’t know this barcode yet');
   await expect(page.locator('#pa-unk-find'), 'the search field has focus').toBeFocused();
   await expect(unknown.locator('.pa-unk-code'), 'the sheet shows the barcode').toHaveText(UNKNOWN);
   await expect(field(page, 'barcode'), 'the barcode is already in the form').toHaveValue(UNKNOWN);
   await expect(unknown.locator('#pa-unk-list'), 'no list before typing').toBeHidden();
-  const targets = await unknown.locator('.ha-row, .ha-sheet-head button').evaluateAll(els => els.filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect().height));
+  const targets = await unknown.locator('.ui-row, .ui-sheet-head button').evaluateAll(els => els.filter(e => e.getClientRects().length).map(e => e.getBoundingClientRect().height));
   expect(targets.every(h => h >= 43.5), `sheet targets are 44px (${targets.join(', ')})`).toBe(true);
   await axe(page, 'unknown barcode sheet');
   await noSideways(page, 'unknown barcode sheet');
@@ -77,8 +77,8 @@ test('picking a catalogue product fills the form and attaches the barcode', asyn
   await page.fill('#pa-unk-find', 'laundry liquid');
   await expect(unknown.locator('#pa-unk-list [data-act="unk-cat"]').first()).toBeVisible();
   await expect.poll(async () => {
-    const subs = await unknown.locator('#pa-unk-list .ha-row-sub').allTextContents();
-    return subs.filter(t => t.startsWith('Dynamo')).length === 1 && (await unknown.locator('#pa-unk-list [data-act="unk-mine"] .ha-row-sub').first().textContent()).startsWith('Dynamo');
+    const subs = await unknown.locator('#pa-unk-list .ui-row-sub').allTextContents();
+    return subs.filter(t => t.startsWith('Dynamo')).length === 1 && (await unknown.locator('#pa-unk-list [data-act="unk-mine"] .ui-row-sub').first().textContent()).startsWith('Dynamo');
   }, 'a product already in the pantry is offered once, as the pantry item').toBe(true);
   await axe(page, 'unknown barcode sheet with a search');
   await noSideways(page, 'unknown barcode sheet with a search');
@@ -115,10 +115,12 @@ test('picking an item already in the pantry attaches the barcode and opens Bough
   await expect(unknown).toBeVisible();
   await page.fill('#pa-unk-find', 'kaya');
   await unknown.locator('#pa-unk-list [data-act="unk-mine"]', { hasText: 'Kaya' }).first().click();
-  const kaya = await page.evaluate(() => [...window.__pantry.S.items.values()].find(i => i.name === 'Kaya'));
-  expect(kaya.barcode, 'the barcode is saved on the pantry item').toBe(UNKNOWN2);
+  // the sheet closes (animated) before the item is saved
+  const kayaNow = () => page.evaluate(() => [...window.__pantry.S.items.values()].find(i => i.name === 'Kaya'));
+  await expect.poll(async () => (await kayaNow()).barcode, 'the barcode is saved on the pantry item').toBe(UNKNOWN2);
+  const kaya = await kayaNow();
   await expect.poll(() => hash(page)).toBe('#/item/' + kaya.id);
-  await expect(sheetOpen(page).locator('.ha-sheet-title'), 'its item opens with Bought more').toHaveText('Bought more');
+  await expect(sheetOpen(page).locator('.pa-sheet-title'), 'its item opens with Bought more').toHaveText('Bought more');
   await page.goBack();
   await expect(sheetOpen(page), 'back closes Bought more').toHaveCount(0);
   expect(hash(page)).toBe('#/item/' + kaya.id);
@@ -126,7 +128,7 @@ test('picking an item already in the pantry attaches the barcode and opens Bough
   const before = asked.length;
   await go(page, '#/add');
   await scan(UNKNOWN2);
-  await expect(sheetOpen(page).locator('.ha-sheet-title', { hasText: 'Bought more' })).toBeVisible();
+  await expect(sheetOpen(page).locator('.pa-sheet-title', { hasText: 'Bought more' })).toBeVisible();
   expect(hash(page)).toBe('#/item/' + kaya.id);
   expect(asked.length, 'the next scan finds the item without asking online').toBe(before);
 });

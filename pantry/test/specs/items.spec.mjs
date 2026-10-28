@@ -37,25 +37,26 @@ async function open(phone, { url = ITEMS, height = 844, ...opts } = {}) {
 }
 // the Items list is drawn: title, all thirteen made-up rows
 const ready = async page => {
-  await expect(page.locator('.ha-large-title').first()).toBeVisible();
+  await expect(page.locator('.ui-large-title').first()).toBeVisible();
   await expect(page.locator('#pa-items-list li')).toHaveCount(13);
 };
 const row = (page, name) => page.locator('#pa-items-list li', { hasText: name });
 const hash = page => new URL(page.url()).hash;
 const bar = page => page.locator('#pa-selbar');
 const count = page => page.locator('#pa-selcount');
-const toast = page => page.locator('.ha-toast.is-visible');
-const undo = page => page.locator('.ha-toast-action');
-const names = page => page.evaluate(() => [...document.querySelectorAll('#pa-items-list .ha-row-title')].map(e => e.textContent));
+const toast = page => page.locator('.toasts .toast');
+const undo = page => page.locator('.toast-action');
+const names = page => page.evaluate(() => [...document.querySelectorAll('#pa-items-list .pa-row-title')].map(e => e.textContent));
 const itemNamed = (page, name) => page.evaluate(n => { const it = [...window.__pantry.S.items.values()].find(i => i.name === n); return it && { id: it.id, location: it.location, removed: !!it.removedAt }; }, name);
 const locationOf = (page, name) => itemNamed(page, name).then(i => i?.location);
 const stateOf = page => page.evaluate(() => ({ on: window.__pantry.S.sel.on, n: window.__pantry.S.sel.ids.size, h: location.hash }));
 const shopLines = (page, live = true) => page.evaluate(live => [...window.__pantry.S.shop.values()].filter(m => !live || !m.removedAt).length, live);
 const edit = (page, name, patch) => page.evaluate(([n, p]) => { const it = [...window.__pantry.S.items.values()].find(i => i.name === n); window.__pantry.S.items.set(it.id, { ...it, ...p }); }, [name, patch]);
 const buzzes = page => page.evaluate(() => window.__buzz.length);
-const sheet = page => page.locator('dialog.ha-sheet[open]');
+const sheet = page => page.locator('dialog.ui-sheet[open]');
 // a row's centre in the viewport (45% across, clear of the grip), or its grip's centre
-const rowPoint = async (page, name) => { const b = await row(page, name).first().locator('.pa-item').boundingBox(); return { x: b.x + b.width * 0.45, y: b.y + b.height / 2 }; };
+// (scrolled to the middle first: the floating tab bar covers the bottom of the screen)
+const rowPoint = async (page, name) => { const r = row(page, name).first().locator('.pa-item'); await r.evaluate(el => el.scrollIntoView({ block: 'center' })); const b = await r.boundingBox(); return { x: b.x + b.width * 0.45, y: b.y + b.height / 2 }; };
 // A box once its layout has stopped moving (the same place for three animation frames in a row): a list that is still
 // settling after a regroup or a redraw would put a measured heading somewhere else by the time the finger gets there.
 const steady = loc => loc.evaluate(el => new Promise(done => {
@@ -69,7 +70,7 @@ const steady = loc => loc.evaluate(el => new Promise(done => {
 }));
 const gripPoint = async (page, name) => { const b = await steady(row(page, name).first().locator('.pa-grip')); return { x: b.x + b.width / 2, y: b.y + b.height / 2 }; };
 const headBox = (page, place) => steady(page.locator(`section[data-place="${place}"] .pa-grouphead`));
-const place = (page, label) => page.locator('.ha-seg', { hasText: label }).click();
+const place = (page, label) => page.locator('.pa-seg', { hasText: label }).click();
 
 async function startSelecting(page) {
   await page.click('#pa-sel-toggle');
@@ -86,9 +87,9 @@ const selecting = async (page, on = true) => expect(bar(page)).toHaveCount(on ? 
 test('the list as it is: default sort, labels that fit, rows are links', async ({ phone, axe }) => {
   const { page } = await open(phone);
   await expect(page.locator('input[name="pa-sort"]:checked')).toHaveAttribute('value', 'expiry');
-  await expect(page.locator('.ha-segmented .ha-seg span'), 'no My order choice').toHaveText(['Use by', 'Name', 'Category', 'Place']);
+  await expect(page.locator('.ui-segmented .pa-seg span'), 'no My order choice').toHaveText(['Use by', 'Name', 'Category', 'Place']);
   await expect(page.locator('.pa-within'), 'the second choice is hidden').toHaveCount(0);
-  const seg = await page.evaluate(() => { const f = document.querySelector('.ha-segmented'); return { sw: f.scrollWidth, cw: f.clientWidth, spans: [...f.querySelectorAll('.ha-seg span')].map(s => ({ w: s.getBoundingClientRect().width, sw: s.scrollWidth, cw: s.clientWidth })) }; });
+  const seg = await page.evaluate(() => { const f = document.querySelector('.ui-segmented'); return { sw: f.scrollWidth, cw: f.clientWidth, spans: [...f.querySelectorAll('.pa-seg span')].map(s => ({ w: s.getBoundingClientRect().width, sw: s.scrollWidth, cw: s.clientWidth })) }; });
   expect(seg.sw <= seg.cw && seg.spans.every(s => s.sw <= s.cw), 'the sort labels fit at 390px: ' + JSON.stringify(seg)).toBe(true);
   await expect(page.locator('#pa-items-list .pa-item')).toHaveCount(13);
   await expect(page.locator('#pa-items-list a.pa-item[href^="#/item/"]'), 'rows are links, as before').toHaveCount(13);
@@ -105,9 +106,9 @@ test('selecting by button: checkboxes by tap, Space and Enter; Select all and no
   await expect(page.locator('#pa-items-list input.pa-sel'), 'a real checkbox on every row').toHaveCount(13);
   await expect(page.locator('#pa-items-list a.pa-item'), 'rows are not links while selecting').toHaveCount(0);
   await expect(page.locator('#pa-sel-toggle'), 'the Select button is gone').toHaveCount(0);
-  await expect(page.locator('.ha-tabbar')).toBeVisible();
+  await expect(page.locator('.ui-tabbar')).toBeVisible();
   await expect.poll(async () => {
-    const b = await bar(page).boundingBox(), t = await page.locator('.ha-tabbar').boundingBox();
+    const b = await bar(page).boundingBox(), t = await page.locator('.ui-tabbar').boundingBox();
     return Math.abs(b.y + b.height - t.y) <= 1.5;
   }, { message: 'the bar sits right above the tab bar' }).toBe(true);
   await expect(page.locator('[data-act="sel-move"]'), 'actions are off with nothing selected').toHaveAttribute('aria-disabled', 'true');
@@ -181,7 +182,7 @@ test('Back leaves select mode and stays on Items', async ({ phone }) => {
 test('another tab ends select mode, and Back from there does not land on a dead entry', async ({ phone }) => {
   const { page } = await open(phone);
   await startSelecting(page);
-  await page.click('.ha-tab[href="#/shop"]');
+  await page.click('.ui-tab[href="#/shop"]');
   await expect.poll(() => hash(page)).toBe('#/shop');
   await selecting(page, false);
   await page.goBack();
@@ -295,7 +296,7 @@ test('Group by place: a heading per place with its count; Fridge folds, and stay
   const { page } = await open(phone);
   await place(page, 'Place');
   await expect(page.locator('input[name="pa-sort"]:checked')).toHaveAttribute('value', 'place');
-  const heads = await page.locator('.pa-grouphead').evaluateAll(hs => hs.map(h => ({ name: h.querySelector('.pa-fold-name').textContent, n: h.querySelector('.ha-num').textContent })));
+  const heads = await page.locator('.pa-grouphead').evaluateAll(hs => hs.map(h => ({ name: h.querySelector('.pa-fold-name').textContent, n: h.querySelector('.pa-num').textContent })));
   expect(heads.length, 'a heading for each place that has items: ' + JSON.stringify(heads)).toBeGreaterThanOrEqual(5);
   const fridge = heads.find(h => h.name === 'Fridge');
   expect(fridge && Number(fridge.n), 'Fridge has four, shown as a count').toBe(4);
@@ -308,7 +309,7 @@ test('Group by place: a heading per place with its count; Fridge folds, and stay
   expect(await page.evaluate(() => document.activeElement?.matches?.('.pa-fold')), 'focus stays on the heading button').toBe(true);
   expect(await page.evaluate(() => JSON.parse(localStorage.getItem('pantry:folded'))), 'the fold is kept on this phone').toEqual(['place:Fridge']);
   await page.reload();
-  await expect(page.locator('.ha-large-title').first()).toBeVisible();
+  await expect(page.locator('.ui-large-title').first()).toBeVisible();
   await expect(page.locator('section[data-place="Fridge"] .pa-fold'), 'and after a reload').toHaveAttribute('aria-expanded', 'false');
 });
 
@@ -346,7 +347,7 @@ test('Move to…: one batch, one toast; Undo leaves alone what changed since', a
   const { page } = await open(phone);
   await pick(page, ['Kaya', 'Fresh milk', 'Laundry liquid']);
   await page.click('[data-act="sel-move"]');
-  await expect(sheet(page).locator('.ha-sheet-title')).toHaveText('Move 3 items');
+  await expect(sheet(page).locator('.pa-sheet-title')).toHaveText('Move 3 items');
   expect(await sheet(page).locator('input[name="pa-moveto"]').count(), 'every place is offered').toBeGreaterThanOrEqual(11);
   await expect(sheet(page).locator('#pa-moveto-go'), 'the button waits for a choice').toHaveAttribute('aria-disabled', 'true');
   await axe(page, 'Move to… sheet');
@@ -541,10 +542,10 @@ test('drag while selecting: the grip of a row that is not ticked drags only that
 test('drag onto a place chip in the default sort, by touch', async ({ phone }) => {
   const { page, touch } = await open(phone, { height: 1500 });
   const c = await gripPoint(page, 'Laundry liquid');
-  const chip = await page.locator('.ha-chip[data-place="Fridge"]').boundingBox();
+  const chip = await page.locator('.ui-chip[data-place="Fridge"]').boundingBox();
   await touch('touchStart', c.x, c.y);
   await dragTo(touch, c, { x: chip.x + chip.width / 2, y: chip.y + chip.height / 2 }, 10);
-  await expect(page.locator('.ha-chip.pa-drop'), 'the place chip is lit').toHaveCount(1);
+  await expect(page.locator('.ui-chip.pa-drop'), 'the place chip is lit').toHaveCount(1);
   await expect(tip(page)).toHaveText('Move to Fridge');
   await touch('touchEnd');
   await expect.poll(() => locationOf(page, 'Laundry liquid'), { message: 'moved by dropping on a chip' }).toBe('Fridge');
@@ -553,7 +554,7 @@ test('drag onto a place chip in the default sort, by touch', async ({ phone }) =
 test('drag onto a place chip with a mouse', async ({ phone }) => {
   const { page } = await open(phone, { height: 1500 });
   const c = await gripPoint(page, 'Laundry liquid');
-  const chip = await page.locator('.ha-chip[data-place="Kitchen cabinet"]').boundingBox();
+  const chip = await page.locator('.ui-chip[data-place="Kitchen cabinet"]').boundingBox();
   await page.mouse.move(c.x, c.y);
   await page.mouse.down();
   await page.mouse.move(c.x + 5, c.y + 3);
@@ -569,7 +570,7 @@ test('a tap on the grip opens its Move sheet and does not drag', async ({ phone 
   await expect(sheet(page), 'a tap on the grip opens the Move sheet').toHaveCount(1);
   await expect(sheet(page).locator('[data-g="up"]'), 'no Move up outside My order').toHaveCount(0);
   await expect(sheet(page).locator('[data-g="to"]'), 'Move to… is there').toHaveCount(1);
-  await sheet(page).locator('[data-ha-close]').click();
+  await sheet(page).locator('[data-pa-close]').click();
   await expect(sheet(page)).toHaveCount(0);
 });
 
@@ -578,7 +579,7 @@ test('auto-scroll: a drag near the bottom edge scrolls the page, near the top it
   const { page, touch } = await open(phone, { height: 560 });
   const c = await gripPoint(page, 'Wholemeal bread');
   await touch('touchStart', c.x, c.y);
-  const bottom = await page.evaluate(() => document.querySelector('.ha-tabbar').getBoundingClientRect().top);
+  const bottom = await page.evaluate(() => document.querySelector('.ui-tabbar').getBoundingClientRect().top);
   await dragTo(touch, c, { x: c.x, y: bottom - 20 });
   await expect(ghost(page)).toHaveCount(1);
   const s0 = await page.evaluate(() => scrollY);
@@ -616,7 +617,7 @@ const ymdPlus = n => { const d = new Date(); d.setDate(d.getDate() + n); return 
 const bulkCount = page => page.locator('#pa-bcount');
 const bulkRow = (page, name) => page.locator('#pa-bulk-list li', { hasText: name }).locator('.pa-item');
 const itemOf = (page, name) => page.evaluate(n => { const it = [...window.__pantry.S.items.values()].find(i => i.name === n); return it && { location: it.location, category: it.category, measure: it.measure || null, level: it.level || null, removed: !!it.removedAt, exp: it.batches.map(b => b.expiry), qty: it.batches.map(b => b.qty) }; }, name);
-const panels = page => page.locator('.ha-panel').allTextContents().then(a => a.join('|'));
+const panels = page => page.locator('.pa-panel').allTextContents().then(a => a.join('|'));
 async function openBulk(phone) {
   const o = await open(phone, { height: 3200 });
   await o.page.click('[data-act="bulk-open"]');
@@ -635,7 +636,7 @@ async function save(page) {
 test('Bulk edit: every field starts Unchanged; filters and Select all matching', async ({ phone }) => {
   const { page } = await openBulk(phone);
   expect(hash(page)).toBe('#/bulk');
-  await expect(page.locator('.ha-back'), 'a back button to Items').toBeVisible();
+  await expect(page.locator('.pa-back'), 'a back button to Items').toBeVisible();
   await expect(bulkCount(page)).toHaveText('None selected');
   for (const id of ['place', 'category', 'mode', 'expiry', 'list', 'bin']) await expect(page.locator(`#pa-bk-${id}`), `${id} starts Unchanged`).toHaveValue('');
   await expect(page.locator('#pa-bk-place option:checked')).toHaveText('Unchanged');
@@ -677,8 +678,8 @@ test('Bulk edit: Review needs items and a complete choice, says what is missing,
   await page.selectOption('#pa-bk-category-to', 'Other');
   await axe(page, 'Bulk edit');
   await review(page);
-  await expect(page.locator('.ha-large-sub')).toHaveText('3 items will change');
-  await expect(page.locator('.ha-list').first().locator('.ha-row-title')).toHaveText(['Place: move to Basement store', 'Category: change to Other']);
+  await expect(page.locator('.pa-large-sub')).toHaveText('3 items will change');
+  await expect(page.locator('.ui-list').first().locator('.pa-row-title')).toHaveText(['Place: move to Basement store', 'Category: change to Other']);
   await expect(page.locator('.pa-warn', { hasText: 'replaces what these items have now' }), 'warns it replaces').toHaveCount(1);
   const samples = page.locator('section[aria-labelledby="h-bk-samples"] li');
   await expect(samples, 'up to three before and after').toHaveCount(3);
@@ -760,7 +761,7 @@ test('Bulk edit: delete is reviewed on its own; Undo restores the item', async (
   await page.selectOption('#pa-bk-bin', 'del');
   await expect(page.locator('#pa-bulk-changes')).toContainText('Delete is done on its own');
   await review(page);
-  await expect(page.locator('.ha-large-sub')).toHaveText('1 item will be deleted');
+  await expect(page.locator('.pa-large-sub')).toHaveText('1 item will be deleted');
   await expect(page.locator('[data-act="bk-save"]')).toHaveText('Delete 1 item');
   await save(page);
   await expect.poll(async () => (await itemOf(page, 'Milo powder')).removed).toBe(true);

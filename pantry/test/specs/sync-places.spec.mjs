@@ -87,7 +87,7 @@ test('one phone removes a place while the other, offline, renames it: it stays h
   const aDoc = (await placeDocs(fsAdmin, hid)).find(d => d.id === idA);
   expect(aDoc.removedAt && aDoc.name === 'Shelf Ay', 'hidden, with the rename kept').toBeTruthy();
   await go(mum, '#/removed');
-  const row = mum.locator('#pa-removed-places .ha-row', { hasText: 'Shelf Ay' });
+  const row = mum.locator('#pa-removed-places .ui-row', { hasText: 'Shelf Ay' });
   await row.locator('[data-act="restore"]').click();
   await same(fsAdmin, hid, [mum, dad], 'restored with the rename', [...before, 'Shelf Ay']);
   expect((await placeDocs(fsAdmin, hid)).find(d => d.id === idA).removedAt, 'markers cleared').toBeUndefined();
@@ -124,11 +124,11 @@ test('a rename moves the items in the place; an item added offline under the old
   for (const p of [mum, dad]) {
     await go(p, '#/places');
     await expect(p.locator('#pa-places-other [data-act="place-open"][data-v="Level 1 freezer"]'), '"Not in your list": the item is still found').toBeVisible();
-    await expect(p.locator('#pa-places-other .ha-row', { hasText: 'Level 1 freezer' }).locator('.ha-row-value')).toHaveText(/^\D*1\D*$/);
+    await expect(p.locator('#pa-places-other .ui-row', { hasText: 'Level 1 freezer' }).locator('.pa-row-value')).toHaveText(/^\D*1\D*$/);
   }
   // and the way out of "Not in your list": move its items to the renamed place
   await mum.locator('#pa-places-other [data-act="place-open"][data-v="Level 1 freezer"]').click();
-  await mum.locator('dialog.ha-sheet[open] [data-pl="remove"]').click();
+  await mum.locator('dialog.ui-sheet[open] [data-pl="remove"]').click();
   await mum.selectOption('#pa-mv-to', 'Cellar freezer'); await mum.locator('#pa-mv-go').click(); await drain(mum);
   await expect.poll(async () => (await fsAdmin.list(`households/${hid}/items`)).find(i => i.name === 'Late ice cream').location).toBe('Cellar freezer');
   // the old phones keep writing the single list: the rules take it; new phones ignore it

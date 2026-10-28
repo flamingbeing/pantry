@@ -31,7 +31,7 @@ const lastChanged = files => {
 };
 // only an exact-version address on core.anawj.com never changes; any other cross-site file (the kit's /v1/, a number in
 // another host's path) may change under the same address, so it gets a new hash every deploy
-const PINNED = /^https:\/\/core\.anawj\.com\/[a-z0-9-]+\/\d+\.\d+\.\d+\//;
+const PINNED = /^https:\/\/core\.anawj\.com\/[a-z0-9-]+\/\d+\.\d+\.\d+(?:-[0-9a-z.]+)?\//;   // (an rc tag is exact too)
 const SKIP = /(^|\/)(test|tools|node_modules|\.[^/]+)(\/|$)|\.md$/;
 const walk = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(d => {
   const f = path.join(dir, d.name);

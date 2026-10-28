@@ -10,10 +10,10 @@ test('the quick start and the Getting started checklist', async ({ phone, axe })
   await card(page, 'Fill it in a minute');
   await welcomeSheet(page).locator('[data-pa-w="start"]').click();
   const sheet = sheetOpen(page);
-  const chips = sheet.locator('.pa-start-chips .ha-chip');
+  const chips = sheet.locator('.pa-start-chips .ui-chip');
   await expect(chips.nth(19)).toBeVisible();
   expect(await chips.count(), 'the quick start offers everyday things').toBeGreaterThanOrEqual(20);
-  for (const n of ['Fresh milk', 'Eggs', 'Thai hom mali rice', 'Bathroom tissue']) await sheet.locator('.pa-start-chips .ha-chip', { hasText: n }).first().click();
+  for (const n of ['Fresh milk', 'Eggs', 'Thai hom mali rice', 'Bathroom tissue']) await sheet.locator('.pa-start-chips .ui-chip', { hasText: n }).first().click();
   await expect(page.locator('#pa-start-go'), 'the button counts the picks').toHaveText('Add 4 items');
   await axe(page, 'quick start');
   await shot(page, 't1-quick-start');
@@ -22,7 +22,7 @@ test('the quick start and the Getting started checklist', async ({ phone, axe })
   await expect.poll(() => live(page), 'four items in the pantry').toBe(4);
   const milk = await itemNamed(page, 'Fresh milk');
   expect(milk.batches[0].expiry && milk.location === 'Fridge', 'with a rough date and its usual place').toBeTruthy();
-  const count = page.locator('#h-tour .ha-num');
+  const count = page.locator('#h-tour .pa-num');
   const total = await page.locator('#h-tour').locator('xpath=..').locator('.pa-tour-row').count();
   await expect(count, 'the checklist ticks "Add what you have"').toHaveText(`1 of ${total}`);
   await axe(page, 'home with the checklist');
@@ -33,15 +33,15 @@ test('the quick start and the Getting started checklist', async ({ phone, axe })
   await expect(page.locator('[data-act="use"].pa-spot'), 'and rings Used 1').toHaveCount(1);
   await shot(page, 't3-show-me');
   await page.locator('[data-act="use"]').first().click();
-  await page.click('.ha-back');
+  await page.click('.pa-back');
   await expect(count, 'Used 1 ticks it').toHaveText(`2 of ${total}`);
   // the shopping list, the home-screen tip, and Say or type
   await page.click('[data-act="tour-show"][data-task="shop"]');
   await expect.poll(() => hash(page), 'Show me opens the shopping list').toBe('#/shop');
   await TAB(page, '#/').click();
   await page.click('[data-act="tour-show"][data-task="install"]');
-  await expect(sheetOpen(page).locator('.ha-sheet-title'), 'the home-screen steps').toHaveText('On your home screen');
-  await page.click('dialog.ha-sheet[open] [data-ha-close]');
+  await expect(sheetOpen(page).locator('.pa-sheet-title'), 'the home-screen steps').toHaveText('On your home screen');
+  await page.click('dialog.ui-sheet[open] [data-pa-close]');
   await expect(sheetOpen(page)).toHaveCount(0);
   await page.click('[data-act="tour-show"][data-task="say"]');
   await page.fill('#pa-quick-text', 'kaya in the fridge');
