@@ -282,7 +282,7 @@ export function nest(pairs) {
 // every save through the outbox is.
 async function writeAll(F, db, hid, kind, list) {
   let b = null, n = 0, bytes = 0;
-  const st = await (await sync()).parts.adapter.stampFields();
+  const st = await (await sync()).sync.parts.adapter.stampFields();
   for (const o of list) {
     const { _saves, serverAt, ...c } = clean(kind === 'items' ? toStored(normalizeItem(o)) : o), size = JSON.stringify(c).length;
     Object.assign(c, st);   // stamped now, so every phone's delta listener hears it, and the server's own stamp (a copied one is another pantry's)
@@ -400,7 +400,7 @@ const strip = d => { if (!d || !('_saves' in d || 'serverAt' in d)) return d; co
 // what a queued save was, for the app's words and its Retry/Discard list: { op, kind, id, obj | ops }
 const infoOf = x => {
   const op = x.record._deleted ? 'del' : (x.ops || []).some(o => o.put) ? 'put' : 'patch', patch = (x.ops || []).filter(o => o.patch).map(o => o.patch);
-  return { op, kind: x.kind, id: x.record.id, ...(op === 'put' && x.kind !== 'photos' ? { obj: x.record } : {}), ...(op === 'patch' ? { ops: patch.length === 1 ? patch[0] : mergeAll(patch) } : {}) };
+  return { op, key: x.key, kind: x.kind, id: x.record.id, ...(op === 'put' && x.kind !== 'photos' ? { obj: x.record } : {}), ...(op === 'patch' ? { ops: patch.length === 1 ? patch[0] : mergeAll(patch) } : {}) };
 };
 
 // The engine, once a page (app-sync 1.x createApp({ config, modules: [auth(), sync()] })): sign-in (app.auth), the device
@@ -475,6 +475,9 @@ export async function signOut({ anyway = false } = {}) {
   if (reload) fb = null;
   return { reload };
 }
+// A refused save the person retried or dropped (or the app didn't keep): given up in the queue too, which counts a
+// refused save as unsent until then (app-sync 1.x: it keeps the sign-out check and synced() false).
+export async function discardRefused(key) { if (key && engine) await (await engine).sync.queue.discard(key); }
 // How many of this phone's changes the outbox still holds (the update reload waits for none).
 export function pending() { return current ? current.queue.pending() : 0; }
 // The chip's state by app-sync's rules (a chip drawn by app.js): never Saved before the server has answered once, and
