@@ -15,19 +15,15 @@ Small fixes, select mode, grip drag and My order, Bulk edit. Index: [../NOTES.md
     "Your pantry changed" with Try again on Home and Settings; nothing is started by itself. Test: `sync.e2e.mjs`, "a pantry that
     goes away" (two phones, the owner removes the pantry; the other ends on the survivor with no reload and no console errors; then
     nothing left, Try again before and after the owner adds the account to a new pantry).
-  - **Sync now** (Settings → Saving to the family). A button that waits up to 5 s for the SDK to acknowledge every change
-    (`waitForPendingWrites`), reads the household document from the server (proves the family can be reached: that read, any
-    acknowledgement and any non-cache snapshot set "Last heard from the family"), and says plainly: "Everything is saved", "Still
-    waiting: this phone can't reach the family right now" or "Needs attention: …" (a refused change; Retry and Discard below). It
-    lists each waiting change in words ("Used one Rice", "Name for Jun", "Added place Garage": `describeWaiting` in `sync.js`) from
-    a small record `cloud.js` keeps of the writes it has sent and the server has not answered (each `track()` call carries
-    `{ kind, id, op, ops | name }`, cleared when its promise settles); changes left from before the app was last closed are
-    listed by document ("A change to Rice (saved before the app was closed)"). **The network switch is offered, not automatic:** if
-    the first try is still waiting, a second button "Reconnect and try again" turns the SDK's network off and on once
-    (`disableNetwork`, 300 ms, `enableNetwork`; never `enableNetwork` while already enabled, which crashed Firestore 10.14.1 in
-    tests). Reason: a change the server applied whose acknowledgement was lost is sent again after a reconnect, and an
-    `increment` sent twice counts twice (the same limit as the randomised test's note). The SDK does this on any real reconnect;
-    Sync now does not add one unasked.
+  - **Sync now** (the sync button in the top bar, the kit's `syncButton`; until the kit move it was a row in Settings → Saving
+    to the family, with a list of each waiting change in words, now dropped). A tap waits up to 5 s for the SDK to acknowledge
+    every change (`waitForPendingWrites`), reads the household document from the server (proves the family can be reached), and
+    says plainly in a toast: "Everything is saved", "Still waiting: this phone can't reach the family right now" or "Needs
+    attention: …" (a refused change; Try again and Discard on Home). **The network switch is offered, not automatic:** if the
+    first try is still waiting, the toast's "Reconnect" turns the SDK's network off and on once (`disableNetwork`, 300 ms,
+    `enableNetwork`; never `enableNetwork` while already enabled, which crashed Firestore 10.14.1 in tests). Reason: a change the
+    server applied whose acknowledgement was lost is sent again after a reconnect, and an `increment` sent twice counts twice
+    (the same limit as the randomised test's note). The SDK does this on any real reconnect; Sync now does not add one unasked.
   - **The "Waiting for signal" chip was wrong in one case, found and fixed.** The owner's phone said "Waiting for signal (1 change)"
     on wifi with a VPN while the server already held everything. `pending` used to be `max(inflight, documents the listeners flag
     hasPendingWrites)`. That flag is `hasLocalMutations || hasCommittedMutations` in the SDK, and a listener that already flagged a

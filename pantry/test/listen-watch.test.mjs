@@ -9,11 +9,11 @@ assert.equal(syncState({ pending: 1, cache: true, waited: 2000, recent: true }).
 assert.equal(syncState({ pending: 0, cache: true }).kind, 'saved', 'nothing unsent: never waiting');
 assert.equal(syncState({ pending: 1, offline: true, recent: true }).kind, 'waiting');
 // B5: the watchdog says the server isn't heard: never "Saved"
-assert.deepEqual(syncState({ pending: 0, stale: true }), { kind: 'waiting', text: 'May be out of date' });
+assert.deepEqual(syncState({ pending: 0, stale: true }), { kind: 'waiting', state: 'unknown', count: 0, text: 'May be out of date' });
 assert.equal(syncState({ pending: 0, stale: true, offline: true }).kind, 'saved', 'offline with nothing unsent: nothing to say');
 assert.equal(syncState({ pending: 1, stale: true, offline: true }).text, 'Waiting for signal (1 change)');
 // B3: changes waiting while the browser may clear the site's storage
-assert.deepEqual(syncState({ pending: 2, offline: true, persisted: false, waited: 10 * 60000 }), { kind: 'waiting', text: 'Only on this phone (2 changes)' });
+assert.deepEqual(syncState({ pending: 2, offline: true, persisted: false, waited: 10 * 60000 }), { kind: 'waiting', state: 'at-risk', count: 2, text: 'Only on this phone (2 changes)' });
 assert.equal(syncState({ pending: 1, offline: true, persisted: false, waited: 5000 }).text, 'Only on this phone (1 change)', 'offline and storage not persistent: at risk at once (app-sync 0.4.0 atRiskOnlyOffline)');
 assert.equal(syncState({ pending: 0, persisted: false }).kind, 'saved', 'nothing waiting: nothing at risk');
 assert.equal(syncState({ refused: 1, pending: 2, offline: true, persisted: false }).kind, 'attention');
@@ -22,12 +22,12 @@ console.log('pantry listen-watch: ok');
 // app-sync 0.4.0 syncStatus: `confirmed` (nothing says Saved before the server has answered once) and at-risk only offline
 {
   const { syncState, reloadAllowed } = await import('../js/sync.js');
-  assert.deepEqual(syncState({ pending: 0, confirmed: false }), { kind: 'waiting', text: 'Not checked with the family yet' }, 'nothing unsent, but the server has not answered: not Saved');
+  assert.deepEqual(syncState({ pending: 0, confirmed: false }), { kind: 'waiting', state: 'unknown', count: 0, text: 'Not checked with the family yet' }, 'nothing unsent, but the server has not answered: not Saved');
   assert.equal(syncState({ pending: 0, confirmed: true }).kind, 'saved');
   assert.equal(syncState({ pending: 0 }).kind, 'saved', 'confirmed defaults to true');
   assert.equal(syncState({ pending: 0, confirmed: false, offline: true }).kind, 'waiting', 'offline and never heard: still not Saved');
   assert.equal(syncState({ pending: 1, waited: 10, persisted: false }).kind, 'saved', 'online, storage not persistent, changes on their way: not at risk');
-  assert.deepEqual(syncState({ pending: 1, offline: true, persisted: false, waited: 10 }), { kind: 'waiting', text: 'Only on this phone (1 change)' }, 'offline and not persistent: at risk at once');
+  assert.deepEqual(syncState({ pending: 1, offline: true, persisted: false, waited: 10 }), { kind: 'waiting', state: 'at-risk', count: 1, text: 'Only on this phone (1 change)' }, 'offline and not persistent: at risk at once');
   assert.equal(syncState({ pending: 1, offline: true, persisted: true, waited: 10 }).text, 'Waiting for signal (1 change)');
   assert.equal(syncState({ refused: 1, pending: 0, confirmed: false }).kind, 'attention', 'attention comes first');
 

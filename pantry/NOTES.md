@@ -53,16 +53,16 @@ node pantry/test/cloud.test.mjs        # how a change becomes Firestore field up
 node pantry/test/merge.test.mjs        # merging duplicate pantries: members, who may, settings
 node pantry/test/scan.test.mjs         # the barcode look-up chain with a stubbed fetch (plain node)
 node pantry/test/photo.test.mjs        # thumbnail and photo sizes, stepping down to fit the limits (plain node)
-node pantry/test/ops.test.mjs          # both shapes of batches, changes as instructions and their inverse, the chip text (plain node)
-node pantry/test/listen-watch.test.mjs # the chip's use of freshness, the watchdog's stale and storage at risk (plain node)
+node pantry/test/ops.test.mjs          # both shapes of batches, changes as instructions and their inverse, the sync button's text, state and count (plain node)
+node pantry/test/listen-watch.test.mjs # the sync button's use of freshness, the watchdog's stale and storage at risk (plain node)
 node pantry/test/bulk-items.test.mjs   # Bulk edit's rules: each choice as ops, skips, warnings, Undo round trips (plain node)
 node pantry/test/order.test.mjs        # My order: midpoints, append, prepend, collisions, renumbering, tie-breaks, 200 random sequences (plain node)
 node pantry/test/select.test.mjs       # selecting: the selection state and the press and hold with a fake pointer (plain node)
-node pantry/test/syncnow.test.mjs      # Sync now: each waiting change in words, last heard, what it says (plain node)
+node pantry/test/syncnow.test.mjs      # Sync now: what the tap says; the button's state and count (plain node)
 node pantry/test/removed.test.mjs      # removed markers, Restore, days left, the sweep's choice, backups and merging, every list skips removed (plain node)
 node pantry/test/live-guards.test.mjs  # the live-service harness's safety guards (plain node; the harness itself: pantry/test/LIVE-TEST.md)
 node pantry/test/config.test.mjs       # set-config, sign-in choice, plain-word errors, sw.js rules
-pantry/test/run-sync.sh                # the rest of the old family-sharing story (sync.e2e.mjs: stock rules, removing, merging, the chip, no signal) in the local emulators
+pantry/test/run-sync.sh                # the rest of the old family-sharing story (sync.e2e.mjs: stock rules, removing, merging, the sync button and refused list, no signal) in the local emulators
 npm ci && npx playwright test          # Playwright Test specs in pantry/test/specs (the phone app: app-*.spec.mjs, split by screen or feature; the Items list with real touch: items.spec.mjs;
 (app-devkit `live-smoke` workflow, calls: Actions > "Live smoke" > Run workflow) live sign-in smoke test on the deployed site (pantry/test/live-smoke; by hand and after each Deploy). Needs PANTRY_TEST_EMAIL / PANTRY_TEST_PASSWORD (the Actions secrets), skips without; the test user is in no household, reads and writes no app data
                                        # with axe; Back with tabs: app-back.spec.mjs; signing in by email: signin.spec.mjs; family sharing, rules, photos, places and names: sync-*.spec.mjs;
@@ -101,8 +101,8 @@ switch doesn't stop a transaction: tests go offline with the browser context as 
 
 Wired by `createApp` (app-sync `0.6.0`, 25 Oct 2026): `js/cloud.js` hands Google sign-in, the device copy, the outbox
 (also in the origin's outbox list), the queue, the hub, the watchdog and sign-out (`forgetDevice`) to one call and keeps
-its own parts: the merge rule (`mergeSaves`), the `permission-denied` retry (`commit`), the status facts the chip and
-Settings draw, the SDK's leftover writes, Sync now and "Reconnect and try again". The hub is told `stampMode: 'client'`
+its own parts: the merge rule (`mergeSaves`), the `permission-denied` retry (`commit`), the status facts the sync
+button draws, the SDK's leftover writes, Sync now and its Reconnect. The hub is told `stampMode: 'client'`
 (createApp would pass the adapter's server mode on), so it still reads by `updatedAt`. Lists come through createApp's
 `watch` (app-sync `watchSaved`): a phone's own unsent save is laid over again when it is done, so another phone's change
 heard meanwhile shows then (the two-phone lag). One copy (25 Oct 2026): each delivery is the kind's whole list and
@@ -124,7 +124,7 @@ server-only) and the backup's photo list, and the SDK's network switch (`cycleNe
 leftover-writes wait). Tests: `test/specs/sync-restore.spec.mjs`.
 
 What 0.4.0 added, as the app uses it (25 Oct 2026): `aborted` (two phones on one document) is retried by the write queue, not
-by the app; the chip follows `syncStatus({ confirmed, atRiskOnlyOffline: true })` (`cloud.status`, `sync.js syncState`): never
+by the app; the sync button follows `syncStatus({ confirmed, atRiskOnlyOffline: true })` (`cloud.status`, `sync.js syncState`): never
 "Saved" before the server has answered once ("Not checked with the family yet"), and "Only on this phone" only while
 offline; sign-out is `forgetDevice` (stop listening, re-check it is still the same person, wipe the copies, the outbox and
 the SDK's cache, then reload; no reload in the emulator). Not used yet: `otherPending` for photo writes outside the queue,

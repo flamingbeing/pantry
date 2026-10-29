@@ -1,7 +1,7 @@
 // Family sharing against the local Firebase emulators (fake accounts, demo-pantry project; never the live one): the second
 // half of the old chained story, still to move to Playwright Test (pantry/STATUS.md, "Next"): stock changes as instructions,
 // the rules for stock, the Items list racing another phone, removing without losing (markers, shopping lines, the sweep),
-// merging two pantries for one email, the chip / Sync now / listener watchdog, a pantry that goes away under an open
+// merging two pantries for one email, the sync button / Sync now / listener watchdog, a pantry that goes away under an open
 // phone, and no signal. The first half (family, outsiders, rules, photos, places, names) and the randomised three-phone run
 // are specs: pantry/test/specs/sync-*.spec.mjs and multidevice.spec.mjs.
 // Run: pantry/test/run-sync.sh
@@ -59,6 +59,9 @@ async function axe(page, what) {
 }
 const SYNC_REFUSED = list => list.length;
 const go = async (p, h) => { await p.evaluate(x => { location.hash = x; }, h); await settle(p); };
+// the sync button in the top bar (the kit's syncButton): its words are its label ("Saved. Sync now")
+const syncSays = (p, re, timeout = 10000) => p.waitForFunction(r => new RegExp(r).test(document.querySelector('#sync-btn')?.getAttribute('aria-label') || ''), re.source, { timeout });
+const syncLabel = p => p.locator('#sync-btn').getAttribute('aria-label');
 const sub = (p, name) => p.locator('#pa-items-list .ui-row', { hasText: name }).locator('.ui-row-sub');
 try {
   const mum = await person('mum@example.com');
@@ -105,13 +108,13 @@ try {
   await net(dad, false);
   await act(dad, 'use', 'soy', 'ba');
   await go(dad, '#/');
-  await dad.locator('.pa-sync', { hasText: /(Waiting for signal|Only on this phone) \(1 change\)/ }).waitFor();
+  await syncSays(dad, /^(Waiting for signal|Only on this phone) \(1\)/);
   if (process.env.SHOTS) await dad.screenshot({ path: process.env.SHOTS + '/s02-waiting.png' });
   await act(mum, 'use', 'soy', 'ba'); await drain(mum);
   assert.deepEqual(await rawQty('soy'), { ba: 2, bb: 2 }, 'the server has only mum’s use while dad is offline');
   await net(dad, true);
   await both('soy', { ba: 1, bb: 2 }, 'dad came back: 3 - 2');
-  await dad.locator('.pa-sync', { hasText: 'Saved' }).waitFor();
+  await syncSays(dad, /^Saved\./);
   if (process.env.SHOTS) await dad.screenshot({ path: process.env.SHOTS + '/s01-saved.png' });
   // 3. one phone adds a batch while the other uses from another: both kept
   await Promise.all([act(mum, 'add', 'soy', 3, '2027-03-03', 'bnew'), act(dad, 'use', 'soy', 'bb')]);
@@ -159,7 +162,7 @@ try {
   await dad.waitForFunction(() => window.__pantry.S.items.get('old3')._arr === true);
   assert.deepEqual(await shown(dad, 'old3'), { y1: 3 });
   await act(dad, 'use', 'old3'); await both('old3', { y1: 2 }, 'converted again');
-  // 7. a change the server refuses is kept on the phone and says Needs attention, with Retry and Discard
+  // 7. a change the server refuses is kept on the phone and says Needs attention, with Try again and Discard (Home's list)
   await admin.put(`households/${hid}/items/gone`, { id: 'gone', name: 'Gone soon', ...base, batches: { g1: { qty: 2, expiry: '2027-01-01' } } });
   await has(dad, 'gone');
   await net(dad, false);
@@ -167,17 +170,16 @@ try {
   await act(dad, 'use', 'gone');
   await net(dad, true);
   await go(dad, '#/');
-  await dad.locator('.pa-sync', { hasText: 'Needs attention' }).waitFor();
+  await syncSays(dad, /^Needs attention/);
   assert.equal(await dad.evaluate(() => window.__pantry.S.refused.length), 1);
   assert.equal(await dad.evaluate(() => JSON.parse(localStorage.getItem('pantry:refused')).length), 1, 'kept on the phone');
-  await go(dad, '#/settings');
-  await dad.locator('#main .pa-refused', { hasText: 'Gone soon' }).waitFor();
-  assert.match(await dad.locator('#main .pa-refused').textContent(), /removed on another phone/);
-  assert.equal(await dad.locator('[data-act="refused-retry"]').count(), 1); assert.equal(await dad.locator('[data-act="refused-discard"]').count(), 1);
+  await dad.locator('#refused li', { hasText: 'Gone soon' }).waitFor();
+  assert.match(await dad.locator('#refused li').textContent(), /removed on another phone/);
+  assert.equal(await dad.locator('#refused .retry').count(), 1); assert.equal(await dad.locator('#refused .discard').count(), 1);
   if (process.env.SHOTS) await dad.screenshot({ path: process.env.SHOTS + '/s03-attention.png' });
   // retry: the item is gone, so there is nothing to change; the entry goes
-  await dad.click('[data-act="refused-retry"]'); await settle(dad);
-  await dad.locator('.pa-sync', { hasText: 'Saved' }).waitFor();
+  await dad.click('#refused .retry'); await settle(dad);
+  await syncSays(dad, /^Saved\./);
   assert.equal(await dad.evaluate(() => window.__pantry.S.refused.length), 0);
   assert.equal(await admin.get(`households/${hid}/items/gone`), null, 'a retry never brings a deleted item back');
   // discard
@@ -185,9 +187,9 @@ try {
   await has(dad, 'gone2'); await net(dad, false);
   await admin.del(`households/${hid}/items/gone2`);
   await act(dad, 'use', 'gone2'); await net(dad, true);
-  await dad.locator('.pa-sync', { hasText: 'Needs attention' }).waitFor();
-  await dad.click('[data-act="refused-discard"]'); await settle(dad);
-  await dad.locator('.pa-sync', { hasText: 'Saved' }).waitFor();
+  await syncSays(dad, /^Needs attention/);
+  await dad.click('#refused .discard'); await settle(dad);
+  await syncSays(dad, /^Saved\./);
   assert.equal(await dad.evaluate(() => JSON.parse(localStorage.getItem('pantry:refused')).length), 0);
   assert.equal(await admin.get(`households/${hid}/items/gone2`), null);
 
@@ -665,7 +667,7 @@ try {
   assert.equal((await admin.list('households/dupE/photos')).length, 2, 'and its photos');
   assert.ok(await admin.get('households/dupF'));
 
-  // ---- the chip tells the truth; Sync now; the name moves into Family sharing (PR-D) ----
+  // ---- the sync button tells the truth; Sync now; the name moves into Family sharing (PR-D) ----
   {
     const proxy = await stallProxy();
     const pUrl = srv.url + `/pantry/?emulator=${proxy.port}:9099`;
@@ -711,9 +713,9 @@ try {
     await admin.put(`households/${shid}/items/sy1`, { id: 'sy1', name: 'Rice', ...base, batches: { b1: { qty: 5, expiry: null } } });
     await sy.waitForFunction(() => window.__pantry.S.items.has('sy1'));
 
-    // (b) the chip tells the truth. The phone's change is acknowledged, but what it listens to is cut off, so the SDK keeps the
+    // (b) the button tells the truth. The phone's change is acknowledged, but what it listens to is cut off, so the SDK keeps the
     if (process.env.PROGRESS) console.log('  chip block b');
-    // document flagged `hasPendingWrites` ("committed mutations") for good: the chip used to read that as "Waiting for signal".
+    // document flagged `hasPendingWrites` ("committed mutations") for good: the old chip used to read that as "Waiting for signal".
     // (a listener made before the write, as the app's own is: a listener made after it never sees the flag)
     await sy.evaluate(async ([u, hid]) => {
       const F = await import(u), db = F.getFirestore();
@@ -725,11 +727,11 @@ try {
     await act(sy, 'set', 'sy1', 'notes', 'one');
     await sy.waitForFunction(() => window.__pantry.S.sync.pending === 0, null, { timeout: 8000 });
     await sy.waitForTimeout(1500);
-    // (app-sync saves in a transaction, which never leaves the SDK's flag set: the premise no longer arises, and the chip
+    // (app-sync saves in a transaction, which never leaves the SDK's flag set: the premise no longer arises, and the button
     // must still say Saved with the listener cut off)
     assert.notEqual(await sy.evaluate(() => window.__flag), undefined, 'the listener is there');
     await settle(sy); await settle(sy); await sy.waitForTimeout(1200);
-    assert.equal(await sy.locator('[data-sync] .pa-badge').first().textContent(), 'Saved', 'acknowledged, so Saved, whatever the listener says');
+    assert.match(await syncLabel(sy), /^Saved\./, 'acknowledged, so Saved, whatever the listener says');
     assert.equal((await admin.get(`households/${shid}/items/sy1`)).notes, 'one', 'the server has it');
     proxy.set({ listen: false });
     await sy.waitForFunction(() => window.__pantry.S.items.get('sy1')?.notes === 'one');
@@ -741,37 +743,32 @@ try {
     await act(sy, 'namePerson', 'syncy@example.com', 'Jun');
     await act(sy, 'addPlace', 'Shed');
     await sy.waitForFunction(() => window.__pantry.S.sync.pending === 3, null, { timeout: 8000 });
-    await sy.locator('[data-sync] .pa-badge--warn', { hasText: /(Waiting for signal|Only on this phone) \(3 changes\)/ }).waitFor({ timeout: 8000 });
+    await syncSays(sy, /^(Waiting for signal|Only on this phone) \(3\)/, 8000);
     await go(sy, '#/settings');
-    await sy.click('#pa-syncnow');
-    await sy.locator('.pa-syncnow-result--waiting', { hasText: 'Still waiting: this phone can’t reach the family right now' }).waitFor({ timeout: 20000 });
-    const lines = await sy.locator('.pa-waiting .pa-row-title').allTextContents();
-    assert.deepEqual(lines.sort(), ['A change to Rice (new)', 'Added place Shed', 'Name for Jun'], 'each waiting change in words');
-    assert.equal(await sy.locator('#pa-heard').count(), 1);
-    assert.match(await sy.locator('#pa-heard').textContent(), /^Last heard from the family: (just now|at \d)/, 'last heard from the family');
-    assert.equal(await sy.locator('[data-act="sync-cycle"]').count(), 1, 'offers one reconnect');
-    await axe(sy, 'Settings: Sync now, still waiting, with the list');
-    if (process.env.SHOTS) { await sy.locator('section[aria-labelledby="h-saving"]').scrollIntoViewIfNeeded(); await sy.evaluate(() => scrollTo(0, document.querySelector('section[aria-labelledby="h-saving"]').offsetTop - 70)); await settle(sy); await sy.screenshot({ path: process.env.SHOTS + '/p01-sync-now.png' }); }
+    await sy.click('#sync-btn');
+    await sy.locator('.toast', { hasText: 'Still waiting: this phone can’t reach the family right now' }).waitFor({ timeout: 20000 });
+    assert.equal(await sy.locator('.toast-action', { hasText: 'Reconnect' }).count(), 1, 'offers one reconnect');
+    await axe(sy, 'the sync button: still waiting, Reconnect offered');
+    if (process.env.SHOTS) await sy.screenshot({ path: process.env.SHOTS + '/p01-sync-now.png' });
     // the server already has all three (the change may still be on its way through the proxy: up to 10 s)
     for (let t = Date.now(); (await admin.get(`households/${shid}/items/sy1`)).name !== 'Rice (new)' && Date.now() - t < 10000;) await sy.waitForTimeout(250);
     assert.equal((await admin.get(`households/${shid}/items/sy1`)).name, 'Rice (new)');
-    // Reconnect and try again: one switch off and on; nothing breaks, and still nothing is heard back
-    await sy.click('[data-act="sync-cycle"]');
-    await sy.locator('.pa-syncnow-result--waiting').waitFor({ timeout: 30000 });
-    await sy.locator('#pa-syncnow .pa-row-title', { hasText: 'Sync now' }).waitFor();
-    assert.equal(await sy.locator('[data-act="sync-cycle"]').count(), 0, 'only one reconnect is offered');
-    // the acknowledgements arrive: Saved, the list empties
+    // Reconnect: one switch off and on; nothing breaks, and still nothing is heard back
+    await sy.locator('.toast-action', { hasText: 'Reconnect' }).click();
+    await sy.locator('.toast', { hasText: 'Still waiting' }).waitFor({ timeout: 30000 });
+    await sy.waitForFunction(() => !window.__pantry.S.syncNow.busy, null, { timeout: 30000 });
+    assert.equal(await sy.locator('.toast-action', { hasText: 'Reconnect' }).count(), 0, 'only one reconnect is offered');
+    // the acknowledgements arrive: Saved
     proxy.set({ write: false });
     await sy.waitForFunction(() => window.__pantry.S.sync.pending === 0, null, { timeout: 20000 });
-    await sy.click('#pa-syncnow');
-    await sy.locator('.pa-syncnow-result--saved', { hasText: 'Everything is saved' }).waitFor({ timeout: 20000 });
-    assert.equal(await sy.locator('.pa-waiting').count(), 0, 'nothing waiting any more');
-    assert.equal(await sy.locator('[data-sync] .pa-badge').first().textContent(), 'Saved');
-    await axe(sy, 'Settings: Sync now, everything saved');
+    await sy.click('#sync-btn');
+    await sy.locator('.toast', { hasText: 'Everything is saved' }).waitFor({ timeout: 20000 });
+    await syncSays(sy, /^Saved\./);
+    await axe(sy, 'the sync button: everything saved');
     // a change the server refuses is Needs attention (not "Everything is saved")
     await sy.evaluate(() => { window.__pantry.S.refused.push({ n: 'x1', hid: window.__pantry.S.household.id, kind: 'items', id: 'sy1', op: 'patch', ops: { set: { a: 1 }, inc: {}, del: [] }, code: 'permission-denied', at: new Date().toISOString(), name: 'Rice' }); });
-    await sy.click('#pa-syncnow');
-    await sy.locator('.pa-syncnow-result--attention', { hasText: 'Needs attention: the family pantry wouldn’t take one change' }).waitFor({ timeout: 20000 });
+    await sy.click('#sync-btn');
+    await sy.locator('.toast', { hasText: 'Needs attention: the family pantry wouldn’t take one change' }).waitFor({ timeout: 20000 });
     await sy.evaluate(() => { window.__pantry.S.refused = []; });
     await sy.waitForTimeout(100);
     // no console or page errors (the stalled streams and the reconnect included)
@@ -830,7 +827,7 @@ try {
     // without the watchdog acting again)
     assert.equal((await admin.get(`households/${wid}/items/wd2`)).notes, 'from A', 'its own change is on the server');
     assert.equal(await wa.evaluate(() => window.__pantry.S.refused.length), 0);
-    // the chip says Saved throughout
+    // the button says Saved throughout
     assert.equal(await wa.evaluate(() => window.__pantry.S.sync.pending), 0);
     proxy.close();
   }

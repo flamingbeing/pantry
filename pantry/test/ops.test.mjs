@@ -138,12 +138,12 @@ inv = L.invertOps({ set: {}, inc: {}, del: ['location'] }, milk, L.applyOps(milk
 assert.deepEqual(inv.set, { location: 'Fridge' });
 
 // ---- the chip and the refused list ----
-assert.deepEqual(SY.syncState({}), { kind: 'saved', text: 'Saved' });
-assert.deepEqual(SY.syncState({ pending: 2, cache: true }), { kind: 'waiting', text: 'Waiting for signal (2 changes)' });
+assert.deepEqual(SY.syncState({}), { kind: 'saved', state: 'synced', count: 0, text: 'Saved' });
+assert.deepEqual(SY.syncState({ pending: 2, cache: true }), { kind: 'waiting', state: 'offline', count: 2, text: 'Waiting for signal (2 changes)' });
 assert.equal(SY.syncState({ pending: 1, offline: true }).text, 'Waiting for signal (1 change)');
-assert.equal(SY.syncState({ pending: 1 }).kind, 'saved', 'a normal save is confirmed before it is worth a chip');
+assert.equal(SY.syncState({ pending: 1 }).kind, 'saved', 'a normal save is confirmed before it is worth "waiting"');
 assert.equal(SY.syncState({ pending: 1, waited: 2000 }).kind, 'waiting');
-assert.deepEqual(SY.syncState({ pending: 3, refused: 1 }), { kind: 'attention', text: 'Needs attention' }, 'attention comes first');
+assert.deepEqual(SY.syncState({ pending: 3, refused: 1 }), { kind: 'attention', state: 'attention', count: 1, text: 'Needs attention' }, 'attention comes first');
 assert.equal(SY.syncState({ refused: 2 }).text, 'Needs attention (2)');
 assert.match(SY.refusedReason('permission-denied'), /may not be in the pantry/);
 assert.match(SY.refusedReason('not-found'), /removed on another phone/);

@@ -4,13 +4,15 @@
 // thing. Icons come from the brand kit's sprite (design.flamingbeing.com/v1/icons.svg, the same shapes as before).
 import {
   detentSheet, sheetsSettled, tabBarRoom, confirmModal, toaster, tabBack, CLOSE_MS, LABELS, stepper as kitStepper, haptic as kitHaptic, largeTitle as kitLargeTitle,
-} from 'https://core.anawj.com/ui/1.0.0-rc.51/ui/index.js';
-import { applyTheme, themeSwitch } from 'https://core.anawj.com/ui/1.0.0-rc.51/theme/index.js';
+  pressFeedback, bounce, watchKeyboard, toggleTicks, syncButton, refusedList,
+} from 'https://core.anawj.com/ui/1.0.0-rc.58/ui/index.js';
+import { applyTheme, themeSwitch } from 'https://core.anawj.com/ui/1.0.0-rc.58/theme/index.js';
 
 const doc = document;
 
 // ---------- the look: this device's choice (Settings → This device), on pantry's own accent (the brand's slate blue) ----------
-applyTheme({ accent: '#3a6390', surface: 'cool' }); // the old kit's cool grey ground (#f5f5f7)
+// iOS look unless this device picked another (Settings → This device)
+applyTheme({ accent: '#3a6390', surface: 'cool', look: 'ios' }); // the old kit's cool grey ground (#f5f5f7)
 // Settings → This device: look, light or dark, density, and glass or Solid bars and sheets (the kit's themeSwitch)
 export const deviceSwitch = host => themeSwitch(host);
 
@@ -20,8 +22,18 @@ if (doc.readyState === 'loading') addEventListener('DOMContentLoaded', watchTabs
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-// iOS shows :active press states only when the page listens for touches.
+// The kit's every-page parts, as its startGestures starts them: pressed at once, the rubber band at a scroll's ends, the
+// keyboard watch, and a tick on a switch or segmented control. Not startGestures itself: its pushed-screen stack would
+// take Back and the history state from pantry's own router (below); sheets, the large title and the tab bar are started
+// here by name already. (iOS shows :active press states only when the page listens for touches.)
 doc.addEventListener('touchstart', () => {}, { passive: true });
+pressFeedback(doc); bounce(doc); watchKeyboard();
+// the ticks only without reduced motion (pantry's rule for every buzz: haptic() below)
+const calm = matchMedia('(prefers-reduced-motion: reduce)');
+let stopTicks = null;
+const ticks = () => { stopTicks?.(); stopTicks = calm.matches ? null : toggleTicks(doc); };
+ticks(); calm.addEventListener?.('change', ticks);
+export { syncButton, refusedList };
 
 // ---------- icons: the brand kit's sprite, put in the page once (browsers refuse <use> across addresses) ----------
 const SPRITE = 'https://design.flamingbeing.com/v1/icons.svg';
@@ -43,7 +55,8 @@ export function icon(name, { label = '', cls = '' } = {}) {
 }
 
 // ---------- small helpers ----------
-export const haptic = () => { if (!reducedMotion()) kitHaptic(); };
+// kind: the kit's tick, threshold, long, confirm or reject
+export const haptic = (kind = 'tick') => { if (!reducedMotion()) kitHaptic(kind); };
 // Say something to screen readers (one shared polite live region).
 let liveEl = null;
 export function announce(text) {
