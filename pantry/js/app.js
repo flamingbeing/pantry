@@ -33,6 +33,9 @@ const WELCOME = params.has('welcome');   // show the welcome even in the demo, o
 const S = {
   items: new Map(), events: new Map(), shop: new Map(), places: new Map(), settings: new Map(), pics: new Map(),
   backend: null, local: null, mode: DEMO ? 'demo' : 'local', cloud: null, user: null, household: null, pantries: [], lookupFailed: false, lost: null, creating: false, pending: null, localCount: 0,
+  // this phone last had a family pantry open, and it isn't open again yet: the screens wait for it instead of showing this phone's
+  // own (usually empty) pantry as "Nothing here yet" for the second or two the sign-in and family lookup take
+  opening: !DEMO && !!prefs.get('household'),
   q: '', place: '', sort: prefs.get('sort', 'expiry'),
   sel: SEL.newSel(),   // Items: the items selected (by id), while selecting (select.js)
   bulk: null,   // the Bulk edit screen's state while it is open (filters, ticked items, the chosen changes, the step)
@@ -513,6 +516,8 @@ function statusLine() {
   }
   return 'Saved on this phone';
 }
+// What an empty screen shows while the family pantry is still opening.
+const openingCard = () => `<div class="ui-card ui-empty" role="status"><span class="ui-empty-icon">${icon('box')}</span><p class="ui-empty-title">Opening the family pantry…</p></div>`;
 function viewHome() {
   const all = items();
   let h = `<h1 class="ui-large-title">Pantry</h1><p class="pa-large-sub">${esc(statusLine())}</p><div id="refused-list"></div>`;
@@ -522,6 +527,7 @@ function viewHome() {
   h += viewLanded();
   h += viewTour();
   h += viewSince();
+  if (!all.length && S.opening) return h + openingCard();
   if (!all.length) {
     return h + `<div class="ui-card ui-empty">
       <span class="ui-empty-icon">${icon('box')}</span>
@@ -774,6 +780,7 @@ function itemsList() {
   SEL.pruneSel(S.sel, all.map(i => i.id));   // what another phone deleted drops out of the selection
   const list = sortedItems(filteredItems());
   if (!list.length) {
+    if (!all.length && S.opening) return openingCard();
     return all.length
       ? `<div class="ui-empty"><span class="ui-empty-icon">${icon('search')}</span><p class="ui-empty-title">Nothing found</p><p class="ui-empty-text">No items match. Try another word or place.</p></div>`
       : `<div class="ui-card ui-empty"><span class="ui-empty-icon">${icon('box')}</span><p class="ui-empty-title">No items yet</p><p class="ui-empty-text">Add what’s at home to start.</p><button type="button" class="ui-fill" data-act="go-add">Add an item</button></div>`;
@@ -3135,6 +3142,9 @@ async function openMerge() {
 // Every change of who is signed in comes here. A new password account is `pending` until the emailed link has been
 // tapped: no family lookup, no family data, nothing from Firestore (its rules need a verified email).
 async function handleUser(u) {
+  try { await whoIs(u); } finally { if (S.opening) { S.opening = false; redraw(); } }
+}
+async function whoIs(u) {
   S.pending = u && !u.verified ? u : null;
   S.user = u && u.verified ? u : null;
   if (!S.user) { if (S.mode !== 'local') await useLocal(); else redraw(); return; }
@@ -3313,14 +3323,16 @@ async function start() {
       S.cloud = await import('./cloud.js');
       if (S.cloud.configured) {
         if (EMULATOR) window.__pantry = { S, signIn: S.cloud.emulatorSignIn };
-        S.cloud.onUser(handleUser).catch(() => { /* no signal on the very first open: stays on this phone's pantry */ });
+        S.cloud.onUser(handleUser).catch(() => { /* no signal on the very first open: stays on this phone's pantry */ S.opening = false; redraw(); });
+        // never wait for ever (sign-in itself stuck): after a while this phone's own pantry shows as it is
+        if (S.opening) setTimeout(() => { if (S.opening) { S.opening = false; redraw(); } }, 8000);
         finishEmailLink();
         // someone verified their email in the mail app and came back: carry on without asking
         document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.pending) checkVerified({ quiet: true }); });
-      }
-    } catch { /* sharing unavailable (no signal on the first open) */ }
+      } else S.opening = false;
+    } catch { /* sharing unavailable (no signal on the first open) */ S.opening = false; }
     redraw();
-  }
+  } else S.opening = false;
   if ('serviceWorker' in navigator && !EMULATOR) {
     // no offline copy in a private window: the app still runs. A new version reloads the page only when no sheet or form is
     // open, nobody is typing or dragging and nothing is waiting to be sent.
