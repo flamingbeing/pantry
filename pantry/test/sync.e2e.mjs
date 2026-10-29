@@ -632,7 +632,8 @@ try {
   assert.equal(await twin.evaluate(() => window.__pantry.S.pantries.length), 1);
   assert.equal(await twin.locator('[data-act="merge-open"]').count(), 0, 'the card is gone');
   assert.equal(await twin.evaluate(() => [...window.__pantry.S.items.values()].length), 5, 'the app shows all five items');
-  await twin.reload(); await twin.waitForFunction(() => window.__pantry?.S.household?.id === 'dupB');
+  // (the pantry opens from the phone's copy at once; the list of pantries comes with the server lookup after it)
+  await twin.reload(); await twin.waitForFunction(() => window.__pantry?.S.household?.id === 'dupB' && window.__pantry.S.pantries.length > 0);
   assert.equal(await twin.evaluate(() => window.__pantry.S.pantries.length), 1);
 
   // someone else's pantry can't be merged away by a member (and the rules say the same)
