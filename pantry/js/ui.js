@@ -212,7 +212,9 @@ export function go(hash, { replace = false, nav = 'push' } = {}) {
   if (h === current?.hash) return Promise.resolve();
   if (isTab(h)) return (open.length ? closeAllSheets() : sheetsSettled()).then(() => toTab(h, nav === 'pop' ? 'pop' : 'tab'));
   const move = () => {
-    const state = { ...(replace ? keepTab() : {}), paDepth: replace ? depth() : depth() + 1 };
+    const d = replace ? depth() : depth() + 1;
+    // (uiScreens tells tabBack that this entry is a screen over the tab, so closing it is not "Back on the first tab")
+    const state = { ...(replace ? keepTab() : {}), paDepth: d, ...(d > 0 ? { uiScreens: d } : {}) };
     if (replace) history.replaceState(state, '', h); else history.pushState(state, '', h);
     paint(nav);
   };
