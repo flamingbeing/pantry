@@ -2341,6 +2341,8 @@ function familyList(h, { demo = false, extra = '' } = {}) {
 // Adding or removing someone: the family pantry's members (in the demo, only in memory).
 async function setMembers(list) {
   if (S.mode === 'demo') { S.household = { ...S.household, members: list }; redraw(); return; }
+  // opened from this phone's copy and not yet confirmed: the member list is a guess, so it must never be written back
+  if (S.household.guess) throw new Error('Still opening the family pantry. Try again in a moment.');
   await S.cloud.setMembers(S.household.id, list);
 }
 // One person's name (or clearing it): a change to that one field, `names.<email>` (people.js nameOps), never the whole map from
@@ -3015,7 +3017,7 @@ function settleRefused(n, retry) {
 let unwatch = null;
 async function useHousehold(h) {
   S.household = h; S.lost = null;
-  prefs.set('household', h.id);
+  prefs.set('household', h.id); if (S.user) prefs.set('householdOf', S.user.email);
   S.backend?.close?.();
   S.sync = { pending: 0, cache: false, since: 0, list: [], heard: 0, lastServerAt: 0, relistens: 0, cycles: 0 }; S.syncNow = { busy: false, result: null };
   S.backend = await S.cloud.openCloud(h.id, onWriteError, onSyncState);
@@ -3148,10 +3150,17 @@ async function whoIs(u) {
   S.pending = u && !u.verified ? u : null;
   S.user = u && u.verified ? u : null;
   if (!S.user) { if (S.mode !== 'local') await useLocal(); else redraw(); return; }
+  // the family pantry this account had open last on this phone opens at once from the phone's copy (as notes does with its
+  // space); the server lookup below then confirms it, moves to the right one, or finds it gone
+  const last = prefs.get('household');
+  if (last && prefs.get('householdOf') === S.user.email && S.household?.id !== last) await useHousehold({ id: last, name: '', members: [S.user.email], guess: true });
   let h = null;
   S.lookupFailed = false;
   try { h = await locate(S.user.email); } catch (e) { console.warn('household', e?.code); S.lookupFailed = true; }   // can't tell (no signal): never "none"
-  if (h) await useHousehold(h); else redraw();
+  if (h && h.id === S.household?.id) { if (S.household.guess) S.household = h; redraw(); }
+  else if (h) await useHousehold(h);
+  else if (!S.lookupFailed && S.household) await householdLost(S.household.id);   // the server says this account is in none now
+  else redraw();
 }
 // Which family pantry this account opens: the one this phone used last, else the biggest. Every one it is in is kept in
 // S.pantries (two means a duplicate to merge: Settings offers it).
