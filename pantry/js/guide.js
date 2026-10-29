@@ -19,9 +19,9 @@ export function installed() {
   try { return matchMedia('(display-mode: standalone)').matches || navigator.standalone === true; } catch { return false; }
 }
 
-const row = (iconName, title, sub = '', trail = '') => `<li><div class="ui-row"><span class="pa-row-icon">${icon(iconName)}</span>
+const row = (iconName, title, sub = '', trail = '') => `<li><div class="ui-row"><span class="ui-row-lead">${icon(iconName)}</span>
   <span class="ui-row-main"><span class="pa-row-title">${title}</span>${sub ? `<span class="ui-row-sub">${sub}</span>` : ''}</span>${trail}</div></li>`;
-const plainRow = (title, sub = '', trail = '') => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">${title}</span>${sub ? `<span class="ui-row-sub">${sub}</span>` : ''}</span>${trail ? `<span class="pa-row-trail">${trail}</span>` : ''}</div></li>`;
+const plainRow = (title, sub = '', trail = '') => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">${title}</span>${sub ? `<span class="ui-row-sub">${sub}</span>` : ''}</span>${trail ? `<span class="ui-row-trail">${trail}</span>` : ''}</div></li>`;
 const list = rows => `<ul class="ui-list">${rows.join('')}</ul>`;
 
 // ---------- the welcome ----------
@@ -150,9 +150,9 @@ export function openWelcome({ invited = false, signedIn = false, save = true, on
 
 // ---------- the guide screen ----------
 
-const badge = (text, tone = '') => `<span class="pa-badge${tone ? ' pa-badge--' + tone : ''}">${esc(text)}</span>`;
+const badge = (text, tone = '') => `<span class="ui-badge"${tone ? ` data-tone="${tone === 'bad' ? 'danger' : tone}"` : ''}>${esc(text)}</span>`;
 function section(id, title, rows, footer = '') {
-  return `<section class="pa-section" aria-labelledby="h-g-${id}"><h2 class="pa-section-header" id="h-g-${id}"><span>${esc(title)}</span></h2>${list(rows)}${footer ? `<p class="pa-section-footer">${footer}</p>` : ''}</section>`;
+  return `<section class="ui-section" aria-labelledby="h-g-${id}"><h2 class="ui-section-head" id="h-g-${id}"><span>${esc(title)}</span></h2>${list(rows)}${footer ? `<p class="ui-section-foot">${footer}</p>` : ''}</section>`;
 }
 
 export function viewGuide() {
@@ -216,5 +216,5 @@ export function viewGuide() {
       row('refresh', 'Not sure it reached the family?', 'Settings, Sync now: it sends anything waiting, lists each change and says if everything is saved.'),
       row('refresh', 'Looks out of date?', 'At the bottom of Settings, tap Get the latest version. Your items are kept.'),
     ])}
-    <ul class="ui-list pa-gagain"><li><button type="button" class="ui-row pa-row--action pa-row--center" data-act="welcome"><span class="ui-row-main"><span class="pa-row-title">Show the welcome again</span></span></button></li></ul>`;
+    <ul class="ui-list pa-gagain"><li><button type="button" class="ui-row" data-tone="action" data-align="center" data-act="welcome"><span class="ui-row-main"><span class="pa-row-title">Show the welcome again</span></span></button></li></ul>`;
 }

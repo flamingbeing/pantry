@@ -12,7 +12,7 @@
 }
 
 /* ---- parts of the old home kit pantry still uses, as its own ---- */
-.pa-btn,.pa-switch,.pa-bar-btn,.pa-noselect{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+.pa-btn,.pa-bar-btn,.pa-noselect{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .pa-sr{position:absolute!important;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .pa-skip{position:fixed;left:8px;top:calc(env(safe-area-inset-top, 0px) + 8px);z-index:100;padding:12px 16px;border-radius:var(--home-r-md); background:var(--accent);color:var(--on-accent)!important;text-decoration:none!important;transform:translateY(-200%)}
 .pa-skip:focus{transform:none}
@@ -37,41 +37,11 @@
 .pa-small{font-size:var(--home-t-small);line-height:1.45}
 .pa-num{font-variant-numeric:tabular-nums}
 .pa-panel{margin:var(--home-s3) 0;padding:var(--home-s3) var(--home-s4);border-radius:var(--home-r-md);background:var(--pa-fill);font-size:var(--home-t-small);line-height:1.5}
-.pa-section{margin:0 0 var(--home-s6)}
-.pa-section-header{display:flex;align-items:baseline;justify-content:space-between;gap:var(--home-s3);margin:0;padding:0 var(--home-s4) 6px; color:var(--muted);font-size:var(--home-t-label);font-weight:600;line-height:1.4;letter-spacing:.05em;text-transform:uppercase}
-.pa-section-header a,.pa-section-header button{padding:0;border:0;background:none;color:var(--accent);font:inherit;text-transform:none;letter-spacing:0;font-size:var(--home-t-small);font-weight:500;text-decoration:none;cursor:pointer;min-height:24px}
-.pa-section-footer{margin:0;padding:6px var(--home-s4) 0;color:var(--muted);font-size:var(--home-t-small);line-height:1.45}
-.ui-row:has(.pa-row-icon){--pa-sep:58px}
-.ui-row:has(.pa-row-thumb){--pa-sep:72px}
-.pa-row-icon{flex:none;display:grid;place-items:center;width:30px;height:30px;border-radius:var(--home-r-sm);background:var(--pa-accent-soft);color:var(--accent)}
-.pa-row-icon .ui-icon{width:19px;height:19px}
-.pa-row-icon--grey{background:var(--pa-fill);color:var(--muted)}
-.pa-row-icon--bad{background:var(--pa-bad-bg);color:var(--danger)}
-.pa-row-thumb{flex:none;display:grid;place-items:center;width:44px;height:44px;border-radius:var(--home-r-sm);background:var(--pa-fill);color:var(--muted);overflow:hidden;object-fit:cover}
-.pa-row-thumb .ui-icon{width:22px;height:22px}
 .pa-row-title{font-size:var(--home-t-body);line-height:1.35;overflow-wrap:anywhere}
 .pa-row-sub--clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.pa-row-trail{flex:none;display:flex;align-items:center;gap:var(--home-s2);margin-left:auto}
-.pa-row-value{flex:none;margin-left:auto;color:var(--muted);font-size:var(--home-t-body);font-variant-numeric:tabular-nums;white-space:nowrap}
-.pa-row-chevron{flex:none;width:18px;height:18px;margin-right:-4px;color:var(--line)}
-.pa-row--action .pa-row-title{color:var(--accent)}
-.pa-row--danger .pa-row-title{color:var(--danger)}
-.pa-row--center{justify-content:center;text-align:center}
-.pa-row--center .ui-row-main{align-items:center}
-.ui-row input[type=checkbox]:not(.pa-switch){flex:none;width:22px;height:22px;margin:0;accent-color:var(--accent)}
+.ui-row input[type=checkbox]{flex:none;width:22px;height:22px;margin:0;accent-color:var(--accent)}
 .ui-row.is-done .pa-row-title{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
-.pa-card{display:block;margin:0 0 var(--home-s4);padding:var(--home-s4);border-radius:var(--home-r-lg);background:var(--surface);color:var(--text);text-decoration:none!important}
-a.pa-card,button.pa-card{width:100%;border:0;text-align:left;cursor:pointer;transition:transform var(--home-d-fast) var(--home-ease),background-color var(--home-d-fast) linear}
-a.pa-card:active,button.pa-card:active{background:var(--press);transform:scale(.985);transition-duration:var(--home-d-press)}
 .pa-card-kicker{margin:0 0 2px;color:var(--muted);font-size:var(--home-t-label);font-weight:600;letter-spacing:.05em;text-transform:uppercase}
-.pa-card-title{margin:0 0 var(--home-s1);font-size:var(--home-t-title2);font-weight:700;line-height:1.25;letter-spacing:-.012em}
-.pa-card-text{margin:0;color:var(--muted);font-size:var(--home-t-small);line-height:1.5}
-.pa-card-actions{display:flex;gap:var(--home-s2);margin-top:var(--home-s4)}
-.pa-card-actions>*{flex:1}
-.pa-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,5.5em),1fr));gap:var(--home-s2);margin:0 0 var(--home-s4)}
-.pa-stat{padding:var(--home-s3) var(--home-s4);border-radius:var(--home-r-lg);background:var(--surface)}
-.pa-stat-value{display:block;font-size:var(--home-t-title1);font-weight:700;line-height:1.15;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.pa-stat-label{display:block;overflow-wrap:anywhere;color:var(--muted);font-size:var(--home-t-small);line-height:1.35}
 .pa-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--home-s2);min-height:50px;padding:var(--home-s2) var(--home-s5); border:0;border-radius:var(--home-r-md);background:var(--pa-accent-soft);color:var(--accent); font-size:var(--home-t-body);font-weight:600;line-height:1.2;text-align:center;text-decoration:none!important;cursor:pointer; transition:transform var(--home-d-fast) var(--home-ease),background-color var(--home-d-fast) linear,opacity var(--home-d-fast) linear}
 .pa-btn:active,.pa-btn.is-pressed{transform:scale(.97);transition-duration:var(--home-d-press)}
 .pa-btn .ui-icon{width:20px;height:20px}
@@ -91,25 +61,6 @@ a.pa-card:active,button.pa-card:active{background:var(--press);transform:scale(.
 .pa-btn-row{display:flex;gap:var(--home-s2);margin:var(--home-s3) 0}
 .pa-btn-row>*{flex:1;min-width:0}
 .pa-btn-stack{display:grid;gap:var(--home-s2);margin:var(--home-s3) 0}
-.pa-switch{-webkit-appearance:none;appearance:none;position:relative;flex:none;width:51px;height:31px;margin:0;border-radius:var(--home-r-full); background:var(--pa-fill-strong);box-shadow:inset 0 0 0 1px var(--line);cursor:pointer; transition:background-color var(--home-d-med) var(--home-ease),box-shadow var(--home-d-med) linear}
-.pa-switch::before{content:"";position:absolute;top:2px;left:2px;width:27px;height:27px;border-radius:50%;background:#fff; box-shadow:0 2px 4px rgb(29 29 31 / .2),0 0 0 .5px rgb(29 29 31 / .06);transition:transform var(--home-d-med) var(--home-ease-ios),width var(--home-d-fast) var(--home-ease)}
-.pa-switch:checked{background:var(--accent);box-shadow:none}
-.pa-switch:checked::before{transform:translateX(20px)}
-.pa-switch:active::before{width:32px}
-.pa-switch:checked:active::before{transform:translateX(15px)}
-.pa-switch:disabled{opacity:.45;cursor:default}
-.pa-chips{display:flex;gap:var(--home-s2);margin:var(--home-s2) calc(-1 * var(--home-gutter)) var(--home-s3);padding:0 var(--home-gutter); overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;scroll-padding-inline:var(--home-gutter);scrollbar-width:none}
-.pa-chips::-webkit-scrollbar{display:none}
-.pa-chips--wrap{flex-wrap:wrap;margin-inline:0;padding-inline:0;overflow:visible}
-.pa-badge{display:inline-flex;align-items:center;gap:5px;min-height:24px;padding:0 8px;border-radius:var(--home-r-xs); background:color-mix(in srgb, var(--text) 7%, var(--surface));color:var(--muted);font-size:var(--home-t-label);font-weight:600;line-height:1;white-space:nowrap}
-.pa-badge--accent{background:color-mix(in srgb, var(--accent) 14%, var(--surface));color:var(--accent)}
-.pa-badge--ok{background:color-mix(in srgb, var(--ok) 14%, var(--surface));color:var(--ok)}
-.pa-badge--warn{background:color-mix(in srgb, var(--warn) 16%, var(--surface));color:var(--warn)}
-.pa-badge--bad{background:color-mix(in srgb, var(--danger) 12%, var(--surface));color:var(--danger)}
-.pa-badge--ok::before{content:"";width:8px;height:4px;margin:-3px 1px 0 0;border:solid currentColor;border-width:0 0 1.75px 1.75px;transform:rotate(-45deg)}
-.pa-badge--warn::before{content:"";width:7px;height:7px;border-radius:50%;box-shadow:inset 0 0 0 1.75px currentColor}
-.pa-badge--bad::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
-.pa-pill{display:inline-flex;align-items:center;gap:6px;min-height:30px;padding:0 12px;border-radius:var(--home-r-full);background:var(--pa-fill); color:var(--text);font-size:var(--home-t-small);font-weight:600;font-variant-numeric:tabular-nums}
 .pa-field{display:block;margin:0 0 var(--home-s4)}
 .pa-field-label{display:block;margin:0 0 6px;padding:0 var(--home-s1);color:var(--muted);font-size:var(--home-t-small);font-weight:500}
 .pa-input,.pa-select{display:block;width:100%;min-height:50px;padding:12px 14px;border:0;border-radius:var(--home-r-md);background:var(--surface); box-shadow:inset 0 0 0 1px var(--line);color:var(--text);font-size:max(16px,var(--home-t-body));line-height:1.35;-webkit-appearance:none;appearance:none}
@@ -148,18 +99,6 @@ input[type=date].pa-input::-webkit-date-and-time-value{text-align:left}
 .pa-sheet--grey,.pa-sheet--grey .pa-sheet-foot{background:var(--bg)}
 .pa-sheet-foot{flex:none;padding:var(--home-s3) var(--home-gutter) calc(var(--home-s3) + env(safe-area-inset-bottom, 0px));background:var(--surface);box-shadow:0 -.5px 0 var(--pa-line)}
 .pa-sheet-foot .pa-btn-row{margin:0}
-.pa-empty{display:flex;flex-direction:column;align-items:center;gap:var(--home-s2);padding:var(--home-s10) var(--home-s6);text-align:center}
-.pa-empty-icon{display:grid;place-items:center;width:64px;height:64px;margin-bottom:var(--home-s2);border-radius:50%;background:var(--pa-fill);color:var(--muted)}
-.pa-empty-icon .ui-icon{width:30px;height:30px}
-.pa-empty-title{margin:0;font-size:var(--home-t-title2);font-weight:700;line-height:1.25;letter-spacing:-.01em}
-.pa-empty-text{margin:0 0 var(--home-s3);max-width:30ch;color:var(--muted);font-size:var(--home-t-small);line-height:1.5}
-.pa-skeleton{display:block;height:14px;border-radius:var(--home-r-xs); background:linear-gradient(90deg,var(--pa-fill) 0 40%,var(--surface) 50%,var(--pa-fill) 60% 100%) 0 0/300% 100%;animation:pa-shimmer 1.4s linear infinite}
-.pa-skeleton--line{width:70%}
-.pa-skeleton--short{width:40%;margin-top:6px}
-.pa-skeleton--thumb{flex:none;width:44px;height:44px;border-radius:var(--home-r-sm)}
-@media (prefers-reduced-motion:reduce){
-  .pa-skeleton{animation:none;background:var(--pa-fill)}
-}
 .pa-version{margin:var(--home-s8) 0 0;padding:0 var(--home-s4);color:var(--muted);font-size:var(--home-t-small);line-height:1.45;text-align:center}
 .pa-version-text{margin:0;font-variant-numeric:tabular-nums}
 .pa-version-btn{display:inline-flex;align-items:center;min-height:44px;padding:0 var(--home-s2);border:0;background:none;color:var(--accent);font:inherit; text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:3px;cursor:pointer}
@@ -170,11 +109,9 @@ input[type=date].pa-input::-webkit-date-and-time-value{text-align:left}
   .pa-btn:not([class*="pa-btn--"]):hover,.pa-btn--secondary:hover{background:var(--pa-accent-soft-press)}
   .pa-btn--outline:hover,.pa-btn--quiet:hover{background:var(--press)}
   .pa-btn--plain:hover,.pa-bar-btn:hover{background:var(--press)}
-  a.pa-card:hover,button.pa-card:hover{background:var(--pa-fill)}
 }
 @keyframes pa-grow{from{transform:scaleX(0)}}
 @keyframes pa-rise{from{transform:scaleY(0)}}
-@keyframes pa-shimmer{from{background-position:100% 0}to{background-position:0 0}}
 
 
 .pa-wrap{white-space:normal;overflow-wrap:anywhere;text-align:right}
@@ -235,10 +172,10 @@ label.ui-row:focus-within:has(.pa-file){outline:2px solid var(--focus);outline-o
 #pa-unk-list{margin:0 0 var(--home-s3)}
 .pa-file-btn{position:relative}
 .pa-file-btn:focus-within{outline:2px solid var(--focus);outline-offset:2px}
-.pa-install .pa-card-text+.pa-card-text{margin-top:var(--home-s2)}
+.pa-install .ui-card-text+.ui-card-text{margin-top:var(--home-s2)}
 
 /* home and lists: the three numbers stay in one row; a name keeps its words whole (the badge moves under it first) */
-.pa-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
+#main .ui-stats{grid-template-columns:repeat(3,minmax(0,1fr))}
 .pa-item{flex-wrap:wrap}  /* as the old kit row: a long name keeps its line, the date badge wraps under it */
 .pa-item .ui-row-main{flex:1 1 8em}
 .pa-item .pa-row-title{overflow-wrap:break-word}
@@ -334,7 +271,8 @@ label.ui-row:focus-within:has(.pa-file){outline:2px solid var(--focus);outline-o
 .pa-item{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
 .pa-item.is-holding{background:var(--press)}
 .pa-item--sel.is-selected{background:var(--pa-accent-soft)}
-.pa-grouphead{justify-content:flex-start;align-items:center}
+#main .pa-group{margin-bottom:var(--home-s4)}
+.pa-grouphead{justify-content:flex-start;align-items:center;padding-block:0}
 .pa-grouphead .pa-num{margin-left:var(--home-s2)}
 .pa-grouphead .pa-fold{display:inline-flex;align-items:center;gap:2px;min-height:44px;margin-left:-6px;padding:0 6px;border-radius:var(--home-r-sm);color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit}
 .pa-fold-icon{flex:none;width:18px;height:18px;transform:rotate(0deg)}
@@ -392,7 +330,7 @@ body.pa-dragging *{cursor:grabbing!important}
 .pa-titlerow .ui-large-title{margin-right:0}
 .pa-datetoggle{flex:none;min-height:32px;padding:0 var(--home-s3)}
 .pa-fulldates .pa-item .ui-row-main{flex-basis:4em}
-.pa-fulldates .pa-badge{white-space:nowrap}
+.pa-fulldates .ui-badge{white-space:nowrap}
 
 /* ---- on the shared kit (ui/shell): what pantry's screens need around it ---- */
 .pa-sprite{position:absolute;width:0;height:0;overflow:hidden}
@@ -407,12 +345,12 @@ body.pa-dragging *{cursor:grabbing!important}
 #bar-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* the screen's own parts sit in from the edges (as the old kit's main did); the kit's lists and title, inside it, don't add their own */
 #main{padding:0 calc(var(--home-gutter) + env(safe-area-inset-right, 0px)) var(--home-s8) calc(var(--home-gutter) + env(safe-area-inset-left, 0px))}
-#main .ui-list{margin-inline:0}
+#main :is(.ui-list,.ui-card,.ui-stats){margin-inline:0}
 #main>.ui-large-title,#main .pa-titlerow>.ui-large-title{margin-inline:0}
 .pa-bar-btn .ui-icon{width:22px;height:22px}
 .pa-savebar .pa-block{width:100%}
 .pa-device{padding:var(--home-s1) var(--home-s4)}
-.pa-chips .ui-chip{white-space:nowrap;flex:none}
+.ui-chips .ui-chip{white-space:nowrap;flex:none}
 /* the everyday choices first (Solid easy to find), then the finer colour ones */
 .pa-device .theme-switch>*{order:5}
 .pa-device .theme-switch>label:has(#look-pick){order:1}
@@ -437,7 +375,7 @@ html[data-look="a"] body { font-size: var(--home-t-body, 17px); line-height: 1.4
 html[data-look="a"] .ui-large-title { margin-top: 0; font-weight: 700; line-height: 1.18; }
 html[data-look="a"] .ui-row-main > .pa-row-title { display: block; }
 @media not (forced-colors: active) { html[data-look="a"] .ui-list { border-width: 0; } }
-html[data-look="a"] .pa-row-icon--grey { color: light-dark(var(--home-ink-2, #3c3c43), var(--muted)); }
+html[data-look="a"] .ui-row-lead[data-tone="grey"] { color: light-dark(var(--home-ink-2, #3c3c43), var(--muted)); }
 html[data-look="a"] .ui-list .ui-row { gap: 12px; padding-block: 10px; }
 html[data-look="a"] .ui-row-main > .ui-row-sub { margin-top: 1px; }
 html[data-look="a"] .ui-row-sub { font-size: 16px; line-height: 1.4; }
@@ -452,7 +390,7 @@ html[data-look="a"] .pa-batch-acts .pa-btn--quiet { color: light-dark(var(--home
 html[data-look="a"] .pa-again .ui-chip { padding: 0 14px; background: transparent; font-size: 16px; }
 /* a count inside a chip (place filters, "at home"): inline, muted (the kit's .ui-chip-badge is the sync icon's corner badge) */
 .ui-chip > .ui-chip-badge{position:static;min-width:0;padding:0;border-radius:0;background:none;-webkit-text-fill-color:currentColor;color:var(--muted);font-size:inherit;line-height:inherit;font-weight:500;font-variant-numeric:tabular-nums}
-html[data-look="a"] .pa-chips .ui-chip { gap: 6px; padding: 0 14px; font-size: 16px; }
+html[data-look="a"] .ui-chips .ui-chip { gap: 6px; padding: 0 14px; font-size: 16px; }
 html[data-look="a"] .ui-chip[aria-pressed="true"] { border-color: var(--accent); background: var(--pa-accent-soft); color: var(--accent); font-weight: 600; box-shadow: inset 0 0 0 .5px var(--accent); }
 html[data-look="a"] .ui-segmented { border-color: transparent; border-radius: 10px; background: var(--pa-fill); }
 /* look A: the tab bar along the bottom edge, every tab showing, as the old pantry's (the kit's data-tabbar="edge") */

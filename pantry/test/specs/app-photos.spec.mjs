@@ -100,8 +100,8 @@ test('add an item with a camera picture: a thumbnail on the item, the photo on i
   await shot(page, '30-item-photo');
   // lists use the thumbnail
   await go(page, '#/items');
-  await expect(page.locator('#pa-items-list a.ui-row', { hasText: 'Photo test sauce' }).locator('img.pa-row-thumb'), 'the list shows the thumbnail').toHaveAttribute('src', added.thumb);
-  await expect(page.locator('#pa-items-list a.ui-row', { hasText: 'Old photo item' }).locator('img.pa-row-thumb'), 'and the moved item its thumbnail').toHaveAttribute('src', migrated.thumb);
+  await expect(page.locator('#pa-items-list a.ui-row', { hasText: 'Photo test sauce' }).locator('img.ui-row-thumb'), 'the list shows the thumbnail').toHaveAttribute('src', added.thumb);
+  await expect(page.locator('#pa-items-list a.ui-row', { hasText: 'Old photo item' }).locator('img.ui-row-thumb'), 'and the moved item its thumbnail').toHaveAttribute('src', migrated.thumb);
   await go(page, '#/');
   expect(await page.evaluate(() => [...document.querySelectorAll('img')].every(i => !i.src.startsWith('data:') || i.src.length <= 12288)), 'Home has no full photos').toBe(true);
 
