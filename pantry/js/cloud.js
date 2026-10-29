@@ -389,7 +389,7 @@ export function mergeSaves(kind) {
 const SEED_AT = '1970-01-01T00:00:00.000Z';   // places.js
 // app-sync, one exact version (sw.js SHELL has the same files): the modules (app.js, auth.js, sync.js) and index.js for
 // the helpers the page draws with (syncStatus, persistGuard, createReport)
-const SYNC = 'https://core.anawj.com/sync/1.5.1/';
+const SYNC = 'https://core.anawj.com/sync/1.5.5/';
 // A soft-deleted item, line or place leaves the phones a week after the sweep deletes it for good (logic.js REMOVED_DAYS),
 // so the sweep still sees it here first.
 const EXPIRE = { field: 'removedAt', after: (30 + 7) * 86400000 };

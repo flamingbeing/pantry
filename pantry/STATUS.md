@@ -3,6 +3,9 @@
 Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner's plans are in the owner's private notes.
 
 ## Now
+- Carried over from Notes (30 Oct 2026): app-sync 1.5.5 (four sync fixes, two that could lose a save) and app-ui rc.60
+  (the update prompt reloads once on a slow start); Back after a redirect sign-in reloads instead of showing the old
+  signed-out page; the install file's colours are the dark ground, so Android's system bar is dark.
 - UI revamp, parts 2 and 3 (30 Oct 2026, app-ui rc.59): every screen and sheet on kit parts (sections, rows, cards,
   badges, empty states, the kit's buttons and themed inputs; Settings "This device" lines up with the other rows); the
   kit's refused list now uses a section heading and iOS row selects have no grey fill. Part 3: drag and select stay

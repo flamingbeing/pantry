@@ -65,8 +65,8 @@ for (const [name, text] of [['index.html', html], ['js/ui.js', uijs]]) for (cons
 for (const m of html.matchAll(/(?:href|src)="(https:\/\/core\.anawj\.com\/ui\/[^"]+)"/g)) assert.ok(sw.includes(`'${m[1]}'`), m[1] + ' in SHELL');
 // one exact app-sync version, the same in the page and the worker, with every module of the index precached
 const syncPins = new Set([...sw.matchAll(/core\.anawj\.com\/sync\/(\d+\.\d+\.\d+)\//g)].map(m => m[1]));
-assert.deepEqual([...syncPins], ['1.5.1'], 'app-sync 1.5.1 only in sw.js');
-assert.ok(fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8').includes("const SYNC = 'https://core.anawj.com/sync/1.5.1/';"),'cloud.js loads the same version');
+assert.deepEqual([...syncPins], ['1.5.5'], 'app-sync 1.5.5 only in sw.js');
+assert.ok(fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8').includes("const SYNC = 'https://core.anawj.com/sync/1.5.5/';"),'cloud.js loads the same version');
 // the engine is wired by one createApp call; the hub keeps reading by `updatedAt` (client stamps) until the backfill
 {
   const cloud = fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8');
@@ -75,7 +75,7 @@ assert.ok(fs.readFileSync(new URL('../js/cloud.js', import.meta.url), 'utf8').in
   assert.ok(!/A\.(signInWithPopup|signInWithRedirect|getRedirectResult|onAuthStateChanged|signOut)\(/.test(cloud), 'Google sign-in and sign-out are the auth module\'s');
   assert.match(cloud, /\n      hub: \{.*stampMode: 'client' \},\n/, 'the hub stays on client stamps (createApp would pass the adapter\'s server mode on)');
 }
-for (const m of ['app.js', 'auth.js', 'sync.js', 'index.js', 'src/runner.js', 'src/auth.js', 'src/module-sync.js', 'src/core.js', 'src/firestore.js', 'src/writes.js', 'src/report.js', 'src/status.js', 'src/persist.js']) assert.ok(sw.includes(`'https://core.anawj.com/sync/1.5.1/${m}'`), m + ' in SHELL');
+for (const m of ['app.js', 'auth.js', 'sync.js', 'index.js', 'src/runner.js', 'src/auth.js', 'src/module-sync.js', 'src/core.js', 'src/firestore.js', 'src/writes.js', 'src/report.js', 'src/status.js', 'src/persist.js']) assert.ok(sw.includes(`'https://core.anawj.com/sync/1.5.5/${m}'`), m + ' in SHELL');
 assert.equal(core, '0.2.0', 'the update module at 0.2.0 (canReload)');
 console.log('pantry config: ok');
 

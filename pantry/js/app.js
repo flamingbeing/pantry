@@ -38,6 +38,7 @@ const S = {
   opening: !DEMO && !!prefs.get('household'),
   q: '', place: '', sort: prefs.get('sort', 'expiry'),
   sel: SEL.newSel(),   // Items: the items selected (by id), while selecting (select.js)
+  leftToSignIn: false,   // a sign-in is under way (a redirect one leaves the page with this still on: the pageshow reload)
   bulk: null,   // the Bulk edit screen's state while it is open (filters, ticked items, the chosen changes, the step)
   dragging: false, gripQuiet: 0,   // a drag by the grip is going on (redraws wait); the click that follows a drag isn't a tap
   folded: new Set(prefs.get('folded', []) || []),   // place headings folded shut on Items (Group by place); per phone
@@ -2735,7 +2736,9 @@ async function onClick(e) {
       redraw(); return toast('Deleted everything on this phone');
     }
     case 'signin':
-      try { await S.cloud.signIn(); } catch (err) { toast(S.cloud.explain(err, 'Sign-in')); }
+      // (marked while away: a redirect sign-in leaves this page with the mark on, a popup clears it on its way back)
+      S.leftToSignIn = true;
+      try { await S.cloud.signIn(); } catch (err) { toast(S.cloud.explain(err, 'Sign-in')); } finally { S.leftToSignIn = false; }
       return;
     case 'email-open': return openEmailSheet();
     case 'merge-open': return openMerge();
@@ -3319,7 +3322,9 @@ async function start() {
   // the listener watchdog (cloud.js, listen-watch.js): a moment the phone came back is when a dead listener is most likely
   const resumed = () => { try { S.backend?.nudge?.('resume'); } catch { /* not listening */ } };
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') resumed(); });
-  addEventListener('pageshow', resumed);
+  // Back after a redirect sign-in comes to the page the sign-in left from, kept whole by the browser (the back/forward
+  // cache) and still signed out: load it again, so it opens as it is now (notes#79)
+  addEventListener('pageshow', e => { if (e.persisted && S.leftToSignIn) location.reload(); else resumed(); });
   addEventListener('online', () => { resumed(); if (S.user && !S.household && S.lookupFailed && S.cloud) handleUser(S.user); else redraw(); });
   addEventListener('offline', () => { drawSync(); redraw(); });
   R = router({
