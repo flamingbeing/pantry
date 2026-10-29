@@ -326,7 +326,7 @@ body.pa-dragging *{cursor:grabbing!important}
 #main>.ui-large-title,#main .pa-titlerow>.ui-large-title{margin-inline:0}
 .pa-bar-btn .ui-icon{width:22px;height:22px}
 .pa-savebar .pa-block{width:100%}
-.pa-device{padding:var(--home-s1) var(--home-s4)}
+.pa-device{padding:0}
 .ui-chips .ui-chip{white-space:nowrap;flex:none}
 /* the everyday choices first (Solid easy to find), then the finer colour ones */
 .pa-device .theme-switch>*{order:5}
