@@ -15,8 +15,8 @@ test('the test user signs in on the live site: signed-in shell, no household, no
 
   await page.goto('/pantry/#/settings');
   await page.locator('[data-act="email-open"]').click();
-  const sheet = page.locator('dialog.ha-sheet[open]');
-  await expect(sheet.locator('.ha-sheet-title')).toHaveText('Sign in with email');
+  const sheet = page.locator('dialog.ui-sheet[open]');
+  await expect(sheet.locator('.pa-sheet-title')).toHaveText('Sign in with email');
   await page.fill('#pa-em-email', email);
   await sheet.locator('[data-pe="pw"]').click();
   await page.fill('#pa-em-pass', password);
