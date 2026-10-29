@@ -27,7 +27,12 @@ export const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;'
 // take Back and the history state from pantry's own router (below); sheets, the large title and the tab bar are started
 // here by name already. (iOS shows :active press states only when the page listens for touches.)
 doc.addEventListener('touchstart', () => {}, { passive: true });
-pressFeedback(doc); bounce(doc); watchKeyboard(); toggleTicks(doc);
+pressFeedback(doc); bounce(doc); watchKeyboard();
+// the ticks only without reduced motion (pantry's rule for every buzz: haptic() below)
+const calm = matchMedia('(prefers-reduced-motion: reduce)');
+let stopTicks = null;
+const ticks = () => { stopTicks?.(); stopTicks = calm.matches ? null : toggleTicks(doc); };
+ticks(); calm.addEventListener?.('change', ticks);
 export { syncButton, refusedList };
 
 // ---------- icons: the brand kit's sprite, put in the page once (browsers refuse <use> across addresses) ----------
