@@ -40,6 +40,15 @@ Detail by topic is in [docs/](docs/); the owner's plans, the dated log and real-
   rule to make a test pass.
 - The Firebase SDK loads once (one shared promise, reset on failure). Signing out waits up to 4 seconds for unsent changes.
 - `enableNetwork` while the network is already enabled crashes Firestore 10.14.1 in the tests: call it only after `disableNetwork`.
+- UI parts are app-ui's (`ui-section`, `ui-row-*`, `ui-card`, `ui-stat`, `ui-badge[data-tone]`, `ui-empty`, `ui-skeleton`,
+  `ui-chips`, `button` / `.ui-tint` / `.ui-fill` / `.ui-plain` / `.ui-wide` / `data-size="small"`, `.ui-buttons`, the
+  themed native inputs and selects). Pantry's own CSS is for its own screens only (`pa-` prefix): add a kit part before
+  adding a `pa-` copy of one.
+- Drag (`drag.js`) and selecting (`select.js`) stay Pantry's own (30 Oct 2026): the kit's `gripDrag` only reorders rows of
+  one list, but a Pantry drag drops onto another place's heading or a place chip, with a ghost above the finger and
+  auto-scroll; the kit's `selectMode` and hold-to-select work on one `.ui-list` in the page, but Items has a list per
+  place, selects by id (kept through other phones' changes) and Select all takes every match, drawn or not. Hold time
+  and slop match the kit's (500 ms, 10 px). `select.js` stays pure so its Node tests run without the kit.
 
 ## How to test
 

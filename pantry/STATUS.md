@@ -3,12 +3,15 @@
 Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner's plans are in the owner's private notes.
 
 ## Now
+- UI revamp, parts 2 and 3 (30 Oct 2026, app-ui rc.59): every screen and sheet on kit parts (sections, rows, cards,
+  badges, empty states, the kit's buttons and themed inputs; Settings "This device" lines up with the other rows); the
+  kit's refused list now uses a section heading and iOS row selects have no grey fill. Part 3: drag and select stay
+  Pantry's own (why: NOTES "Rules that bite").
 - UI revamp, part 1 of 3 (29 Oct 2026, app-ui rc.58): the iOS look by default (a device can still pick another), the kit's
   every-page parts started by name (pressed at once, rubber band, keyboard watch, switch ticks; not `startGestures`, whose
   screen stack would take Back from Pantry's own router), haptic kinds, the viewport's `interactive-widget`. Sync looks like
   the other apps: the kit's sync button in the top bar (tap = Sync now, the result in a toast with Reconnect) and the kit's
   refused list on Home (Try again, Discard). Settings → Saving to the family is gone (with its waiting list and "last heard").
-  Next: part 2, every screen and sheet onto kit parts; part 3, the kit's grip drag and hold menu.
 - app-ui rc.51 (29 Oct 2026): Back on Pantry now shows "Press Back again to close" and a second Back within 2 s leaves (tabBack `onClose`).
 - Back with tabs (29 Oct 2026, app-ui rc.42's `tabBack`): tab changes add at most one Back step; Back on another tab goes to
   Pantry, Back on Pantry leaves the app; pushed screens and sheets still close first. Test: `app-back.spec.mjs`.
