@@ -65,7 +65,7 @@ node pantry/test/config.test.mjs       # set-config, sign-in choice, plain-word 
 pantry/test/run-sync.sh                # the rest of the old family-sharing story (sync.e2e.mjs: stock rules, removing, merging, the chip, no signal) in the local emulators
 npm ci && npx playwright test          # Playwright Test specs in pantry/test/specs (the phone app: app-*.spec.mjs, split by screen or feature; the Items list with real touch: items.spec.mjs;
 (app-devkit `live-smoke` workflow, calls: Actions > "Live smoke" > Run workflow) live sign-in smoke test on the deployed site (pantry/test/live-smoke; by hand and after each Deploy). Needs PANTRY_TEST_EMAIL / PANTRY_TEST_PASSWORD (the Actions secrets), skips without; the test user is in no household, reads and writes no app data
-                                       # with axe; signing in by email: signin.spec.mjs; family sharing, rules, photos, places and names: sync-*.spec.mjs;
+                                       # with axe; Back with tabs: app-back.spec.mjs; signing in by email: signin.spec.mjs; family sharing, rules, photos, places and names: sync-*.spec.mjs;
                                        # the randomised three-phone run: multidevice.spec.mjs, SEED=<n> re-runs a seed): fully parallel, 4 workers, own server,
                                        # accounts and ids per test; starts the emulators itself. One file: npx playwright test app-places;
                                        # the env var PW_NO_EMULATOR (set to 1) skips the emulators (the app-* specs don't need them); the env var SHOTS (a folder) saves screenshots

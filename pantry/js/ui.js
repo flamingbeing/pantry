@@ -3,9 +3,9 @@
 // Every screen and every sheet is a history entry, so the iPhone edge swipe and Android back always do the expected
 // thing. Icons come from the brand kit's sprite (design.flamingbeing.com/v1/icons.svg, the same shapes as before).
 import {
-  detentSheet, sheetsSettled, tabBarRoom, confirmModal, toaster, stepper as kitStepper, haptic as kitHaptic, largeTitle as kitLargeTitle,
-} from 'https://core.anawj.com/ui/1.0.0-rc.31/ui/index.js';
-import { applyTheme, themeSwitch } from 'https://core.anawj.com/ui/1.0.0-rc.31/theme/index.js';
+  detentSheet, sheetsSettled, tabBarRoom, confirmModal, toaster, tabBack, stepper as kitStepper, haptic as kitHaptic, largeTitle as kitLargeTitle,
+} from 'https://core.anawj.com/ui/1.0.0-rc.42/ui/index.js';
+import { applyTheme, themeSwitch } from 'https://core.anawj.com/ui/1.0.0-rc.42/theme/index.js';
 
 const doc = document;
 
@@ -143,8 +143,13 @@ export function confirm({ title, text = '', ok = 'OK', cancel = 'Cancel', danger
 // where nav is 'push', 'pop', 'tab' or 'none' (first paint). Links to '#/…' are followed here; tab links (inside
 // tabs, '.ui-tabbar, .ui-sidebar') get aria-current="page" when the route's first part matches theirs; tabOf(route)
 // names the tab for a pushed screen. go('#/item/3') pushes a screen; back('#/') goes back, or to the fallback.
-let routes = null, current = null, title = null;
+// Tabs are Back as on Android (the kit's tabBack): going to a tab first takes away the screens pushed over it, then
+// leaving the first tab ('#/') adds one entry and the other tabs only change its address, so Back on any other tab
+// is the first tab and Back on the first tab leaves the app.
+let routes = null, current = null, title = null, tabTrail = null, unwinding = false;
+const FIRST = '#/';
 const depth = () => history.state?.paDepth || 0;
+const keepTab = () => history.state?.uiTabBack ? { uiTabBack: 1 } : {};
 function parse(hash) {
   const h = hash && hash.startsWith('#/') ? hash : '#/';
   const path = h.slice(1).split('?')[0];
@@ -181,7 +186,7 @@ export function router({ render, tabs = '.ui-tabbar, .ui-sidebar', tabOf } = {})
   // start on a real route ('#/'), so going back to the first screen never lands on a bare URL
   const start = parse(location.hash).hash;
   history.replaceState({ ...(history.state || {}), paDepth: depth() }, '', location.hash === start ? location.href : start);
-  addEventListener('popstate', () => { if (parse(location.hash).hash !== current?.hash) { for (const s of [...open]) closeSheet(s.d, s.value); paint('pop'); } });
+  addEventListener('popstate', () => { if (unwinding) return; if (parse(location.hash).hash !== current?.hash) { for (const s of [...open]) closeSheet(s.d, s.value); paint('pop'); } });
   // follow in-app links ourselves, so each one is a history entry with a known depth
   doc.addEventListener('click', e => {
     const a = e.target.closest('a[href^="#/"]');
@@ -189,15 +194,20 @@ export function router({ render, tabs = '.ui-tabbar, .ui-sidebar', tabOf } = {})
     e.preventDefault();
     go(a.getAttribute('href'), { nav: a.closest(tabs) ? 'tab' : 'push' });
   });
+  tabTrail = tabBack({ history, events: window, onFirst: () => { if (!unwinding) paint('pop'); } });
   paint('none');
   return { get route() { return current; }, refresh: () => { current = null; paint('none'); } };
 }
+// a tab's own address (a link in the tab bar or side bar), not a screen pushed over one
+const isTab = h => [...doc.querySelectorAll(routes.tabs.split(',').map(t => t.trim() + ' a[href^="#/"]').join(','))]
+  .some(a => parse(a.getAttribute('href')).hash === h);
 export function go(hash, { replace = false, nav = 'push' } = {}) {
   const h = parse(hash).hash;
   if (!routes) { location.hash = h; return Promise.resolve(); }
   if (h === current?.hash) return Promise.resolve();
+  if (isTab(h)) return (open.length ? closeAllSheets() : sheetsSettled()).then(() => toTab(h, nav === 'pop' ? 'pop' : 'tab'));
   const move = () => {
-    const state = { paDepth: replace ? depth() : depth() + 1 };
+    const state = { ...(replace ? keepTab() : {}), paDepth: replace ? depth() : depth() + 1 };
     if (replace) history.replaceState(state, '', h); else history.pushState(state, '', h);
     paint(nav);
   };
@@ -207,7 +217,26 @@ export function go(hash, { replace = false, nav = 'push' } = {}) {
 }
 export function back(fallback = '#/') {
   if (depth() > 0) history.back();
-  else { history.replaceState({ paDepth: 0 }, '', parse(fallback).hash); paint('pop'); }
+  else { history.replaceState({ ...keepTab(), paDepth: 0 }, '', parse(fallback).hash); paint('pop'); }
+}
+// Go to a tab: Back first takes away the screens pushed over the current tab (and a select mode's entry, which keeps
+// the depth under it) without painting them, then tabBack moves between the tab entries.
+function toTab(h, nav) {
+  const steps = depth() + (history.state?.paSelect ? 1 : 0);
+  if (steps > 0) {
+    return new Promise(done => {
+      unwinding = true;
+      addEventListener('popstate', () => { unwinding = false; done(); }, { once: true });
+      history.go(-steps);
+    }).then(() => toTab(h, nav));
+  }
+  const first = h === FIRST;
+  if (first && tabTrail.away()) {   // went() goes Back to the first tab's entry; the popstate paints it
+    return new Promise(done => { addEventListener('popstate', () => done(), { once: true }); tabTrail.went(true); });
+  }
+  tabTrail.went(first, h);
+  if (parse(location.hash).hash !== current?.hash) paint(nav);
+  return Promise.resolve();
 }
 
 // ---------- the large title that collapses into the bar (the kit's largeTitle) ----------
