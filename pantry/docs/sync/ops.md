@@ -41,12 +41,12 @@ Dated design record, moved out of [../sync-safety.md](../sync-safety.md) (the in
     what is there (restoring a backup or re-running a merge writes the same line again). Nothing in the app edits an event
     (checked: `save('events')` only ever creates, Undo and delete use `remove`), so an update that changes anything is denied.
   - **Saved / Waiting / Needs attention.** The existing listeners now use `includeMetadataChanges`: `hasPendingWrites` per
-    document and `fromCache` give the chip near the top of Home and in Settings → Saving to the family (cloud mode only): *Saved*,
+    document and `fromCache` give the sync state (now the kit's sync button in the top bar; cloud mode only): *Saved*,
     *Waiting for signal (N changes)* (unconfirmed for 1.5 s, or offline), *Needs attention*. History lines and photos aren't
     counted (each belongs to a change that is). No extra listener or read. A write the **server refuses** (`not-found` because
     another phone deleted the item, `permission-denied`, ...) is dropped by the SDK and the screen quietly goes back, so the
     app keeps a copy (`js/sync.js`, localStorage `pantry:refused`, newest 30, under 200 KB: the instructions, or a new
-    item's document) and shows Needs attention with plain words and **Retry** (instructions are re-applied to the item as it
+    item's document) and shows Needs attention with plain words and **Retry** (now the kit's refused list on Home, "Try again") (instructions are re-applied to the item as it
     now is; never brings a deleted item back) and **Discard**. Not captured: a write queued, the app closed, and refused by the
     server only after it is opened again (the SDK keeps the queue across a reload but the app has no promise to hear it).
   - **Known limits, honestly.** (1) `increment` is at-least-once: if the connection drops between the server applying a write

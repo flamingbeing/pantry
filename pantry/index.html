@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script>addEventListener('beforeinstallprompt', e => e.preventDefault());</script>
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
@@ -20,17 +20,17 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <!-- the shared kit (app-ui, exact version; the same in js/ui.js and sw.js): the early theme marks first, then the
      brand tokens, the kit's styles in order, and pantry's own last -->
-<script src="https://core.anawj.com/ui/1.0.0-rc.51/theme/early.js"></script>
+<script src="https://core.anawj.com/ui/1.0.0-rc.58/theme/early.js"></script>
 <link rel="stylesheet" href="https://design.flamingbeing.com/v1/tokens.css">
-<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.51/theme/theme.css">
-<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.51/ui/ui.css">
-<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.51/theme/glass.css">
-<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.51/ui/gestures.css">
-<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.51/ui/shell/shell.css">
-<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.51/ui/layout.css">
+<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.58/theme/theme.css">
+<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.58/ui/ui.css">
+<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.58/theme/glass.css">
+<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.58/ui/gestures.css">
+<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.58/ui/shell/shell.css">
+<link rel="stylesheet" href="https://core.anawj.com/ui/1.0.0-rc.58/ui/layout.css">
 <link rel="stylesheet" href="pantry.css">
-<link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.51/ui/index.js">
-<link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.51/theme/index.js">
+<link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.58/ui/index.js">
+<link rel="modulepreload" href="https://core.anawj.com/ui/1.0.0-rc.58/theme/index.js">
 </head>
 <body>
 <a class="pa-skip" href="#main">Skip to content</a>
@@ -41,7 +41,7 @@
 <header class="ui-bar">
   <span class="ui-bar-side" id="bar-lead"></span>
   <h2 class="ui-bar-title" id="bar-title" aria-hidden="true">Pantry</h2>
-  <span class="ui-bar-side ui-bar-end" id="bar-trail"></span>
+  <span class="ui-bar-side ui-bar-end" id="bar-end"><span id="bar-trail"></span><button id="sync-btn" type="button" class="ui-icon-btn ui-sync-btn" data-state="unknown" aria-label="Connecting…" title="Connecting…" hidden></button></span>
 </header>
 
 <nav class="ui-sidebar" aria-label="Sections">

@@ -327,21 +327,6 @@ label.ui-row:focus-within:has(.pa-file){outline:2px solid var(--focus);outline-o
 .pa-em-lead{margin:0 0 var(--home-s4);line-height:1.45}
 #pa-em-form .pa-field-error{margin:0 0 var(--home-s3)}
 
-/* saving to the family: the chip and the changes the server refused */
-.pa-sync{margin:0 0 var(--home-s4)}
-.pa-sync-link{display:inline-flex;align-items:center;gap:var(--home-s2);color:inherit;text-decoration:none}
-.pa-sync-more{color:var(--accent);font-size:var(--home-t-small)}
-.pa-refused{flex-wrap:wrap;row-gap:var(--home-s2)}
-/* Sync now: the result, what is waiting (each change in words), when the family last answered */
-.pa-syncnow{margin:0 0 var(--home-s3)}
-.pa-sync-detail{margin:0 0 var(--home-s3)}
-.pa-syncnow-result{margin:0 0 var(--home-s3);padding:var(--home-s3) var(--home-s4);border-radius:var(--home-r-md);background:var(--pa-fill);color:var(--text);font-size:var(--home-t-small)}
-.pa-syncnow-result--saved{background:var(--pa-ok-bg);color:var(--text);box-shadow:inset 3px 0 0 var(--ok)}
-.pa-syncnow-result--waiting{background:var(--pa-warn-bg);color:var(--text);box-shadow:inset 3px 0 0 var(--warn)}
-.pa-syncnow-result--attention{background:var(--pa-bad-bg);color:var(--text);box-shadow:inset 3px 0 0 var(--danger)}
-.pa-sync-h{margin:0 0 var(--home-s2);padding:0 var(--home-s4);color:var(--muted);font-size:var(--home-t-label);font-weight:600;letter-spacing:.05em;text-transform:uppercase}
-.pa-waiting{margin:0 0 var(--home-s3)}
-.pa-heard{margin:0 0 var(--home-s2);padding:0 var(--home-s4);color:var(--muted);font-size:var(--home-t-small)}
 /* your family pantry went away */
 .pa-lost .pa-btn{display:flex;margin-top:var(--home-s2)}
 
@@ -417,7 +402,8 @@ body.pa-dragging *{cursor:grabbing!important}
 /* on a phone, Add is the tab bar's centre + (the kit's .ui-tab-action), as the old pantry's; from 600 px (side bar, no tab bar) it stays in the top bar */
 @media (max-width:599.98px){.pa-bar-btn[data-act="go-add"]{display:none}}
 /* the trail keeps its buttons' room (the bar's title, hidden until it scrolls, gives way) */
-#bar-lead,#bar-trail{flex:1 0 auto}
+#bar-lead,#bar-end{flex:1 0 auto}
+#bar-trail{display:contents}
 #bar-title{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 /* the screen's own parts sit in from the edges (as the old kit's main did); the kit's lists and title, inside it, don't add their own */
 #main{padding:0 calc(var(--home-gutter) + env(safe-area-inset-right, 0px)) var(--home-s8) calc(var(--home-gutter) + env(safe-area-inset-left, 0px))}

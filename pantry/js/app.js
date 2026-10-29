@@ -21,7 +21,7 @@ import { starterChoices, tourTasks } from './tour.js';
 import { firebaseConfig } from '../config.js';
 import {
   router, go as goTo, back as goBack, sheet, closeSheet, sheetOpen, confirm, toast, hideToast, stepper, stepperHtml, version,
-  haptic, icon as kitIcon, esc, announce, largeTitle, deviceSwitch, sheetsSettled,
+  haptic, icon as kitIcon, esc, announce, largeTitle, deviceSwitch, sheetsSettled, syncButton, refusedList,
 } from './ui.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -41,7 +41,7 @@ const S = {
   draft: null, dirty: false, pendingRender: false, syncError: false,
   refused: prefs.get('refused', []) || [],   // changes the family pantry refused, kept here until retried or discarded (sync.js)
   sync: { pending: 0, cache: false, since: 0, list: [], heard: 0, lastServerAt: 0, relistens: 0, cycles: 0 },   // changes this phone made that the server hasn't confirmed yet (list: each in words' records), and when the family last answered
-  syncNow: { busy: false, result: null },   // Settings → Saving to the family → Sync now
+  syncNow: { busy: false, result: null },   // the sync button's tap (Sync now) while it runs, and what it found
   lastUndo: null,
   removedNotes: prefs.get('removedNotes', {}) || {},   // items another phone removed that this phone had changes on: id -> removedAt (until Recently removed is opened)
   since: null,   // when this phone last looked (Since you last looked), an ISO time
@@ -515,7 +515,7 @@ function statusLine() {
 }
 function viewHome() {
   const all = items();
-  let h = `<h1 class="ui-large-title">Pantry</h1><p class="pa-large-sub">${esc(statusLine())}</p>${syncChip()}`;
+  let h = `<h1 class="ui-large-title">Pantry</h1><p class="pa-large-sub">${esc(statusLine())}</p><div id="refused-list"></div>`;
   h += viewLost();
   if (S.syncError) h += `<div class="pa-panel pa-alert" role="status">${icon('alert')}<span>Some changes didn’t reach the family pantry. ${esc(S.syncError)}</span></div>`;
   if (S.mode === 'cloud' && S.pantries.length > 1) h += `<a class="pa-panel pa-alert" href="#/settings">${icon('alert')}<span>You’re in more than one family pantry. Merge them in Settings.</span></a>`;
@@ -1031,7 +1031,7 @@ function onGripDown(e) {
     handle: grip,
     ghost: many ? null : grip.closest('li'),
     text: many ? `${ids.length} items` : '',
-    hit, haptic: () => haptic(8),
+    hit, haptic: () => haptic('tick'),
     suppressClick: () => { S.gripQuiet = Date.now() + 500; },
     onDrop: d => {
       if (d.place) { const list = ids.map(itemById).filter(Boolean); bulkMove(list, d.place); return; }
@@ -2400,54 +2400,20 @@ function openPerson(email) {
 }
 
 
-// Settings → Saving to the family: the chip, and each change the server refused with Retry and Discard.
-function viewSaving() {
-  const v = syncView(); if (!v) return '';
-  const mine = SY.refusedFor(S.refused, S.household?.id || '');
-  const row = r => `<li><div class="ui-row pa-refused"><span class="ui-row-main"><span class="pa-row-title pa-break">${esc(SY.describeRefused(r, id => S.items.get(id)?.name))}</span><span class="ui-row-sub">${esc(SY.refusedReason(r.code))}</span></span>
-      <span class="pa-batch-acts"><button type="button" class="pa-btn pa-btn--small" data-act="refused-retry" data-n="${esc(r.n)}">Retry</button><button type="button" class="pa-btn pa-btn--small pa-btn--quiet" data-act="refused-discard" data-n="${esc(r.n)}">Discard</button></span></div></li>`;
-  const syncRow = `<ul class="ui-list pa-syncnow"><li><button type="button" class="ui-row pa-row--action" data-act="sync-now" id="pa-syncnow"${S.syncNow.busy ? ' aria-disabled="true"' : ''}><span class="pa-row-icon">${icon('refresh')}</span><span class="ui-row-main"><span class="pa-row-title">${S.syncNow.busy ? 'Checking…' : 'Sync now'}</span><span class="ui-row-sub">Send what’s waiting and check the family can be reached</span></span></button></li></ul>`;
-  return section('Saving to the family', `${syncChip()}${syncRow}<div id="pa-sync-detail" class="pa-sync-detail">${syncDetail()}</div>${mine.length ? `<ul class="ui-list pa-refusals">${mine.map(row).join('')}</ul>` : ''}`, { id: 'saving' });
-}
-// What Sync now found, what is waiting (each change in words), and when the family last answered. Redrawn on its own as the
-// state changes (drawSyncDetail), without redrawing the screen.
-function syncDetail() {
-  const r = S.syncNow.result, list = S.sync.list || [];
-  const ctx = { itemName: id => S.items.get(id)?.name || '', lineName: id => S.shop.get(id)?.name || '', placeName: id => S.places.get(id)?.name || '', personName: e => nameOf(e) };
-  const lines = list.map(x => SY.describeWaiting(x, ctx));
-  let h = '';
-  if (r) h += `<p class="pa-syncnow-result pa-syncnow-result--${r.kind}" role="status">${esc(r.text)}</p>`;
-  if (r?.offer && !S.syncNow.busy) h += `<ul class="ui-list pa-syncnow"><li><button type="button" class="ui-row pa-row--action" data-act="sync-cycle"><span class="pa-row-icon">${icon('refresh')}</span><span class="ui-row-main"><span class="pa-row-title">Reconnect and try again</span><span class="ui-row-sub">Switches this phone’s connection off and on once</span></span></button></li></ul>`;
-  if (lines.length) h += `<h3 class="pa-sync-h" id="pa-waiting-h">Waiting to be sent (${lines.length})</h3><ul class="ui-list pa-waiting" aria-labelledby="pa-waiting-h">${lines.map(t => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title pa-break">${esc(t)}</span></span></div></li>`).join('')}</ul>`;
-  h += `<p class="pa-heard" id="pa-heard">Last heard from the family: ${esc(SY.heardText(S.sync.heard))}</p>`;
-  const v = syncView();
-  const foot = v && { saved: 'Everything done on this phone has reached the family.', waiting: 'These changes are kept on this phone and sent when there is signal. Nothing is lost by closing the app.',
-    attention: 'The family pantry would not take these. Retry sends one again; Discard drops it.' }[v.kind];
-  return h + (foot ? `<p class="pa-section-footer pa-sync-foot">${esc(foot)}</p>` : '');
-}
-function drawSyncDetail() {
-  const el = $('#pa-sync-detail'); if (!el) return;
-  const v = syncView();
-  if (v?.kind === 'saved' && S.syncNow.result?.kind === 'waiting') S.syncNow.result = { kind: 'saved', text: 'Everything is saved' };
-  const html = syncDetail();
-  if (el.dataset.html !== html) { el.innerHTML = html; el.dataset.html = html; }
-  const b = $('#pa-syncnow');
-  if (b) {
-    b.setAttribute('aria-disabled', String(S.syncNow.busy));
-    b.querySelector('.pa-row-title').textContent = S.syncNow.busy ? 'Checking…' : 'Sync now';
-  }
-}
-// Sync now: try to send what is waiting (cloud.js syncNow), then say plainly how it went.
+// Sync now (the sync button's tap): try to send what is waiting (cloud.js syncNow), then say plainly how it went (a toast;
+// Reconnect when the first try didn't reach the family).
 async function syncNow({ cycle = false } = {}) {
   if (S.syncNow.busy || S.mode !== 'cloud' || !S.backend?.syncNow) return;
-  S.syncNow = { busy: true, result: null }; drawSyncDetail(); announce(cycle ? 'Reconnecting…' : 'Checking…');
+  S.syncNow = { busy: true, result: null }; announce(cycle ? 'Reconnecting…' : 'Checking…');
   try { S.backend.nudge?.('syncnow'); } catch { /* not listening */ }
   let r;
   try { r = await S.backend.syncNow({ cycle }); } catch (err) { console.warn('sync now', err?.code || err?.message); r = { ok: false }; }
-  S.syncNow = { busy: false, result: SY.syncNowResult(r, { refused: SY.refusedFor(S.refused, S.household?.id || '').length, pending: S.sync.pending }) };
-  drawSyncDetail(); drawSync();
-  if (document.activeElement === document.body) $('#pa-syncnow')?.focus({ preventScroll: true });
-  announce(S.syncNow.result.text);
+  const res = SY.syncNowResult(r, { refused: SY.refusedFor(S.refused, S.household?.id || '').length, pending: S.sync.pending });
+  S.syncNow = { busy: false, result: res };
+  drawSync();
+  if (res.offer) toast(res.text, { action: 'Reconnect', onAction: () => syncNow({ cycle: true }) });
+  else if (res.kind === 'attention' && screen() !== 'home') toast(res.text, { action: 'Show', onAction: () => goTo('#/') });
+  else toast(res.text);
 }
 
 // The kit's two version lines (and its "Get the latest version" button); the line reads the running worker's version,
@@ -2497,7 +2463,6 @@ function viewSettings() {
     famFoot = 'They sign in with that email (Google, or an emailed link or password) to see the pantry. Tap your own row to set your name; tap someone else to name them, email them the link again, or stop sharing. Whoever started it can’t be removed.';
   }
   return `<h1 class="ui-large-title">Settings</h1>
-    ${viewSaving()}
     ${mergeCard()}
     ${section('Family sharing', fam, { id: 'family', footer: famFoot })}
     ${section('This device', '<div class="pa-device" id="pa-device"></div>', { id: 'device', footer: 'Look, light or dark, and how roomy the lists are. Solid turns off the see-through bars and sheets (smoother on older phones). Kept on this phone.' })}
@@ -2579,6 +2544,8 @@ function draw(r, { keep = false } = {}) {
     showVersion($('#pa-version'));
   }
   document.title = name === 'home' ? 'Pantry' : `${title} · Pantry`;
+  if (name === 'home') drawRefusedList();
+  drawSync();
   drawSelBar();
   drawBadge();
   S.pendingRender = false;
@@ -2801,10 +2768,6 @@ async function onClick(e) {
       } catch (err) { S.lookupFailed = true; redraw(); toast(S.cloud.explain(err, 'Checking')); }
       return;
     }
-    case 'sync-now': return syncNow();
-    case 'sync-cycle': return syncNow({ cycle: true });
-    case 'refused-retry': return settleRefused(b.dataset.n, true);
-    case 'refused-discard': return settleRefused(b.dataset.n, false);
     case 'person': return openPerson(b.dataset.v);
     case 'copy-up': {
       try {
@@ -2953,7 +2916,7 @@ function onRemote(kind, list, pending = []) {
 }
 // ---- saving to the family: the chip, and what the server refused (sync.js) ----------------------------------------------
 
-// What the chip says now (only in a family pantry: on this phone alone there is nothing to wait for).
+// What the sync button says now (only in a family pantry: on this phone alone there is nothing to wait for).
 function syncView() {
   if (S.mode !== 'cloud') return null;
   const refused = SY.refusedFor(S.refused, S.household?.id || '').length, offline = navigator.onLine === false;
@@ -2964,33 +2927,44 @@ function syncView() {
     status: S.cloud.status?.({ online: !offline, pending: S.sync.pending, attention: refused, persisted, stale: !!S.sync.stale, confirmed }),
   });
 }
-const SYNC_BADGE = { saved: 'pa-badge--ok', waiting: 'pa-badge--warn', attention: 'pa-badge--bad' };
-function syncInner(v) {
-  const b = `<span class="pa-badge ${SYNC_BADGE[v.kind]}">${esc(v.text)}</span>`;
-  return v.kind === 'attention' && screen() !== 'settings' ? `<a class="pa-sync-link" href="#/settings">${b}<span class="pa-sync-more">See what</span></a>` : b;
+// The sync button (the kit's syncButton, in the top bar): shown in a family pantry only; its words are pantry's own.
+const SYNC_WORDS = { synced: 'Saved', pending: 'Saving…', offline: 'Waiting for signal', 'at-risk': 'Only on this phone', attention: 'Needs attention', unknown: 'Not checked with the family yet' };
+const syncWatch = new Set(), refusedWatch = new Set();
+const watch = set => fn => { set.add(fn); return () => set.delete(fn); };
+const buttonStatus = () => { const v = syncView(); return v ? { state: v.state, count: v.count } : { state: 'synced', count: 0 }; };
+// What the kit's parts read: the status for the button; the refused changes, kept on this phone (S.refused), for the list.
+const syncApi = {
+  status$: fn => { fn(buttonStatus()); return watch(syncWatch)(fn); },
+  queue: {
+    refused: () => SY.refusedFor(S.refused, S.household?.id || '').map(r => ({ key: r.n, record: r, code: SY.refusedReason(r.code).replace(/\.$/, '') })),
+    retry: n => settleRefused(n, true),
+    discard: n => settleRefused(n, false),
+    onChange: watch(refusedWatch),
+  },
+};
+const refusedText = r => SY.describeRefused(r, id => S.items.get(id)?.name);
+let syncTimer = null, stopRefused = null;
+function startSyncButton() {
+  syncButton($('#sync-btn'), { sync: syncApi, syncNow: () => syncNow(), labels: SYNC_WORDS });
 }
-// The chip's own markup (Home and Settings); drawSync() keeps it current without redrawing the screen.
-function syncChip() {
-  const v = syncView();
-  return v ? `<p class="pa-sync" data-sync aria-live="${v.kind === 'saved' ? 'off' : 'polite'}">${syncInner(v)}</p>` : '';
+// Home's refused list (the kit's refusedList): put in again each time Home is drawn, as the screen's markup is new.
+function drawRefusedList() {
+  stopRefused?.(); stopRefused = null;
+  const host = $('#refused-list');
+  if (host && S.mode === 'cloud') stopRefused = refusedList(host, { sync: syncApi, text: refusedText });
 }
-let syncTimer = null;
 function drawSync() {
-  const v = syncView();
-  for (const el of document.querySelectorAll('[data-sync]')) {
-    if (!v) { el.hidden = true; continue; }
-    el.hidden = false;
-    el.setAttribute('aria-live', v.kind === 'saved' ? 'off' : 'polite');
-    const html = syncInner(v);
-    if (el.dataset.kind !== v.kind + v.text) { el.innerHTML = html; el.dataset.kind = v.kind + v.text; }
-  }
+  const b = $('#sync-btn'); if (b) b.hidden = S.mode !== 'cloud';
+  const st = buttonStatus();
+  for (const fn of syncWatch) fn(st);
+  for (const fn of refusedWatch) fn();
 }
 // The cloud backend's count of this phone's unconfirmed changes (and whether it is showing its own copy). A change that
-// stays unconfirmed for a moment turns the chip to "Waiting for signal"; a normal save confirms before that.
+// stays unconfirmed for a moment turns the button to "Waiting for signal"; a normal save confirms before that.
 function onSyncState(st) {
   const was = S.sync.pending;
   S.sync = { pending: st.pending, cache: st.cache, since: st.pending > 0 ? (was > 0 ? S.sync.since : Date.now()) : 0, list: st.list || [], heard: st.heard || S.sync.heard || 0, lastServerAt: st.lastServerAt || 0, relistens: st.relistens || 0, cycles: st.cycles || 0, stale: !!st.stale, persisted: st.persisted !== false };
-  drawSync(); drawSyncDetail();
+  drawSync();
   adoptName();
   clearTimeout(syncTimer);
   if (st.pending > 0) syncTimer = setTimeout(drawSync, 1600);
@@ -3282,6 +3256,7 @@ async function finishEmailLink() {
 
 let R = null;
 async function start() {
+  startSyncButton();
   if (DEMO) {
     S.local = S.backend = openMemory({ ...sampleData(demoBy, { removed: true }), settings: [PP.peopleDoc(DEMO_NAMES)] });   // (with its places as documents, one of them removed)
     S.household = { ...DEMO_FAMILY };
@@ -3304,7 +3279,7 @@ async function start() {
   // selecting: a press and hold on a row (select.js), Escape and Back leave it; Enter ticks a row's checkbox like Space does
   SEL.holdToSelect($('#main'), {
     start: el => { if (!S.sel.on && screen() === 'items') enterSelect(el.closest('li')?.dataset.id || ''); },
-    haptic: () => haptic(15),
+    haptic: () => haptic('long'),
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && S.sel.on && !sheetOpen()) { e.preventDefault(); exitSelect(); }
@@ -3327,7 +3302,7 @@ async function start() {
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') resumed(); });
   addEventListener('pageshow', resumed);
   addEventListener('online', () => { resumed(); if (S.user && !S.household && S.lookupFailed && S.cloud) handleUser(S.user); else redraw(); });
-  addEventListener('offline', redraw);
+  addEventListener('offline', () => { drawSync(); redraw(); });
   R = router({
     render: r => draw(r),
     tabOf: r => ['item', 'edit', 'add', 'guide', 'places', 'removed', 'bulk'].includes(r.parts[0]) ? S.originTab : r.hash,
