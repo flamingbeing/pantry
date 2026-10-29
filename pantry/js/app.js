@@ -56,7 +56,7 @@ const CAT_ICON = {
   'Kitchen & paper': 'roll', Toiletries: 'droplet', 'Medicine & first aid': 'pill', Pet: 'paw', Leftovers: 'bowl', Other: 'box',
 };
 const icon = (name, o) => kitIcon(name, o);
-const chevron = () => icon('chevron-right', { cls: 'pa-row-chevron' });
+const chevron = () => icon('chevron-right', { cls: 'ui-row-chevron' });
 
 // Names the family gave its members (settings/people, people.js), shared with everyone in the family pantry.
 const names = () => PP.namesOf(S.settings.get(PP.PEOPLE_ID));
@@ -413,7 +413,7 @@ function undoItem(id, sent, before) {
 
 // ---- small pieces --------------------------------------------------------------------------------------------------
 
-function thumb(it, cls = 'pa-row-thumb') {
+function thumb(it, cls = 'ui-row-thumb') {
   const src = thumbSrc(it);
   return src ? `<img class="${cls}" src="${esc(src)}" alt="">` : `<span class="${cls}">${icon(CAT_ICON[it.category] || 'box')}</span>`;
 }
@@ -426,9 +426,9 @@ function longDate(ymd) {
 function badge(date, { full = false } = {}) {
   const b = L.shortLabel(date, today());
   if (!b.text) return '';
-  if (full) return `<span class="pa-badge${{ bad: ' pa-badge--bad', warn: ' pa-badge--warn' }[b.tone] || ''}">${esc(longDate(date))}</span>`;
-  const tone = { bad: ' pa-badge--bad', warn: ' pa-badge--warn' }[b.tone] || '';
-  return `<span class="pa-badge${tone}">${esc(b.text)}</span>`;
+  if (full) return `<span class="ui-badge"${{ bad: ' data-tone="danger"', warn: ' data-tone="warn"' }[b.tone] || ''}>${esc(longDate(date))}</span>`;
+  const tone = { bad: ' data-tone="danger"', warn: ' data-tone="warn"' }[b.tone] || '';
+  return `<span class="ui-badge"${tone}>${esc(b.text)}</span>`;
 }
 const LEVEL_WORD = { plenty: 'Plenty', low: 'Low', out: 'Out' };
 // A stock change that means "bought more": a count gets a batch; a staple goes back to Plenty.
@@ -442,7 +442,7 @@ function itemRow(it, { sub, trail, select = false, grip = false, sel = null, att
   const t = trail ?? (staple ? '' : badge(L.nextUseBy(it), { full: screen() === 'items' && prefs.get('fullDates', false) === true }));
   const body = `${thumb(it)}
     <span class="ui-row-main"><span class="pa-row-title">${esc(it.name)}</span>${s ? `<span class="ui-row-sub">${s}</span>` : ''}</span>
-    ${t ? `<span class="pa-row-trail">${t}</span>` : ''}`;
+    ${t ? `<span class="ui-row-trail">${t}</span>` : ''}`;
   // selecting: the row is a label around a real checkbox (the whole row is the target; no link to open)
   if (select) {
     const on = SEL.isSel(sel || S.sel, it.id);
@@ -453,7 +453,7 @@ function itemRow(it, { sub, trail, select = false, grip = false, sel = null, att
 const gripBtn = it => `<button type="button" class="pa-grip" id="pa-grip-${esc(it.id)}" data-act="grip" data-id="${esc(it.id)}" aria-label="Reorder or move ${esc(it.name)}">${gripIcon()}</button>`;
 function section(title, body, { count = '', action = '', footer = '', id = '' } = {}) {
   const hid = 'h-' + (id || title.toLowerCase().replace(/[^a-z]+/g, '-'));
-  return `<section class="pa-section" aria-labelledby="${hid}"><h2 class="pa-section-header" id="${hid}"><span>${esc(title)}</span>${action || (count !== '' ? `<span class="pa-num">${count}</span>` : '')}</h2>${body}${footer ? `<p class="pa-section-footer">${footer}</p>` : ''}</section>`;
+  return `<section class="ui-section" aria-labelledby="${hid}"><h2 class="ui-section-head" id="${hid}"><span>${esc(title)}</span>${action || (count !== '' ? `<span class="pa-num">${count}</span>` : '')}</h2>${body}${footer ? `<p class="ui-section-foot">${footer}</p>` : ''}</section>`;
 }
 function fmt(ymd) {
   const d = L.parseYmd(ymd);
@@ -480,7 +480,7 @@ function guessFor(x) {
   return days ? { days, date: L.addDays(today(), days), label: `About ${daysText(days)}` } : null;
 }
 // The quick dates under a date field; a guess comes first (selected while it is the date), with a line saying so.
-const dateChips = (name, value, guess = null) => `<div class="pa-datebox"><div class="pa-chips pa-chips--wrap pa-dates" role="group" aria-label="Quick dates" data-for="${name}">${
+const dateChips = (name, value, guess = null) => `<div class="pa-datebox"><div class="ui-chips pa-dates" data-wrap="on" role="group" aria-label="Quick dates" data-for="${name}">${
   guess ? `<button type="button" class="ui-chip pa-guess" aria-pressed="${guess.date === value}" data-act="date" data-v="${guess.date}">${esc(guess.label)}</button>` : ''}${
   quickDates().filter(([, v]) => !guess || v !== guess.date).map(([l, v]) =>
   `<button type="button" class="ui-chip" aria-pressed="${v === value}" data-act="date" data-v="${v}">${l}</button>`).join('')}<button type="button" class="ui-chip" aria-pressed="false" data-act="date" data-v="">No date</button></div>${
@@ -523,10 +523,10 @@ function viewHome() {
   h += viewTour();
   h += viewSince();
   if (!all.length) {
-    return h + `<div class="pa-card pa-empty">
-      <span class="pa-empty-icon">${icon('box')}</span>
-      <p class="pa-empty-title">Nothing here yet</p>
-      <p class="pa-empty-text">Add what’s in the fridge and cupboards. The pantry then shows what to use first and what to buy.</p>
+    return h + `<div class="ui-card ui-empty">
+      <span class="ui-empty-icon">${icon('box')}</span>
+      <p class="ui-empty-title">Nothing here yet</p>
+      <p class="ui-empty-text">Add what’s in the fridge and cupboards. The pantry then shows what to use first and what to buy.</p>
       <button type="button" class="pa-btn ui-primary" data-act="start">Pick what you have</button>
       <button type="button" class="pa-btn pa-btn--secondary" data-act="go-add">Add one item</button>
       <button type="button" class="pa-btn pa-btn--plain" data-act="sample">Try it with sample items</button>
@@ -541,10 +541,10 @@ function viewHome() {
   const opened = all.filter(it => !listed.has(it.id) && (it.batches || []).some(b => b.openedAt && b.qty > 0));
   const m = L.monthStats(liveEvents(), t.slice(0, 7));
   h += `<div class="pa-btn-row pa-quickrow"><button type="button" class="pa-btn pa-btn--secondary pa-btn--compact" data-act="leftovers">${icon('bowl')}Leftovers</button><button type="button" class="pa-btn pa-btn--secondary pa-btn--compact" data-act="scan-many">${icon('barcode')}Scan many</button></div>`;
-  h += `<div class="pa-stats" aria-label="Summary">
-    <div class="pa-stat"><span class="pa-stat-value">${expired.length}</span><span class="pa-stat-label">Expired</span></div>
-    <div class="pa-stat"><span class="pa-stat-value">${soon.length}</span><span class="pa-stat-label">Use soon</span></div>
-    <div class="pa-stat"><span class="pa-stat-value">${buy.length}</span><span class="pa-stat-label">To buy</span></div>
+  h += `<div class="ui-stats" aria-label="Summary">
+    <div class="ui-stat"><span class="ui-stat-value">${expired.length}</span><span class="ui-stat-label">Expired</span></div>
+    <div class="ui-stat"><span class="ui-stat-value">${soon.length}</span><span class="ui-stat-label">Use soon</span></div>
+    <div class="ui-stat"><span class="ui-stat-value">${buy.length}</span><span class="ui-stat-label">To buy</span></div>
   </div>`;
   if (expired.length) h += section('Expired', `<ul class="ui-list">${expired.map(x => itemRow(x.item)).join('')}</ul>`, { count: expired.length, footer: 'Used it or binned it? Open the item and tap Used 1 or Bin 1.' });
   h += section('Use soon', soon.length ? `<ul class="ui-list">${soon.map(x => itemRow(x.item)).join('')}</ul>` : '', { count: soon.length || '', footer: soon.length ? `Within the next ${soonText()}.` : `Nothing runs out of date in the next ${soonText()}.` });
@@ -558,10 +558,10 @@ function viewHome() {
       { id: 'low', action: `<a href="#/shop">Shopping list</a>`, footer: buy.length > 5 ? `${buy.length - 5} more on the shopping list.` : '' });
   }
   h += section('This month', `<ul class="ui-list">
-    <li><div class="ui-row"><span class="pa-row-icon">${icon('check')}</span><span class="ui-row-main"><span class="pa-row-title">Used up</span></span><span class="pa-row-value">${m.used}</span></div></li>
-    <li><div class="ui-row"><span class="pa-row-icon pa-row-icon--grey">${icon('cart')}</span><span class="ui-row-main"><span class="pa-row-title">Bought</span></span><span class="pa-row-value">${m.bought}</span></div></li>
-    <li><div class="ui-row"><span class="pa-row-icon">${icon('clock')}</span><span class="ui-row-main"><span class="pa-row-title">Used before expiry</span></span><span class="pa-row-value">${m.saved}</span></div></li>
-    <li><div class="ui-row"><span class="pa-row-icon pa-row-icon--bad">${icon('trash')}</span><span class="ui-row-main"><span class="pa-row-title">Thrown away</span>${m.expired ? `<span class="ui-row-sub">${m.expired} past ${m.expired === 1 ? 'its' : 'their'} date</span>` : ''}</span><span class="pa-row-value">${m.wasted}</span></div></li>
+    <li><div class="ui-row"><span class="ui-row-lead">${icon('check')}</span><span class="ui-row-main"><span class="pa-row-title">Used up</span></span><span class="ui-row-value">${m.used}</span></div></li>
+    <li><div class="ui-row"><span class="ui-row-lead" data-tone="grey">${icon('cart')}</span><span class="ui-row-main"><span class="pa-row-title">Bought</span></span><span class="ui-row-value">${m.bought}</span></div></li>
+    <li><div class="ui-row"><span class="ui-row-lead">${icon('clock')}</span><span class="ui-row-main"><span class="pa-row-title">Used before expiry</span></span><span class="ui-row-value">${m.saved}</span></div></li>
+    <li><div class="ui-row"><span class="ui-row-lead" data-tone="danger">${icon('trash')}</span><span class="ui-row-main"><span class="pa-row-title">Thrown away</span>${m.expired ? `<span class="ui-row-sub">${m.expired} past ${m.expired === 1 ? 'its' : 'their'} date</span>` : ''}</span><span class="ui-row-value">${m.wasted}</span></div></li>
   </ul>`, { id: 'month' });
   return h;
 }
@@ -591,7 +591,7 @@ function viewSince() {
   const mine = who();
   const list = L.sinceLast({ events: liveEvents(), shop: shopLines(), since: S.since, isMe: by => nameOf(by) === mine });
   if (!list.length) return '';
-  const row = x => `<li><div class="ui-row"><span class="pa-row-icon pa-row-icon--grey">${icon('user')}</span><span class="ui-row-main"><span class="pa-row-title">${esc(nameOf(x.by))} ${esc(L.sinceText(x))}</span><span class="ui-row-sub">${esc(L.agoText(x.at))}</span></span></div></li>`;
+  const row = x => `<li><div class="ui-row"><span class="ui-row-lead" data-tone="grey">${icon('user')}</span><span class="ui-row-main"><span class="pa-row-title">${esc(nameOf(x.by))} ${esc(L.sinceText(x))}</span><span class="ui-row-sub">${esc(L.agoText(x.at))}</span></span></div></li>`;
   return section('Since you last looked', `<ul class="ui-list pa-since">${list.slice(0, 5).map(row).join('')}</ul>`,
     { id: 'since', count: list.length, footer: `${list.length > 5 ? `And ${list.length - 5} more. ` : ''}<button type="button" class="pa-btn pa-btn--plain pa-btn--compact pa-since-ok" data-act="since-ok">Got it</button>` });
 }
@@ -611,14 +611,14 @@ function viewTour() {
   if (!tourOn()) return '';
   const list = tasks(), done = list.filter(t => t.done).length;
   if (done === list.length) {
-    return section('Getting started', `<div class="pa-card pa-tour-done"><p class="pa-card-title">All set</p>
-      <p class="pa-card-text">You know your way around. The guide in Settings has the rest.</p>
+    return section('Getting started', `<div class="ui-card pa-tour-done"><p class="ui-card-title">All set</p>
+      <p class="ui-card-text">You know your way around. The guide in Settings has the rest.</p>
       <button type="button" class="pa-btn pa-btn--secondary" data-act="tour-hide">Hide this</button></div>`, { id: 'tour' });
   }
   const row = t => `<li><div class="ui-row pa-tour-row${t.done ? ' is-done' : ''}">
       <span class="pa-tour-mark" aria-hidden="true">${t.done ? icon('check') : ''}</span>
       <span class="ui-row-main"><span class="pa-row-title">${esc(t.title)}<span class="pa-sr">${t.done ? ', done' : ', to do'}</span></span><span class="ui-row-sub">${esc(t.sub)}</span></span>
-      ${t.done ? '' : `<span class="pa-row-trail"><button type="button" class="pa-btn pa-btn--small" data-act="tour-show" data-task="${t.id}" aria-label="Show me: ${esc(t.title)}">Show me</button></span>`}
+      ${t.done ? '' : `<span class="ui-row-trail"><button type="button" class="pa-btn pa-btn--small" data-act="tour-show" data-task="${t.id}" aria-label="Show me: ${esc(t.title)}">Show me</button></span>`}
     </div></li>`;
   return section('Getting started', `<ul class="ui-list pa-tour">${list.map(row).join('')}</ul>
     <p class="pa-tour-foot"><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-act="tour-hide">Hide this list</button></p>`,
@@ -649,9 +649,9 @@ function showMe(task) {
     return sheet({
       title: 'On your home screen', closeLabel: 'Done', grey: true,
       body: `<ul class="ui-list">
-        <li><div class="ui-row"><span class="pa-row-icon">${icon('share')}</span><span class="ui-row-main"><span class="pa-row-title">iPhone</span><span class="ui-row-sub">In Safari, tap Share (the square with an arrow), then Add to Home Screen.</span></span></div></li>
-        <li><div class="ui-row"><span class="pa-row-icon">${icon('plus')}</span><span class="ui-row-main"><span class="pa-row-title">Android</span><span class="ui-row-sub">In Chrome, tap the menu (three dots), then Add to home screen or Install app.</span></span></div></li>
-      </ul><p class="pa-section-footer">It then opens like an app, full screen, and works without signal.</p>`,
+        <li><div class="ui-row"><span class="ui-row-lead">${icon('share')}</span><span class="ui-row-main"><span class="pa-row-title">iPhone</span><span class="ui-row-sub">In Safari, tap Share (the square with an arrow), then Add to Home Screen.</span></span></div></li>
+        <li><div class="ui-row"><span class="ui-row-lead">${icon('plus')}</span><span class="ui-row-main"><span class="pa-row-title">Android</span><span class="ui-row-sub">In Chrome, tap the menu (three dots), then Add to home screen or Install app.</span></span></div></li>
+      </ul><p class="ui-section-foot">It then opens like an app, full screen, and works without signal.</p>`,
       onClose: () => { flag('installSeen'); afterSheet(); redraw(); },
     });
   }
@@ -671,9 +671,9 @@ function openStarter() {
   const s = sheet({
     title: 'What do you have?', closeLabel: 'Cancel', grey: true, detent: 'large',
     body: `<p class="pa-text pa-start-intro">Tap the everyday things you have at home. Each goes in with a rough best-before date, which you can change on the item.</p>
-      ${groups.map((g, i) => `<section class="pa-section" aria-labelledby="pa-sg-${i}"><h3 class="pa-section-header" id="pa-sg-${i}">${esc(g)}</h3>
-        <div class="pa-chips pa-chips--wrap pa-start-chips" role="group" aria-labelledby="pa-sg-${i}">${choices.filter(c => c.group === g).map(chip).join('')}</div></section>`).join('')}
-      <p class="pa-section-footer">Not here? Add it afterwards with + or the microphone.</p>`,
+      ${groups.map((g, i) => `<section class="ui-section" aria-labelledby="pa-sg-${i}"><h3 class="ui-section-head" id="pa-sg-${i}">${esc(g)}</h3>
+        <div class="ui-chips pa-start-chips" data-wrap="on" role="group" aria-labelledby="pa-sg-${i}">${choices.filter(c => c.group === g).map(chip).join('')}</div></section>`).join('')}
+      <p class="ui-section-foot">Not here? Add it afterwards with + or the microphone.</p>`,
     footer: `<button type="button" class="pa-btn ui-primary pa-btn--block" id="pa-start-go" disabled>Add items</button>`,
     onClose: afterSheet,
   });
@@ -724,7 +724,7 @@ function viewItems() {
     <div class="ui-search" role="search">${icon('search')}
       <input type="search" id="pa-q" placeholder="Search the pantry" aria-label="Search the pantry" autocomplete="off" value="${esc(S.q)}">
       <button type="button" class="pa-search-clear" data-act="q-clear" aria-label="Clear search">${icon('close')}</button></div>
-    <div class="pa-chips" role="group" aria-label="Where it’s kept">${chip('', 'All', all.length)}${places.map(p => chip(p, p, all.filter(i => i.location === p).length)).join('')}</div>
+    <div class="ui-chips" role="group" aria-label="Where it’s kept">${chip('', 'All', all.length)}${places.map(p => chip(p, p, all.filter(i => i.location === p).length)).join('')}</div>
     <fieldset class="ui-segmented"><legend>Sort by</legend>${SORTS.map(([v, l]) => seg(v, l)).join('')}</fieldset>
     <div id="pa-items-list"${full ? ' class="pa-fulldates"' : ''}>${itemsList()}</div>`;
 }
@@ -765,7 +765,7 @@ function groupSection(g) {
   const title = g.fold
     ? `<button type="button" class="pa-fold" data-act="fold" data-g="${esc(g.key)}" id="pa-fold-${esc(g.hid)}" aria-expanded="${!folded}" aria-controls="pa-list-${esc(g.hid)}">${icon('chevron-right', { cls: 'pa-fold-icon' })}<span class="pa-fold-name">${esc(g.title)}</span></button>`
     : `<span>${esc(g.title)}</span>`;
-  return `<section class="pa-section pa-group" ${g.place ? `data-place="${esc(g.place)}" ` : ''}${g.cat !== undefined ? `data-cat="${esc(g.cat)}" ` : ''}aria-labelledby="${esc(g.hid)}"><h2 class="pa-section-header pa-grouphead" id="${esc(g.hid)}">${title}<span class="pa-num">${n}</span>${sel}</h2>${
+  return `<section class="ui-section pa-group" ${g.place ? `data-place="${esc(g.place)}" ` : ''}${g.cat !== undefined ? `data-cat="${esc(g.cat)}" ` : ''}aria-labelledby="${esc(g.hid)}"><h2 class="ui-section-head pa-grouphead" id="${esc(g.hid)}">${title}<span class="pa-num">${n}</span>${sel}</h2>${
     folded ? '' : `<ul class="ui-list" id="pa-list-${esc(g.hid)}">${g.items.map(it => itemRow(it, { select: S.sel.on, grip: true })).join('')}</ul>`}</section>`;
 }
 const selTheseText = g => (SEL.groupState(S.sel, g.items.map(i => i.id)) === 'all' ? `Unselect these ${g.items.length}` : `Select these ${g.items.length}`);
@@ -775,8 +775,8 @@ function itemsList() {
   const list = sortedItems(filteredItems());
   if (!list.length) {
     return all.length
-      ? `<div class="pa-empty"><span class="pa-empty-icon">${icon('search')}</span><p class="pa-empty-title">Nothing found</p><p class="pa-empty-text">No items match. Try another word or place.</p></div>`
-      : `<div class="pa-card pa-empty"><span class="pa-empty-icon">${icon('box')}</span><p class="pa-empty-title">No items yet</p><p class="pa-empty-text">Add what’s at home to start.</p><button type="button" class="pa-btn ui-primary" data-act="go-add">Add an item</button></div>`;
+      ? `<div class="ui-empty"><span class="ui-empty-icon">${icon('search')}</span><p class="ui-empty-title">Nothing found</p><p class="ui-empty-text">No items match. Try another word or place.</p></div>`
+      : `<div class="ui-card ui-empty"><span class="ui-empty-icon">${icon('box')}</span><p class="ui-empty-title">No items yet</p><p class="ui-empty-text">Add what’s at home to start.</p><button type="button" class="pa-btn ui-primary" data-act="go-add">Add an item</button></div>`;
   }
   const groups = itemGroups(list);
   if (!groups) return section(plural(list.length, 'item'), `<ul class="ui-list">${list.map(i => itemRow(i, { select: S.sel.on, grip: true })).join('')}</ul>`, { id: 'items' });
@@ -973,7 +973,7 @@ function openGrip(id) {
   const it = itemById(id); if (!it) return;
   const ord = sortMode() === 'myorder', cat = catOf(it);
   const pos = () => { const p = O.positionOf(groupOf(it), id); return `${p.index + 1} of ${p.count} in ${cat}`; };
-  const btn = (g, title, sub, dis = false) => `<li><button type="button" class="ui-row pa-row--action" data-g="${g}"${dis ? ' aria-disabled="true"' : ''}><span class="ui-row-main"><span class="pa-row-title">${title}</span><span class="ui-row-sub" ${g === 'to' ? '' : `id="pa-grip-sub-${g}"`}>${sub}</span></span></button></li>`;
+  const btn = (g, title, sub, dis = false) => `<li><button type="button" class="ui-row" data-tone="action" data-g="${g}"${dis ? ' aria-disabled="true"' : ''}><span class="ui-row-main"><span class="pa-row-title">${title}</span><span class="ui-row-sub" ${g === 'to' ? '' : `id="pa-grip-sub-${g}"`}>${sub}</span></span></button></li>`;
   const first = () => O.positionOf(groupOf(it), id).index === 0, last = () => { const p = O.positionOf(groupOf(it), id); return p.index === p.count - 1; };
   const s = sheet({
     title: it.name, closeLabel: 'Done', grey: true,
@@ -1071,7 +1071,7 @@ const bulkChosen = () => SEL.chosen(bulkState().sel, items());
 function bulkList() {
   const b = bulkState(), list = bulkFiltered();
   SEL.pruneSel(b.sel, items().map(i => i.id));
-  if (!list.length) return `<div class="pa-empty"><span class="pa-empty-icon">${icon('search')}</span><p class="pa-empty-title">Nothing found</p><p class="pa-empty-text">No items match. Try another word, place or category.</p></div>`;
+  if (!list.length) return `<div class="ui-empty"><span class="ui-empty-icon">${icon('search')}</span><p class="ui-empty-title">Nothing found</p><p class="ui-empty-text">No items match. Try another word, place or category.</p></div>`;
   return `<ul class="ui-list">${list.map(i => itemRow(i, { select: true, sel: b.sel, attr: 'bsel' })).join('')}</ul>`;
 }
 function bulkChanges() {
@@ -1105,12 +1105,12 @@ function viewBulk() {
     ${section('Which items', `<div class="ui-search" role="search">${icon('search')}
         <input type="search" id="pa-bq" placeholder="Search the pantry" aria-label="Search the pantry" autocomplete="off" value="${esc(b.q)}">
         <button type="button" class="pa-search-clear" data-act="bk-q-clear" aria-label="Clear search">${icon('close')}</button></div>
-      <div class="pa-chips" role="group" aria-label="Where it’s kept">${chip('', 'All', all.length)}${places.map(p => chip(p, p, all.filter(i => i.location === p).length)).join('')}</div>
+      <div class="ui-chips" role="group" aria-label="Where it’s kept">${chip('', 'All', all.length)}${places.map(p => chip(p, p, all.filter(i => i.location === p).length)).join('')}</div>
       <label class="pa-field pa-bk-cat"><span class="pa-field-label">Category</span><select class="pa-select" id="pa-bk-cat" data-bk="cat"><option value="">All categories</option>${cats.map(c => `<option value="${esc(c)}"${b.cat === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
       <div class="pa-bk-bar"><span class="pa-selcount" id="pa-bcount" role="status" aria-live="polite"></span>
         <span class="pa-selbar-links"><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-act="bk-all">Select all matching</button><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-act="bk-none">Select none</button></span></div>
       <div id="pa-bulk-list">${bulkList()}</div>`, { id: 'bk-items' })}
-    ${section('What to change', `<div class="pa-card pa-bk-changes" id="pa-bulk-changes">${bulkChanges()}</div>
+    ${section('What to change', `<div class="ui-card pa-bk-changes" id="pa-bulk-changes">${bulkChanges()}</div>
       <button type="button" class="pa-btn ui-primary pa-btn--block" data-act="bk-review">Review changes</button>`, { id: 'bk-change', footer: 'Every field stays as it is until you choose. Names are changed one item at a time, on the item.' })}`;
 }
 function updateBulkUI() {
@@ -1206,7 +1206,7 @@ function viewItem(it) {
     const desc = d ? `use by ${fmt(d)}` : 'no date';
     return `<li><div class="ui-row pa-batch">
       <span class="ui-row-main"><span class="pa-row-title">${esc(what)}</span><span class="ui-row-sub">${esc(sub.charAt(0).toUpperCase() + sub.slice(1))}</span></span>
-      <span class="pa-row-trail">${badge(d)}</span>
+      <span class="ui-row-trail">${badge(d)}</span>
       <span class="pa-batch-acts">
         ${!b.openedAt && it.openDays && !frozen ? `<button type="button" class="pa-btn pa-btn--small" data-act="open" data-b="${esc(b.id)}" aria-label="Open 1, ${esc(desc)}">Open</button>` : ''}
         ${L.canUnfreeze(b) ? `<button type="button" class="pa-btn pa-btn--small pa-btn--quiet" data-act="unfreeze" data-b="${esc(b.id)}" aria-label="Not frozen: back to the packaging date, ${esc(b.packExpiry ? fmt(b.packExpiry) : 'no date')}">Not frozen</button>` : ''}
@@ -1235,9 +1235,9 @@ function viewItem(it) {
   const cur = t.slice(0, 7);
   const cols = u.months.map(m => `<li class="pa-col${m.key === cur ? ' is-current' : ''}"><span class="pa-col-value">${m.used + m.wasted}</span><span class="pa-col-bar" style="--v:${Math.round(((m.used + m.wasted) / max) * 100)}%"></span><span>${esc(m.label)}${m.key === cur ? '<span class="pa-sr"> (this month)</span>' : ''}</span></li>`).join('');
   const pace = u.daysPerUnit
-    ? `<p class="pa-card-kicker">Usual pace</p><p class="pa-card-title">${esc(L.paceLabel(u).replace(/^./, c => c.toUpperCase()))}</p>${ro ? `<p class="pa-card-text">At this pace it runs out around <strong>${esc(fmt(ro))}</strong>.</p>` : ''}`
-    : `<p class="pa-card-text">Tap “Used 1” each time one is finished. After two, the pantry learns how fast you use it and puts it on the shopping list before it runs out.</p>`;
-  h += section('How fast we use it', `<div class="pa-card">${pace}
+    ? `<p class="pa-card-kicker">Usual pace</p><p class="ui-card-title">${esc(L.paceLabel(u).replace(/^./, c => c.toUpperCase()))}</p>${ro ? `<p class="ui-card-text">At this pace it runs out around <strong>${esc(fmt(ro))}</strong>.</p>` : ''}`
+    : `<p class="ui-card-text">Tap “Used 1” each time one is finished. After two, the pantry learns how fast you use it and puts it on the shopping list before it runs out.</p>`;
+  h += section('How fast we use it', `<div class="ui-card">${pace}
       <p class="pa-cols-label" id="pa-cols-l">Used up or thrown away each month</p>
       <ul class="pa-cols pa-cols" aria-labelledby="pa-cols-l">${cols}</ul></div>`,
     { id: 'pace', footer: [plural(u.units, 'used up', 'used up'), u.discards ? `${u.discards} thrown away` : '', it.lowAt ? `on the shopping list at ${it.lowAt} left` : ''].filter(Boolean).join(' · ') });
@@ -1245,18 +1245,18 @@ function viewItem(it) {
   // buy it online
   const sq = shopQuery(it);
   h += section('Buy online', `<ul class="ui-list">
-    ${L.SHOPS.map(sh => `<li><a class="ui-row" href="${esc(sh.url(sq))}" target="_blank" rel="noopener"><span class="pa-row-icon pa-row-icon--grey">${icon('cart')}</span><span class="ui-row-main"><span class="pa-row-title">Search ${esc(sh.name)}</span></span>${icon('external', { cls: 'pa-row-chevron' })}<span class="pa-sr"> (opens ${esc(sh.name)})</span></a></li>`).join('')}
+    ${L.SHOPS.map(sh => `<li><a class="ui-row" href="${esc(sh.url(sq))}" target="_blank" rel="noopener"><span class="ui-row-lead" data-tone="grey">${icon('cart')}</span><span class="ui-row-main"><span class="pa-row-title">Search ${esc(sh.name)}</span></span>${icon('external', { cls: 'ui-row-chevron' })}<span class="pa-sr"> (opens ${esc(sh.name)})</span></a></li>`).join('')}
   </ul>`, { id: 'online' });
 
   // details
-  const detail = (label, value) => value === '' || value == null ? '' : `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">${label}</span></span><span class="pa-row-value pa-wrap">${esc(value)}</span></div></li>`;
+  const detail = (label, value) => value === '' || value == null ? '' : `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">${label}</span></span><span class="ui-row-value pa-wrap">${esc(value)}</span></div></li>`;
   h += section('Details', `<ul class="ui-list">${detail('Category', it.category)}${detail('Kept in', it.location)}${detail('Keeps once opened', it.openDays ? plural(it.openDays, 'day') : 'Not set')}${L.isStaple(it) ? detail('Kept track of', 'Plenty, low or out') : detail('Shopping list at', it.lowAt ? `${it.lowAt} left` : 'None left')}${detail('Barcode', it.barcode)}${detail('Added by', nameOf(it.createdBy))}${detail('Last changed by', nameOf(it.updatedBy))}</ul>`, { id: 'details' });
 
   // history
   h += section('History', evs.length
     ? `<ul class="ui-list">${evs.slice(0, 15).map(e => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">${e.type === 'level' ? `Marked ${esc(LEVEL_WORD[e.level] || e.level || '').toLowerCase()}` : VERB[e.type] || esc(e.type)} ${e.qty > 1 ? e.qty : ''}</span><span class="ui-row-sub">${esc(fmtTime(e.at))}${e.by ? ' · ' + esc(nameOf(e.by)) : ''}</span></span></div></li>`).join('')}</ul>`
     : `<ul class="ui-list"><li><div class="ui-row"><span class="ui-row-main"><span class="ui-row-sub">Nothing yet.</span></span></div></li></ul>`, { id: 'history', footer: evs.length > 15 ? `The latest 15 of ${evs.length}.` : '' });
-  h += `<ul class="ui-list pa-delete"><li><button type="button" class="ui-row pa-row--danger pa-row--center" data-act="delete"><span class="ui-row-main"><span class="pa-row-title">Delete item</span></span></button></li></ul>`;
+  h += `<ul class="ui-list pa-delete"><li><button type="button" class="ui-row" data-tone="danger" data-align="center" data-act="delete"><span class="ui-row-main"><span class="pa-row-title">Delete item</span></span></button></li></ul>`;
   return h;
 }
 
@@ -1280,17 +1280,17 @@ function viewForm(id) {
   const field = (name, label, attrs = '', hint = '') => `<label class="pa-field"><span class="pa-field-label">${label}</span><input class="pa-input" name="${name}" value="${esc(d[name])}" ${attrs}>${hint ? `<span class="pa-field-hint">${hint}</span>` : ''}</label>`;
   let h = `<h1 class="ui-large-title">${editing ? 'Edit item' : 'Add an item'}</h1>`;
   if (!editing) {
-    h += `<section class="pa-section pa-finder" aria-label="Find a product">
+    h += `<section class="ui-section pa-finder" aria-label="Find a product">
       <div class="ui-search" role="search">${icon('search')}
         <input type="search" id="pa-find" placeholder="Soy sauce, Milo, Dynamo…" aria-label="Find a product" autocomplete="off" enterkeyhint="search">
         <button type="button" class="pa-search-clear" data-act="find-clear" aria-label="Clear">${icon('close')}</button></div>
       <ul class="ui-list" id="pa-sugg" hidden></ul>
       <div class="pa-btn-row"><button type="button" class="pa-btn pa-btn--secondary" data-act="scan">${icon('barcode')}Scan barcode</button><button type="button" class="pa-btn pa-btn--secondary" data-act="quick">${icon('mic')}Say or type a list</button><button type="button" class="pa-btn pa-btn--secondary" data-act="leftovers">${icon('bowl')}Leftovers</button></div>
-      <p class="pa-section-footer" id="pa-find-foot">Pick a common Singapore supermarket product, scan its barcode, or say what you bought, to fill in the details.</p>
+      <p class="ui-section-foot" id="pa-find-foot">Pick a common Singapore supermarket product, scan its barcode, or say what you bought, to fill in the details.</p>
     </section>`;
   }
   h += `<form id="pa-form" novalidate>
-    <section class="pa-section" aria-labelledby="h-f-details"><h2 class="pa-section-header" id="h-f-details">Details</h2>
+    <section class="ui-section" aria-labelledby="h-f-details"><h2 class="ui-section-head" id="h-f-details">Details</h2>
       <div class="pa-photo-row">
         <label class="pa-photo">${d.pic ? `<img src="${esc(d.pic)}" alt="">` : icon('camera')}<span>${d.pic ? 'Change photo' : 'Add photo'}</span>
           <input type="file" accept="image/*" capture="environment" class="pa-file" id="pa-photo-file"></label>
@@ -1309,23 +1309,23 @@ function viewForm(id) {
   const track = `<fieldset class="ui-segmented pa-track"><legend>Keep track by</legend>
       <label class="pa-seg"><input type="radio" name="measure" value="count"${d.measure !== 'level' ? ' checked' : ''}><span>Counting</span></label>
       <label class="pa-seg"><input type="radio" name="measure" value="level"${d.measure === 'level' ? ' checked' : ''}><span>Plenty, low, out</span></label></fieldset>`;
-  const trackFoot = '<p class="pa-section-footer">For rice, oil or loose vegetables, “Plenty, low, out” is easier than counting.</p>';
+  const trackFoot = '<p class="ui-section-foot">For rice, oil or loose vegetables, “Plenty, low, out” is easier than counting.</p>';
   if (!editing && d.measure === 'level') {
-    h += `<section class="pa-section" aria-labelledby="h-f-stock"><h2 class="pa-section-header" id="h-f-stock">Stock</h2>${track}${trackFoot}</section>`;
+    h += `<section class="ui-section" aria-labelledby="h-f-stock"><h2 class="ui-section-head" id="h-f-stock">Stock</h2>${track}${trackFoot}</section>`;
   } else if (!editing) {
-    h += `<section class="pa-section" aria-labelledby="h-f-stock"><h2 class="pa-section-header" id="h-f-stock">Stock</h2>${track}
+    h += `<section class="ui-section" aria-labelledby="h-f-stock"><h2 class="ui-section-head" id="h-f-stock">Stock</h2>${track}
       <ul class="ui-list"><li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title" id="pa-qty-l">How many</span></span>
         ${stepperHtml({ id: 'pa-qty', labelledby: 'pa-qty-l', value: Number(d.qty) || 0, min: 0, max: 99 })}</div></li></ul>
       <label class="pa-field pa-gap"><span class="pa-field-label">Best before or use by</span><input class="pa-input" type="date" name="expiry" value="${esc(d.expiry)}"></label>
       ${dateChips('expiry', d.expiry, d._guess)}
     </section>`;
   }
-  h += `<section class="pa-section" aria-labelledby="h-f-remind"><h2 class="pa-section-header" id="h-f-remind">Reminders</h2>
+  h += `<section class="ui-section" aria-labelledby="h-f-remind"><h2 class="ui-section-head" id="h-f-remind">Reminders</h2>
       ${editing ? `${track}${trackFoot}` : ''}
       <div class="pa-two">${field('openDays', 'Keeps once opened (days)', 'type="number" inputmode="numeric" min="0" placeholder="Not set"')}${field('lowAt', 'On the list when down to', 'type="number" inputmode="numeric" min="0"')}</div>
-      <p class="pa-section-footer">Opened items are due the earlier of the printed date and this many days after opening.</p>
+      <p class="ui-section-foot">Opened items are due the earlier of the printed date and this many days after opening.</p>
     </section>
-    <section class="pa-section" aria-labelledby="h-f-code"><h2 class="pa-section-header" id="h-f-code">Barcode</h2>
+    <section class="ui-section" aria-labelledby="h-f-code"><h2 class="ui-section-head" id="h-f-code">Barcode</h2>
       ${field('barcode', 'Barcode number', 'inputmode="numeric" autocomplete="off" placeholder="Optional"', 'Scanning it next time finds this item.')}
     </section>
   </form>`;
@@ -1383,14 +1383,14 @@ function suggestions(q) {
 function suggRows(list, { mine = 'sugg-mine', cat = 'sugg' } = {}) {
   const row = (act, data, thumbHtml, title, sub, trail = '') => `<li><button type="button" class="ui-row" data-act="${act}" ${data}>${thumbHtml}<span class="ui-row-main"><span class="pa-row-title">${title}</span>${sub ? `<span class="ui-row-sub">${sub}</span>` : ''}</span>${trail}</button></li>`;
   return list.map(x => x.mine
-    ? row(mine, `data-id="${esc(x.mine.id)}"`, thumb(x.mine), esc(x.mine.name), subOf(x.mine), `<span class="pa-row-trail"><span class="pa-badge pa-badge--accent">In the pantry</span></span>`)
-    : row(cat, `data-i="${x.i}"`, `<span class="pa-row-thumb">${icon(CAT_ICON[x.cat.category] || 'box')}</span>`, esc(x.cat.name), [x.cat.brand, x.cat.size].filter(Boolean).map(esc).join(' · '))).join('');
+    ? row(mine, `data-id="${esc(x.mine.id)}"`, thumb(x.mine), esc(x.mine.name), subOf(x.mine), `<span class="ui-row-trail"><span class="ui-badge" data-tone="accent">In the pantry</span></span>`)
+    : row(cat, `data-i="${x.i}"`, `<span class="ui-row-thumb">${icon(CAT_ICON[x.cat.category] || 'box')}</span>`, esc(x.cat.name), [x.cat.brand, x.cat.size].filter(Boolean).map(esc).join(' · '))).join('');
 }
 function showSugg() {
   const q = $('#pa-find')?.value || '', ul = $('#pa-sugg');
   if (!ul) return;
   ul.innerHTML = suggRows(suggestions(q))
-    + (q.trim() ? `<li><button type="button" class="ui-row pa-row--action" data-act="sugg-own"><span class="pa-row-icon">${icon('plus')}</span><span class="ui-row-main"><span class="pa-row-title">Add “${esc(q.trim())}”</span><span class="ui-row-sub">Not in the list? Type the details below.</span></span></button></li>` : '');
+    + (q.trim() ? `<li><button type="button" class="ui-row" data-tone="action" data-act="sugg-own"><span class="ui-row-lead">${icon('plus')}</span><span class="ui-row-main"><span class="pa-row-title">Add “${esc(q.trim())}”</span><span class="ui-row-sub">Not in the list? Type the details below.</span></span></button></li>` : '');
   ul.hidden = !q.trim();
   $('#pa-find-foot').hidden = !!q.trim();
 }
@@ -1532,7 +1532,7 @@ function openUnknown(code) {
         <input type="search" id="pa-unk-find" placeholder="Soy sauce, Dynamo, tissue…" aria-label="Find the product" autocomplete="off" enterkeyhint="search" autofocus>
         <button type="button" class="pa-search-clear" data-act="unk-clear" aria-label="Clear">${icon('close')}</button></div>
       <ul class="ui-list" id="pa-unk-list" aria-label="Matching products" hidden></ul>
-      <ul class="ui-list pa-unk-new"><li><button type="button" class="ui-row pa-row--action" data-act="unk-new"><span class="pa-row-icon">${icon('edit')}</span><span class="ui-row-main"><span class="pa-row-title">Type a new name</span><span class="ui-row-sub" id="pa-unk-new-sub">Not in the list? Fill in the details yourself.</span></span></button></li></ul>`,
+      <ul class="ui-list pa-unk-new"><li><button type="button" class="ui-row" data-tone="action" data-act="unk-new"><span class="ui-row-lead">${icon('edit')}</span><span class="ui-row-main"><span class="pa-row-title">Type a new name</span><span class="ui-row-sub" id="pa-unk-new-sub">Not in the list? Fill in the details yourself.</span></span></button></li></ul>`,
     onClose: afterSheet,
   });
   const input = $('#pa-unk-find', s.el), ul = $('#pa-unk-list', s.el), sub = $('#pa-unk-new-sub', s.el);
@@ -1586,7 +1586,7 @@ function openScanMany(mode = 'add') {
         `<label class="pa-seg"><input type="radio" name="pa-sm-mode" value="${v}"${v === mode ? ' checked' : ''}><span>${l}</span></label>`).join('')}</fieldset>
       <div class="pa-scan pa-sm-video"><video muted playsinline aria-label="Camera view"></video></div>
       <p class="pa-text pa-scan-msg" id="pa-sm-msg" role="status">Point the camera at each barcode in turn. Each counts once.</p>
-      <section class="pa-section" aria-labelledby="pa-sm-h"><h3 class="pa-section-header" id="pa-sm-h"><span>Scanned</span><span class="pa-num" id="pa-sm-n">0</span></h3>
+      <section class="ui-section" aria-labelledby="pa-sm-h"><h3 class="ui-section-head" id="pa-sm-h"><span>Scanned</span><span class="pa-num" id="pa-sm-n">0</span></h3>
         <ul class="ui-list" id="pa-sm-tally"><li><div class="ui-row"><span class="ui-row-main"><span class="ui-row-sub">Nothing yet.</span></span></div></li></ul></section>
       <label class="pa-btn pa-btn--secondary pa-btn--block pa-file-btn">${icon('camera')}Use a photo instead<input type="file" accept="image/*" class="pa-file" id="pa-sm-file"></label>`,
     footer: `<button type="button" class="pa-btn ui-primary pa-btn--block" data-pa-close>Done</button>`,
@@ -1603,8 +1603,8 @@ function openScanMany(mode = 'add') {
   const modeNow = () => el.querySelector('[name="pa-sm-mode"]:checked')?.value || 'add';
   const draw = () => {
     $('#pa-sm-n', el).textContent = [...tally.values()].reduce((n, t) => n + t.n, 0) + unknown.size;
-    ul.innerHTML = [...tally.values()].reverse().map(t => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">${esc(t.name)}</span><span class="ui-row-sub">${esc(SCAN_MODES[t.mode])}</span></span><span class="pa-row-value">× ${t.n}</span></div></li>`).join('')
-      + [...unknown].map(c => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">New barcode</span><span class="ui-row-sub pa-unk-code">${esc(c)}</span></span><span class="pa-row-trail"><button type="button" class="pa-btn pa-btn--small" data-sm-new="${esc(c)}">Add it</button></span></div></li>`).join('')
+    ul.innerHTML = [...tally.values()].reverse().map(t => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">${esc(t.name)}</span><span class="ui-row-sub">${esc(SCAN_MODES[t.mode])}</span></span><span class="ui-row-value">× ${t.n}</span></div></li>`).join('')
+      + [...unknown].map(c => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">New barcode</span><span class="ui-row-sub pa-unk-code">${esc(c)}</span></span><span class="ui-row-trail"><button type="button" class="pa-btn pa-btn--small" data-sm-new="${esc(c)}">Add it</button></span></div></li>`).join('')
       || `<li><div class="ui-row"><span class="ui-row-main"><span class="ui-row-sub">Nothing yet.</span></span></div></li>`;
   };
   const got = code => {
@@ -1719,8 +1719,8 @@ function openCold(it, batchId, kind) {
     title: `${verb} ${it.name}`, closeLabel: 'Cancel', grey: true,
     body: `${b.qty > 1 ? `<ul class="ui-list"><li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title" id="pa-cold-l">How many</span><span class="ui-row-sub">of ${b.qty}</span></span>
         ${stepperHtml({ id: 'pa-cold-qty', labelledby: 'pa-cold-l', value: b.qty, min: 1, max: b.qty })}</div></li></ul>` : ''}
-      ${places.length > 1 ? `<fieldset class="pa-moveto" id="pa-cold-where"><legend class="pa-section-header">${kind === 'freezer' ? 'Which freezer' : 'Which fridge'}</legend><ul class="ui-list">${places.map(row).join('')}</ul></fieldset>` : ''}
-      <p class="pa-section-footer" id="pa-cold-note" role="status"></p>`,
+      ${places.length > 1 ? `<fieldset class="pa-moveto" id="pa-cold-where"><legend class="ui-section-head">${kind === 'freezer' ? 'Which freezer' : 'Which fridge'}</legend><ul class="ui-list">${places.map(row).join('')}</ul></fieldset>` : ''}
+      <p class="ui-section-foot" id="pa-cold-note" role="status"></p>`,
     footer: `<button type="button" class="pa-btn ui-primary pa-btn--block" id="pa-cold-go">${verb}</button>`,
     onClose: afterSheet,
   });
@@ -1751,7 +1751,7 @@ function openLeftovers() {
       <label class="pa-field"><span class="pa-field-label">What is it?</span><input class="pa-input" name="name" id="pa-left-name" autocomplete="off" placeholder="Chicken curry, fried rice…" required aria-describedby="pa-left-err pa-left-when"></label>
       <p class="pa-field-error" id="pa-left-err" hidden>${icon('alert')}Say what it is</p>
       <label class="pa-field pa-gap"><span class="pa-field-label">Kept in</span><select class="pa-select" name="location">${placeOptions(fridge)}</select></label>
-      <p class="pa-section-footer" id="pa-left-when">Use within ${plural(LEFTOVER_DAYS, 'day')}, by ${esc(fmt(by))}. It shows under Use soon, and never goes on the shopping list.</p>
+      <p class="ui-section-foot" id="pa-left-when">Use within ${plural(LEFTOVER_DAYS, 'day')}, by ${esc(fmt(by))}. It shows under Use soon, and never goes on the shopping list.</p>
     </form>`,
     footer: `<button type="submit" form="pa-left" class="pa-btn ui-primary pa-btn--block">Add leftovers</button>`,
     onClose: afterSheet,
@@ -1785,7 +1785,7 @@ async function openQuick() {
       <label class="pa-field"><span class="pa-field-label">What did you buy?</span>
         <textarea class="pa-input pa-quick-text" id="pa-quick-text" autocomplete="off" placeholder="2 Meiji milk in the fridge expires 25 Oct, eggs and 3 tins of sardines"></textarea></label>
       ${Q.canListen() ? `<div class="pa-btn-row"><button type="button" class="pa-btn pa-btn--secondary pa-mic" id="pa-mic" aria-pressed="false">${icon('mic')}<span>Speak</span></button></div>` : ''}
-      <p class="pa-section-footer" id="pa-quick-hint">${Q.canListen() ? 'Tap Speak, or type.' : 'Type, or tap the microphone on your keyboard.'} Say how many, where it’s kept and the date; separate things with “and” or commas.</p>
+      <p class="ui-section-foot" id="pa-quick-hint">${Q.canListen() ? 'Tap Speak, or type.' : 'Type, or tap the microphone on your keyboard.'} Say how many, where it’s kept and the date; separate things with “and” or commas.</p>
       <ul class="ui-list" id="pa-quick-list" aria-live="polite"></ul>
     </form>`,
     footer: `<button type="submit" form="pa-quick" class="pa-btn ui-primary pa-btn--block" id="pa-quick-go" disabled>Add items</button>`,
@@ -1903,7 +1903,7 @@ function viewShop() {
       <button class="pa-btn pa-btn--compact" type="submit">Add</button></form>`;
   const again = buyAgain(suggested);
   if (again.length) {
-    h += section('Buy again', `<div class="pa-chips pa-chips--wrap pa-again" role="group" aria-labelledby="h-again">${again.map(it =>
+    h += section('Buy again', `<div class="ui-chips pa-again" data-wrap="on" role="group" aria-labelledby="h-again">${again.map(it =>
       `<button type="button" class="ui-chip" data-act="to-list" data-id="${esc(it.id)}" aria-label="Add ${esc(it.name)} to the list">${icon('plus')}${esc(it.name)}</button>`).join('')}</div>`, { id: 'again' });
   }
   const line = m => `<li><label class="ui-row${m.done ? ' is-done' : ''}">
@@ -1928,11 +1928,11 @@ function viewShop() {
   }
   h += section('Suggested from the pantry', suggested.length
     ? `<ul class="ui-list">${suggested.map(b => `<li><div class="ui-row">${thumb(b.item)}<span class="ui-row-main"><span class="pa-row-title">${esc(b.item.name)}</span><span class="ui-row-sub">${esc(L.whyText(b, today()))}</span></span>
-        <span class="pa-row-trail"><button type="button" class="pa-btn pa-btn--small" data-act="to-list" data-id="${esc(b.item.id)}" aria-label="Add ${esc(b.item.name)} to the list">Add</button></span></div></li>`).join('')}</ul>`
+        <span class="ui-row-trail"><button type="button" class="pa-btn pa-btn--small" data-act="to-list" data-id="${esc(b.item.id)}" aria-label="Add ${esc(b.item.name)} to the list">Add</button></span></div></li>`).join('')}</ul>`
     : '', { id: 'suggested', footer: suggested.length ? 'Out of stock, running low, or due to run out within a week at your usual pace.' : 'Nothing is running low.' });
   if (todo.length || suggested.length) {
     h += `<p class="pa-share-line pa-going"><a class="pa-btn pa-btn--secondary pa-btn--block" id="pa-wa-going" href="${esc(L.waLink(goingText()))}" target="_blank" rel="noopener">${icon('share')}Going shopping now<span class="pa-sr"> (opens WhatsApp)</span></a></p>
-      <p class="pa-section-footer pa-going-foot">Tells the family on WhatsApp, with the list, so they can add anything before you’re back.</p>`;
+      <p class="ui-section-foot pa-going-foot">Tells the family on WhatsApp, with the list, so they can add anything before you’re back.</p>`;
   }
   return h;
 }
@@ -2063,12 +2063,12 @@ function viewRemoved() {
     const by = x.removedBy ? `Removed by ${nameOf(x.removedBy)}` : 'Removed';
     const sub = [kind === 'items' ? x.location : kind === 'places' ? 'Place' : 'Shopping list', by, L.daysLeftText(L.daysLeft(x)), landed.has(x.id) ? 'Your change is kept' : ''].filter(Boolean).join(' · ');
     return `<li><div class="ui-row pa-removed"><span class="ui-row-main"><span class="pa-row-title pa-break">${esc(x.name)}</span><span class="ui-row-sub pa-break">${esc(sub)}</span></span>
-      <span class="pa-row-trail"><button type="button" class="pa-btn pa-btn--small" data-act="restore" data-kind="${kind}" data-id="${esc(x.id)}" aria-label="Restore ${esc(x.name)}">Restore</button></span></div></li>`;
+      <span class="ui-row-trail"><button type="button" class="pa-btn pa-btn--small" data-act="restore" data-kind="${kind}" data-id="${esc(x.id)}" aria-label="Restore ${esc(x.name)}">Restore</button></span></div></li>`;
   };
   let h = `<h1 class="ui-large-title">Recently removed</h1><p class="pa-large-sub">Kept for ${L.REMOVED_DAYS} days</p>`;
   if (!its.length && !lines.length && !pls.length) {
-    return h + `<div class="pa-card pa-empty"><span class="pa-empty-icon">${icon('trash')}</span><p class="pa-empty-title">Nothing removed</p>
-      <p class="pa-empty-text">Items, shopping list lines and places you delete wait here for ${L.REMOVED_DAYS} days, so you can put them back.</p></div>`;
+    return h + `<div class="ui-card ui-empty"><span class="ui-empty-icon">${icon('trash')}</span><p class="ui-empty-title">Nothing removed</p>
+      <p class="ui-empty-text">Items, shopping list lines and places you delete wait here for ${L.REMOVED_DAYS} days, so you can put them back.</p></div>`;
   }
   if (its.length) h += section('Items', `<ul class="ui-list" id="pa-removed">${its.map(x => row(x, 'items')).join('')}</ul>`, { id: 'removed-items', count: its.length, footer: 'Restore brings the item back with its history and any change made to it since.' });
   if (lines.length) h += section('Shopping list', `<ul class="ui-list" id="pa-removed-lines">${lines.map(x => row(x, 'shop')).join('')}</ul>`, { id: 'removed-lines', count: lines.length });
@@ -2138,7 +2138,7 @@ function viewPlaces() {
   const counts = P.placeCounts(items());
   const row = p => { const n = counts.get(p) || 0; return `<li><button type="button" class="ui-row pa-place" data-act="place-open" data-v="${esc(p)}">
       <span class="ui-row-main"><span class="pa-row-title">${esc(p)}</span>${kindOfPlace(p) !== 'other' ? `<span class="ui-row-sub">${esc(P.KIND_LABELS[kindOfPlace(p)])}</span>` : ''}</span>
-      <span class="pa-row-value">${n}<span class="pa-sr"> ${n === 1 ? 'item' : 'items'}</span></span>${chevron()}</button></li>`; };
+      <span class="ui-row-value">${n}<span class="pa-sr"> ${n === 1 ? 'item' : 'items'}</span></span>${chevron()}</button></li>`; };
   let h = `<h1 class="ui-large-title">Places</h1><p class="pa-large-sub">Where things are kept${S.mode === 'cloud' ? ', shared with the family' : ''}</p>`;
   h += section('Your places', `<ul class="ui-list" id="pa-places">${listed.map(row).join('')}</ul>`,
     { id: 'places-list', count: listed.length, footer: 'Tap a place to rename it, move it up or down, or remove it. Add and Items show them in this order.' });
@@ -2173,9 +2173,9 @@ const kindNote = name => `${placeByName(name)?.kind ? '' : 'Guessed from the nam
 function placeKindSection(name) {
   const k = kindOfPlace(name);
   const seg = v => `<label class="pa-seg"><input type="radio" name="pa-pl-kind" value="${v}"${k === v ? ' checked' : ''}><span>${v === 'other' ? 'Other' : esc(P.KIND_LABELS[v])}</span></label>`;
-  return `<section class="pa-section" aria-labelledby="pa-pl-kind-h"><h3 class="pa-section-header" id="pa-pl-kind-h">Kind of place</h3>
+  return `<section class="ui-section" aria-labelledby="pa-pl-kind-h"><h3 class="ui-section-head" id="pa-pl-kind-h">Kind of place</h3>
     <fieldset class="ui-segmented pa-pl-kind"><legend class="pa-sr">Kind of place</legend>${P.KINDS.map(seg).join('')}</fieldset>
-    <p class="pa-section-footer" id="pa-pl-kind-note">${esc(kindNote(name))}</p></section>`;
+    <p class="ui-section-foot" id="pa-pl-kind-note">${esc(kindNote(name))}</p></section>`;
 }
 function setPlaceKind(e, kind) {
   materializePlaces();
@@ -2197,12 +2197,12 @@ function openPlace(name) {
       <p class="pa-text pa-pl-count">${n ? `${esc(plural(n, 'item'))} kept here. Renaming moves ${n === 1 ? 'it' : 'them'} too.` : 'No items kept here.'}</p>
       ${listed() ? placeKindSection(name) : ''}
       ${listed()
-        ? `<section class="pa-section" aria-labelledby="pa-pl-order"><h3 class="pa-section-header" id="pa-pl-order">Order</h3>
+        ? `<section class="ui-section" aria-labelledby="pa-pl-order"><h3 class="ui-section-head" id="pa-pl-order">Order</h3>
           <div class="pa-btn-row pa-pl-move"><button type="button" class="pa-btn pa-btn--secondary" data-pl="up" aria-label="Move up, ${esc(name)}">${icon('chevron-left', { cls: 'pa-up' })}Move up</button><button type="button" class="pa-btn pa-btn--secondary" data-pl="down" aria-label="Move down, ${esc(name)}">${icon('chevron-left', { cls: 'pa-down' })}Move down</button></div>
-          <p class="pa-section-footer" id="pa-pl-pos" role="status">${esc(pos())}</p></section>`
+          <p class="ui-section-foot" id="pa-pl-pos" role="status">${esc(pos())}</p></section>`
         : `<div class="pa-btn-stack pa-pl-add"><button type="button" class="pa-btn pa-btn--secondary pa-btn--block" data-pl="list">${icon('plus')}Add to your list</button></div>`}
-      <ul class="ui-list pa-pl-del"><li><button type="button" class="ui-row pa-row--danger pa-row--center" data-pl="remove"${only ? ' aria-disabled="true" aria-describedby="pa-pl-only"' : ''}><span class="ui-row-main"><span class="pa-row-title">${listed() ? 'Remove place' : 'Move its items'}</span></span></button></li></ul>
-      ${only ? '<p class="pa-section-footer" id="pa-pl-only">Keep at least one place.</p>' : ''}`,
+      <ul class="ui-list pa-pl-del"><li><button type="button" class="ui-row" data-tone="danger" data-align="center" data-pl="remove"${only ? ' aria-disabled="true" aria-describedby="pa-pl-only"' : ''}><span class="ui-row-main"><span class="pa-row-title">${listed() ? 'Remove place' : 'Move its items'}</span></span></button></li></ul>
+      ${only ? '<p class="ui-section-foot" id="pa-pl-only">Keep at least one place.</p>' : ''}`,
     onClose: afterSheet,
   });
   const el = s.el;
@@ -2321,11 +2321,11 @@ function familyList(h, { demo = false, extra = '' } = {}) {
   const n = names();
   const person = m => {
     const sub = [n[m] ? m : '', m === h.owner ? 'Started it' : '', m === me() ? 'You' : ''].filter(Boolean).join(' · ');
-    return `<li><button type="button" class="ui-row pa-person" data-act="person" data-v="${esc(m)}"><span class="pa-row-icon pa-row-icon--grey">${icon('user')}</span>
+    return `<li><button type="button" class="ui-row pa-person" data-act="person" data-v="${esc(m)}"><span class="ui-row-lead" data-tone="grey">${icon('user')}</span>
       <span class="ui-row-main"><span class="pa-row-title pa-break">${esc(n[m] || m)}</span>${sub ? `<span class="ui-row-sub pa-break">${esc(sub)}</span>` : ''}</span>${chevron()}</button></li>`;
   };
   return `<ul class="ui-list">
-      <li><div class="ui-row"><span class="pa-row-icon">${icon('cloud')}</span><span class="ui-row-main"><span class="pa-row-title">${esc(h.name)}</span><span class="ui-row-sub pa-break">${demo ? 'Demo family' : `Signed in as ${esc(me())}`}</span></span></div></li>
+      <li><div class="ui-row"><span class="ui-row-lead">${icon('cloud')}</span><span class="ui-row-main"><span class="pa-row-title">${esc(h.name)}</span><span class="ui-row-sub pa-break">${demo ? 'Demo family' : `Signed in as ${esc(me())}`}</span></span></div></li>
       ${h.members.map(person).join('')}${extra}</ul>
     <form class="pa-addline pa-member" id="pa-member-add"><label class="pa-sr" for="pa-member-email">Family member’s email</label>
       <input class="pa-input" id="pa-member-email" type="email" placeholder="Family member’s email" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -2362,17 +2362,17 @@ function openPerson(email) {
   const canRemove = email !== h.owner && email !== me();
   const s = sheet({
     title: names()[email] || 'Family member', closeLabel: 'Done', grey: true,
-    body: `<ul class="ui-list"><li><div class="ui-row"><span class="pa-row-icon">${icon('mail')}</span><span class="ui-row-main"><span class="pa-row-title pa-break">${esc(email)}</span>
+    body: `<ul class="ui-list"><li><div class="ui-row"><span class="ui-row-lead">${icon('mail')}</span><span class="ui-row-main"><span class="pa-row-title pa-break">${esc(email)}</span>
         <span class="ui-row-sub">${email === h.owner ? 'Started the family pantry' : 'Google account'}${email === me() ? ' · you' : ''}</span></span></div></li></ul>
       <form id="pa-person" class="pa-person-form" novalidate>
         <label class="pa-field"><span class="pa-field-label">${email === me() ? 'Your name' : 'Name'}</span>
           <input class="pa-input" name="name" id="pa-person-name" value="${esc(names()[email] || '')}" maxlength="${PP.NAME_MAX}" autocomplete="off" placeholder="For example, Mum or Ah Mei" aria-describedby="pa-person-hint"></label>
-        <p class="pa-section-footer" id="pa-person-hint">Everyone in the family sees this name instead of the email, in history and on the shopping list. Leave it empty to show the email.</p>
+        <p class="ui-section-foot" id="pa-person-hint">Everyone in the family sees this name instead of the email, in history and on the shopping list. Leave it empty to show the email.</p>
         <button type="submit" class="pa-btn ui-primary pa-btn--block">Save</button>
       </form>
       <ul class="ui-list pa-person-acts">
-        ${email !== me() ? `<li><a class="ui-row pa-row--action" href="${esc(inviteHref(email))}"><span class="pa-row-icon">${icon('mail')}</span><span class="ui-row-main"><span class="pa-row-title">Email an invite</span><span class="ui-row-sub">From your own mail app, with the link</span></span></a></li>` : ''}
-        ${canRemove ? `<li><button type="button" class="ui-row pa-row--danger pa-row--center" data-pp="remove"><span class="ui-row-main"><span class="pa-row-title">Stop sharing</span></span></button></li>` : ''}
+        ${email !== me() ? `<li><a class="ui-row" data-tone="action" href="${esc(inviteHref(email))}"><span class="ui-row-lead">${icon('mail')}</span><span class="ui-row-main"><span class="pa-row-title">Email an invite</span><span class="ui-row-sub">From your own mail app, with the link</span></span></a></li>` : ''}
+        ${canRemove ? `<li><button type="button" class="ui-row" data-tone="danger" data-align="center" data-pp="remove"><span class="ui-row-main"><span class="pa-row-title">Stop sharing</span></span></button></li>` : ''}
       </ul>`,
     onClose: afterSheet,
   });
@@ -2426,18 +2426,18 @@ async function showVersion(el) {
 
 function viewSettings() {
   const configured = !!S.cloud?.configured;
-  const row = (inner, cls = '') => `<li><div class="ui-row${cls}">${inner}</div></li>`;
-  const btnRow = (act, title, { cls = ' pa-row--action', iconName = '', sub = '' } = {}) => `<li><button type="button" class="ui-row${cls}" data-act="${act}">${iconName ? `<span class="pa-row-icon">${icon(iconName)}</span>` : ''}<span class="ui-row-main"><span class="pa-row-title">${title}</span>${sub ? `<span class="ui-row-sub">${sub}</span>` : ''}</span></button></li>`;
+  const row = (inner, cls = '') => `<li><div class="ui-row"${cls}>${inner}</div></li>`;
+  const btnRow = (act, title, { cls = ' data-tone="action"', iconName = '', sub = '' } = {}) => `<li><button type="button" class="ui-row"${cls} data-act="${act}">${iconName ? `<span class="ui-row-lead">${icon(iconName)}</span>` : ''}<span class="ui-row-main"><span class="pa-row-title">${title}</span>${sub ? `<span class="ui-row-sub">${sub}</span>` : ''}</span></button></li>`;
   let fam, famFoot = '';
   if (S.mode === 'demo') {
     fam = familyList(S.household, { demo: true });
     famFoot = 'A made-up family: tap someone to give them a name. Nothing is saved.';
   } else if (!configured) {
-    fam = `<ul class="ui-list">${row(`<span class="pa-row-icon pa-row-icon--grey">${icon('box')}</span><span class="ui-row-main"><span class="pa-row-title">On this phone only</span><span class="ui-row-sub">Family sharing isn’t set up yet.</span></span>`)}</ul>`;
+    fam = `<ul class="ui-list">${row(`<span class="ui-row-lead" data-tone="grey">${icon('box')}</span><span class="ui-row-main"><span class="pa-row-title">On this phone only</span><span class="ui-row-sub">Family sharing isn’t set up yet.</span></span>`)}</ul>`;
     famFoot = 'Sharing with the family needs a one-time setup of the pantry’s Firebase project (SETUP.md).';
   } else if (S.pending) {
     // a new password account, not verified yet: no family data until the emailed link has been tapped
-    fam = `<ul class="ui-list">${row(`<span class="pa-row-icon">${icon('mail')}</span><span class="ui-row-main"><span class="pa-row-title">Check your email</span><span class="ui-row-sub pa-break">We sent a link to ${esc(S.pending.email)}. Tap it, then come back here.</span></span>`)}
+    fam = `<ul class="ui-list">${row(`<span class="ui-row-lead">${icon('mail')}</span><span class="ui-row-main"><span class="pa-row-title">Check your email</span><span class="ui-row-sub pa-break">We sent a link to ${esc(S.pending.email)}. Tap it, then come back here.</span></span>`)}
       ${btnRow('verified', 'I’ve verified', { iconName: 'check' })}${btnRow('verify-resend', 'Send it again')}${btnRow('signout', 'Use a different email')}</ul>`;
     famFoot = 'The link proves the email is yours. Look in Junk or Spam if it doesn’t arrive in a minute or two.';
   } else if (!S.user) {
@@ -2445,16 +2445,16 @@ function viewSettings() {
       <p class="pa-quiet"><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-act="email-open">Use email instead</button></p>`;
     famFoot = 'Sign in to share one pantry with the family: everyone sees the same items and shopping list. Only the people added can see it.';
   } else if (!S.household && S.lost) {
-    fam = `<ul class="ui-list">${row(`<span class="pa-row-icon">${icon('alert')}</span><span class="ui-row-main"><span class="pa-row-title">Your pantry changed</span><span class="ui-row-sub pa-break">${S.lost.failed ? 'No signal to check right now.' : 'Your family pantry is gone, or this account isn’t in it any more.'}</span></span>`)}
+    fam = `<ul class="ui-list">${row(`<span class="ui-row-lead">${icon('alert')}</span><span class="ui-row-main"><span class="pa-row-title">Your pantry changed</span><span class="ui-row-sub pa-break">${S.lost.failed ? 'No signal to check right now.' : 'Your family pantry is gone, or this account isn’t in it any more.'}</span></span>`)}
       ${btnRow('hh-check', 'Try again', { iconName: 'refresh' })}${btnRow('hh-create', 'Start our family pantry')}${btnRow('signout', 'Sign out')}</ul>`;
     famFoot = `Signed in as ${esc(S.user.email)}. Try again looks for a pantry this account is in now; starting a new one is your choice.`;
   } else if (!S.household && S.lookupFailed) {
     // couldn't ask the server (no signal): not "no pantry", so no Start button
-    fam = `<ul class="ui-list">${row(`<span class="pa-row-icon">${icon('alert')}</span><span class="ui-row-main"><span class="pa-row-title">Can’t check right now</span><span class="ui-row-sub pa-break">${esc(S.user.email)}</span></span>`)}
+    fam = `<ul class="ui-list">${row(`<span class="ui-row-lead">${icon('alert')}</span><span class="ui-row-main"><span class="pa-row-title">Can’t check right now</span><span class="ui-row-sub pa-break">${esc(S.user.email)}</span></span>`)}
       ${btnRow('hh-check', 'Try again', { iconName: 'refresh' })}${btnRow('signout', 'Sign out')}</ul>`;
     famFoot = 'Connect to the internet and try again. Your family pantry is looked up first, so a second one is never started by mistake.';
   } else if (!S.household) {
-    fam = `<ul class="ui-list">${row(`<span class="pa-row-icon">${icon('user')}</span><span class="ui-row-main"><span class="pa-row-title">Signed in</span><span class="ui-row-sub">${esc(S.user.email)}</span></span>`)}
+    fam = `<ul class="ui-list">${row(`<span class="ui-row-lead">${icon('user')}</span><span class="ui-row-main"><span class="pa-row-title">Signed in</span><span class="ui-row-sub">${esc(S.user.email)}</span></span>`)}
       ${btnRow('hh-create', 'Start our family pantry')}${btnRow('hh-check', 'Check again')}${btnRow('signout', 'Sign out')}</ul>`;
     famFoot = `Not in a family pantry yet. Start one, or ask whoever started yours to add ${esc(S.user.email)}, then tap Check again.`;
   } else {
@@ -2466,15 +2466,15 @@ function viewSettings() {
     ${mergeCard()}
     ${section('Family sharing', fam, { id: 'family', footer: famFoot })}
     ${section('This device', '<div class="pa-device" id="pa-device"></div>', { id: 'device', footer: 'Look, light or dark, and how roomy the lists are. Solid turns off the see-through bars and sheets (smoother on older phones). Kept on this phone.' })}
-    ${section('Where things are kept', `<ul class="ui-list"><li><a class="ui-row" href="#/places"><span class="pa-row-icon">${icon('home')}</span><span class="ui-row-main"><span class="pa-row-title">Places</span><span class="ui-row-sub">${esc(plural(placeNames().length, 'place'))}: ${esc(placeNames().slice(0, 3).join(', '))}${placeNames().length > 3 ? '…' : ''}</span></span>${chevron()}</a></li></ul>`,
+    ${section('Where things are kept', `<ul class="ui-list"><li><a class="ui-row" href="#/places"><span class="ui-row-lead">${icon('home')}</span><span class="ui-row-main"><span class="pa-row-title">Places</span><span class="ui-row-sub">${esc(plural(placeNames().length, 'place'))}: ${esc(placeNames().slice(0, 3).join(', '))}${placeNames().length > 3 ? '…' : ''}</span></span>${chevron()}</a></li></ul>`,
       { id: 'places', footer: `Rename, reorder or add your own places.${S.mode === 'cloud' ? ' Shared with the family.' : ''}` })}
-    ${section('Recently removed', `<ul class="ui-list"><li><a class="ui-row" href="#/removed"><span class="pa-row-icon">${icon('trash')}</span><span class="ui-row-main"><span class="pa-row-title">Recently removed</span><span class="ui-row-sub">${esc((() => { const r = removedLists(), n = r.items.length + r.lines.length + r.places.length; return n ? `${plural(n, 'thing')} you can put back` : 'Nothing right now'; })())}</span></span>${chevron()}</a></li></ul>`,
+    ${section('Recently removed', `<ul class="ui-list"><li><a class="ui-row" href="#/removed"><span class="ui-row-lead">${icon('trash')}</span><span class="ui-row-main"><span class="pa-row-title">Recently removed</span><span class="ui-row-sub">${esc((() => { const r = removedLists(), n = r.items.length + r.lines.length + r.places.length; return n ? `${plural(n, 'thing')} you can put back` : 'Nothing right now'; })())}</span></span>${chevron()}</a></li></ul>`,
       { id: 'removed', footer: `Deleted items, shopping list lines and places wait here for ${L.REMOVED_DAYS} days, then go for good.` })}
-    ${section('Reminders', `<div class="pa-chips pa-chips--wrap" role="group" aria-label="Use soon means within">${Object.entries(SOON).map(([v, l]) =>
+    ${section('Reminders', `<div class="ui-chips" data-wrap="on" role="group" aria-label="Use soon means within">${Object.entries(SOON).map(([v, l]) =>
       `<button type="button" class="ui-chip" aria-pressed="${soonDays() === Number(v)}" data-act="soon" data-v="${v}">${l}</button>`).join('')}</div>`,
       { id: 'remind', footer: 'How far ahead “Use soon” looks, on Home. Kept on this phone.' })}
     ${section('Help', `<ul class="ui-list">
-      <li><a class="ui-row" href="#/guide"><span class="pa-row-icon">${icon('info')}</span><span class="ui-row-main"><span class="pa-row-title">How to use the pantry</span></span>${chevron()}</a></li>
+      <li><a class="ui-row" href="#/guide"><span class="ui-row-lead">${icon('info')}</span><span class="ui-row-main"><span class="pa-row-title">How to use the pantry</span></span>${chevron()}</a></li>
       ${btnRow('welcome', 'Show the welcome again', { iconName: 'home' })}
       ${tourOn() ? '' : btnRow('tour-on', 'Show the getting-started list', { iconName: 'list' })}
     </ul>`, { id: 'help' })}
@@ -2484,11 +2484,11 @@ function viewSettings() {
     ${section('Your data', `<ul class="ui-list">
       ${btnRow('csv', 'Export as CSV', { iconName: 'download', sub: 'A spreadsheet of what’s in stock' })}
       ${btnRow('backup', 'Back up', { iconName: 'download', sub: 'Everything, as a JSON file' })}
-      <li><label class="ui-row pa-row--action"><span class="pa-row-icon">${icon('upload')}</span><span class="ui-row-main"><span class="pa-row-title">Restore a backup</span><span class="ui-row-sub">Adds the items in a backup file</span></span><input type="file" accept="application/json,.json" class="pa-file" id="pa-restore"></label></li>
+      <li><label class="ui-row" data-tone="action"><span class="ui-row-lead">${icon('upload')}</span><span class="ui-row-main"><span class="pa-row-title">Restore a backup</span><span class="ui-row-sub">Adds the items in a backup file</span></span><input type="file" accept="application/json,.json" class="pa-file" id="pa-restore"></label></li>
       ${btnRow('sample', 'Add sample items', { iconName: 'box', sub: 'Made-up items to try the app with' })}
-      ${S.mode === 'local' ? btnRow('wipe', 'Delete everything on this phone', { cls: ' pa-row--danger' }) : ''}
+      ${S.mode === 'local' ? btnRow('wipe', 'Delete everything on this phone', { cls: ' data-tone="danger"' }) : ''}
     </ul>`, { id: 'data' })}
-    ${section('On your home screen', `<div class="pa-card pa-install"><p class="pa-card-text"><strong>iPhone:</strong> in Safari, tap Share, then Add to Home Screen.</p><p class="pa-card-text"><strong>Android:</strong> in Chrome, open the menu, then Add to home screen or Install app.</p><p class="pa-card-text">It then opens like an app and works without signal.</p></div>`, { id: 'install' })}
+    ${section('On your home screen', `<div class="ui-card pa-install"><p class="ui-card-text"><strong>iPhone:</strong> in Safari, tap Share, then Add to Home Screen.</p><p class="ui-card-text"><strong>Android:</strong> in Chrome, open the menu, then Add to home screen or Install app.</p><p class="ui-card-text">It then opens like an app and works without signal.</p></div>`, { id: 'install' })}
     ${section('About', '', { id: 'about', footer: 'Product suggestions are common Singapore supermarket goods; “keeps once opened” days are a rough guide, so check the label. Barcode look-ups use Open Food Facts, Open Products Facts and Open Beauty Facts. Shop links open FairPrice’s, Sheng Siong’s, Cold Storage’s and Shopee’s own search.' })}
     <div id="pa-version"></div>`;
 }
@@ -3073,8 +3073,8 @@ function mergeCard() {
   const p = MG.plan(S.pantries, S.household?.id, me());
   const notMine = [...new Set(p.notMine.map(h => nameOf(h.owner)))];
   const body = p.notMine.length && !S.pantries.some(h => h.owner === me())
-    ? `<li><div class="ui-row"><span class="pa-row-icon">${icon('alert')}</span><span class="ui-row-main"><span class="pa-row-title">You’re in more than one family pantry</span><span class="ui-row-sub pa-break">Ask ${esc(notMine.join(' or '))} to merge them.</span></span></div></li>`
-    : `<li><button type="button" class="ui-row pa-row--action" data-act="merge-open"><span class="pa-row-icon">${icon('alert')}</span><span class="ui-row-main"><span class="pa-row-title">You’re in more than one family pantry</span><span class="ui-row-sub">Merge them into one</span></span>${chevron()}</button></li>`;
+    ? `<li><div class="ui-row"><span class="ui-row-lead">${icon('alert')}</span><span class="ui-row-main"><span class="pa-row-title">You’re in more than one family pantry</span><span class="ui-row-sub pa-break">Ask ${esc(notMine.join(' or '))} to merge them.</span></span></div></li>`
+    : `<li><button type="button" class="ui-row" data-tone="action" data-act="merge-open"><span class="ui-row-lead">${icon('alert')}</span><span class="ui-row-main"><span class="pa-row-title">You’re in more than one family pantry</span><span class="ui-row-sub">Merge them into one</span></span>${chevron()}</button></li>`;
   return section('Two family pantries', `<ul class="ui-list">${body}</ul>`, { id: 'merge', footer: 'The same email is in more than one family pantry, so you may see a different one on another phone. Merging moves everything into one.' });
 }
 // The merge sheet: each pantry (name, who started it, how many people), the one with the most people chosen to keep.
@@ -3096,7 +3096,7 @@ async function openMerge() {
     body.innerHTML = `<p class="pa-em-lead">Choose the one to keep. Everything in the others (items, history, shopping lists, photos, places, names and people) moves into it, then the others are deleted.</p>
       <ul class="ui-list" role="radiogroup" aria-label="Pantry to keep">${rows}</ul>
       ${why ? `<p class="pa-field-error" role="alert">${icon('alert')}<span>${esc(why)}</span></p>` : ''}
-      <p class="pa-section-footer" id="pa-merge-msg" role="status"></p>
+      <p class="ui-section-foot" id="pa-merge-msg" role="status"></p>
       <button type="button" class="pa-btn ui-primary pa-btn--block" data-pm="go"${p.canMerge ? '' : ' disabled'}>Merge into this one</button>`;
   };
   draw();
@@ -3168,7 +3168,7 @@ function openEmailSheet({ confirm = false, onSubmit = null } = {}) {
   const s = sheet({ title: confirm ? 'Finish signing in' : 'Sign in with email', closeLabel: 'Cancel', grey: true, body: '', onClose: afterSheet });
   const body = $('.ui-sheet-body', s.el);
   const emailField = (hint = '') => `<label class="pa-field"><span class="pa-field-label">Email</span>
-      <input class="pa-input" id="pa-em-email" name="email" type="email" value="${esc(mail)}" autocomplete="email" autocapitalize="off" spellcheck="false" inputmode="email" placeholder="you@example.com"${hint ? ' aria-describedby="pa-em-hint"' : ''}></label>${hint ? `<p class="pa-section-footer pa-em-hint" id="pa-em-hint">${hint}</p>` : ''}`;
+      <input class="pa-input" id="pa-em-email" name="email" type="email" value="${esc(mail)}" autocomplete="email" autocapitalize="off" spellcheck="false" inputmode="email" placeholder="you@example.com"${hint ? ' aria-describedby="pa-em-hint"' : ''}></label>${hint ? `<p class="ui-section-foot pa-em-hint" id="pa-em-hint">${hint}</p>` : ''}`;
   const errBox = () => `<p class="pa-field-error" id="pa-em-err" role="alert"${err ? '' : ' hidden'}>${icon('alert')}<span>${esc(err)}</span></p>`;
   const views = {
     email: () => `<form id="pa-em-form" novalidate>${emailField('Use the email the family added. No password needed: we email you a link that signs you in.')}${errBox()}
@@ -3177,17 +3177,17 @@ function openEmailSheet({ confirm = false, onSubmit = null } = {}) {
     password: () => `<form id="pa-em-form" novalidate>${emailField()}
         <label class="pa-field"><span class="pa-field-label">Password</span>
           <input class="pa-input" id="pa-em-pass" name="password" type="password" autocomplete="current-password" minlength="${C.MIN_PASSWORD}" aria-describedby="pa-em-phint"></label>
-        <p class="pa-section-footer pa-em-hint" id="pa-em-phint">New here? Choose at least ${C.MIN_PASSWORD} characters, then tap Create account. We email a link to check the address.</p>${errBox()}
+        <p class="ui-section-foot pa-em-hint" id="pa-em-phint">New here? Choose at least ${C.MIN_PASSWORD} characters, then tap Create account. We email a link to check the address.</p>${errBox()}
         <button type="submit" class="pa-btn ui-primary pa-btn--block" data-pe="signin">Sign in</button>
         <button type="button" class="pa-btn pa-btn--block pa-em-second" data-pe="create">Create account</button>
         <div class="pa-em-links"><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-pe="forgot">Forgot password?</button>
           <button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-pe="back">Email me a link instead</button></div></form>`,
-    sent: () => `<div class="pa-em-note"><span class="pa-row-icon">${icon('mail')}</span><div><p class="pa-em-title">Check your email</p>
+    sent: () => `<div class="pa-em-note"><span class="ui-row-lead">${icon('mail')}</span><div><p class="pa-em-title">Check your email</p>
         <p>We sent a sign-in link to <strong class="pa-break">${esc(mail)}</strong>. Tap it on this phone and you’re in.</p>
         <p>On an iPhone the link may open in Safari instead of the home-screen app. That’s fine: you’ll be signed in there. In the home-screen app, use a password instead, or ask for the link from inside the home-screen app.</p></div></div>${errBox()}
       <button type="button" class="pa-btn ui-primary pa-btn--block" data-pe="link">Send it again</button>
       <button type="button" class="pa-btn pa-btn--block pa-em-second" data-pe="pw">Use a password instead</button>`,
-    reset: () => `<div class="pa-em-note"><span class="pa-row-icon">${icon('mail')}</span><div><p class="pa-em-title">Check your email</p>
+    reset: () => `<div class="pa-em-note"><span class="ui-row-lead">${icon('mail')}</span><div><p class="pa-em-title">Check your email</p>
         <p>We sent a link to <strong class="pa-break">${esc(mail)}</strong>. Open it, choose a new password, then come back and sign in.</p></div></div>
       <button type="button" class="pa-btn ui-primary pa-btn--block" data-pe="pw">Back to sign in</button>`,
     confirm: () => `<form id="pa-em-form" novalidate><p class="pa-em-lead">You opened a sign-in link. Type the email it was sent to, to finish.</p>${emailField()}${errBox()}

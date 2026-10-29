@@ -78,7 +78,7 @@ test('the app moves an old-style photo by itself: a thumbnail on the item, the p
   expect((await fsAdmin.get(`households/${hid}/photos/old2`))?.data, 'its photo moved to photos/old2 unchanged').toBe(real);
   // and the family sees it: dad's list shows the thumbnail, his item screen the photo
   await go(dad, '#/items');
-  await dad.waitForFunction(t => [...document.querySelectorAll('#pa-items-list img.pa-row-thumb')].some(i => i.getAttribute('src') === t), moved.thumb);
+  await dad.waitForFunction(t => [...document.querySelectorAll('#pa-items-list img.ui-row-thumb')].some(i => i.getAttribute('src') === t), moved.thumb);
   await go(dad, '#/item/old2');
   await dad.waitForFunction(d => document.querySelector('#pa-hero')?.src === d, real);
   // deleting an item in the app hides it (a marker) and keeps its photo until the sweep purges it after 30 days

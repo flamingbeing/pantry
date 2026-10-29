@@ -28,12 +28,12 @@ test('first open: the welcome once per phone, the Getting started list, the empt
   await expect(page.locator('#h-tour'), 'first open: Getting started on Home').toHaveCount(1);
   await page.click('[data-act="tour-hide"]');
   await expect(page.locator('#h-tour'), 'Hide this list hides it').toHaveCount(0);
-  await expect(page.locator('.pa-empty-title', { hasText: 'Nothing here yet' }), 'empty pantry says so').toBeVisible();
-  await expect(page.locator('.pa-empty a[href="#/guide"]'), 'empty Home links to the guide').toBeVisible();
+  await expect(page.locator('.ui-empty-title', { hasText: 'Nothing here yet' }), 'empty pantry says so').toBeVisible();
+  await expect(page.locator('.ui-empty a[href="#/guide"]'), 'empty Home links to the guide').toBeVisible();
   await go(page, '#/shop');
-  await expect(sectionOf(page, 'h-shop').locator('.pa-section-footer'), 'an empty shopping list says how things get there').toContainText('come here by themselves');
+  await expect(sectionOf(page, 'h-shop').locator('.ui-section-foot'), 'an empty shopping list says how things get there').toContainText('come here by themselves');
   await go(page, '#/settings');
-  if (await page.locator('[data-act="signin"]').count()) await expect(sectionOf(page, 'h-family').locator('.pa-section-footer'), 'signed out: one line on why to sign in').toHaveText(/^Sign in to share/);
+  if (await page.locator('[data-act="signin"]').count()) await expect(sectionOf(page, 'h-family').locator('.ui-section-foot'), 'signed out: one line on why to sign in').toHaveText(/^Sign in to share/);
   await home(page);
   await expect(page.locator('.ui-tab[aria-current="page"]'), 'Pantry tab current').toHaveAttribute('href', '#/');
   await axe(page, 'empty home');
@@ -113,7 +113,7 @@ test('Use soon on Home, an empty name is refused in words, Cancel goes back', as
   await home(page);
   const row = sectionOf(page, 'h-use-soon').locator('.ui-row', { hasText: 'Baby spinach' });
   await expect(row, 'expiring item under Use soon').toHaveCount(1);
-  await expect(page.locator('.ui-row', { hasText: 'Baby spinach' }).locator('.pa-badge--warn'), 'with an in 2 days badge').toHaveText('in 2 days');
+  await expect(page.locator('.ui-row', { hasText: 'Baby spinach' }).locator('.ui-badge[data-tone="warn"]'), 'with an in 2 days badge').toHaveText('in 2 days');
   // an empty name is refused in words
   await page.click('[data-act="go-add"]:visible');
   await page.click('#pa-save');
@@ -217,7 +217,7 @@ test('Items: search, place chips, sort; an item opened from the list goes back t
   await page.click('[data-act="place"][data-v="Fridge"]');
   await expect(page.locator('#pa-items-list .ui-row-sub', { hasText: 'Kitchen cabinet' }), 'place chip filters').toHaveCount(0);
   await page.click('.pa-seg:has(input[value="category"])');
-  await expect.poll(() => page.locator('#pa-items-list .pa-section').count(), 'category sort groups the list').toBeGreaterThan(1);
+  await expect.poll(() => page.locator('#pa-items-list .ui-section').count(), 'category sort groups the list').toBeGreaterThan(1);
   await page.click('[data-act="place"][data-v=""]');
   await axe(page, 'items');
   await shot(page, '07-items', true);
@@ -239,7 +239,7 @@ test('Settings: Use soon, the guide and its back button, the welcome again', asy
   await expect(page.locator('h1'), 'the guide opens from Settings').toHaveText('How to use the pantry');
   await expect(page.locator('.pa-back span'), 'its back button names Settings').toHaveText('Settings');
   await expect(page.locator('.ui-tab[aria-current="page"]'), 'Settings stays the current tab').toHaveAttribute('href', '#/settings');
-  await expect(page.locator('#main .pa-section'), 'seven guide sections').toHaveCount(7);
+  await expect(page.locator('#main .ui-section'), 'seven guide sections').toHaveCount(7);
   await page.goBack();
   await expect.poll(() => hash(page), 'back returns to Settings').toBe('#/settings');
   await page.click('#main a[href="#/guide"]');

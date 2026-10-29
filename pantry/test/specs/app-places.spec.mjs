@@ -8,7 +8,7 @@ const DEFAULTS = ['Kitchen cabinet', 'Fridge', 'Level 1 fridge', 'Freezer', 'Lev
 const state = page => page.evaluate(() => ({ list: window.__pantry.places(), items: [...window.__pantry.S.items.values()].filter(i => !i.removedAt).map(i => ({ id: i.id, name: i.name, location: i.location })) }));
 const list = page => page.evaluate(() => window.__pantry.places());
 const rows = page => page.locator('#pa-places .pa-row-title');
-const countOf = (page, name) => page.locator('#pa-places .ui-row, #pa-places-other .ui-row').filter({ has: page.locator('.pa-row-title', { hasText: new RegExp(`^${name}$`) }) }).locator('.pa-row-value').textContent().then(t => t.replace(/\D+/g, ''));
+const countOf = (page, name) => page.locator('#pa-places .ui-row, #pa-places-other .ui-row').filter({ has: page.locator('.pa-row-title', { hasText: new RegExp(`^${name}$`) }) }).locator('.ui-row-value').textContent().then(t => t.replace(/\D+/g, ''));
 const openPlace = async (page, name) => { await page.locator(`[data-act="place-open"][data-v="${name}"]`).click(); await expect(sheetOpen(page)).toBeVisible(); };
 const kindOf = (page, n) => page.evaluate(x => [...window.__pantry.S.places.values()].find(p => p.name === x && !p.removedAt)?.kind, n);
 const placeOptions = page => page.locator('#pa-form [name="location"] option').allTextContents();

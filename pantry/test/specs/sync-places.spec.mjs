@@ -125,7 +125,7 @@ test('a rename moves the items in the place; an item added offline under the old
   for (const p of [mum, dad]) {
     await go(p, '#/places');
     await expect(p.locator('#pa-places-other [data-act="place-open"][data-v="Level 1 freezer"]'), '"Not in your list": the item is still found').toBeVisible();
-    await expect(p.locator('#pa-places-other .ui-row', { hasText: 'Level 1 freezer' }).locator('.pa-row-value')).toHaveText(/^\D*1\D*$/);
+    await expect(p.locator('#pa-places-other .ui-row', { hasText: 'Level 1 freezer' }).locator('.ui-row-value')).toHaveText(/^\D*1\D*$/);
   }
   // and the way out of "Not in your list": move its items to the renamed place
   await mum.locator('#pa-places-other [data-act="place-open"][data-v="Level 1 freezer"]').click();
