@@ -214,7 +214,32 @@ export function router({ render, tabs = '.ui-tabbar, .ui-sidebar', tabOf } = {})
     onClose: () => { toasts ??= toaster(doc.body); toasts.show(LABELS.backAgain, { ms: CLOSE_MS }); },
   });
   paint('none');
+  swipeTabs();
   return { get route() { return current; }, refresh: () => { current = null; paint('none'); } };
+}
+// A sideways swipe on a tab's content moves to the next or previous tab (the tab bar's links, in order). Not from the
+// screen edges (the system's Back gesture), a field, a dialog, a sheet, select mode, a sideways scroller or a pushed screen.
+function swipeTabs() {
+  const links = () => [...doc.querySelectorAll('.ui-tabbar a[href^="#/"]')].map(a => parse(a.getAttribute('href')).hash);
+  const sideways = el => { for (; el && el !== doc.body; el = el.parentElement) { if (el.scrollWidth > el.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(el).overflowX)) return true; } return false; };
+  let from = null;
+  doc.addEventListener('touchstart', e => {
+    from = null;
+    const t = e.touches[0], edge = Math.min(32, innerWidth / 14);
+    if (e.touches.length !== 1 || t.clientX < edge || t.clientX > innerWidth - edge) return;
+    if (open.length || depth() > 0 || history.state?.paSelect || !isTab(current?.hash)) return;
+    if (e.target.closest('input, textarea, select, [contenteditable], dialog, [data-swipe-own], .ui-tabbar') || sideways(e.target)) return;
+    from = { x: t.clientX, y: t.clientY, at: e.timeStamp };
+  }, { passive: true });
+  doc.addEventListener('touchend', e => {
+    const f = from; from = null;
+    const t = e.changedTouches[0];
+    if (!f || getSelection()?.toString()) return;
+    const dx = t.clientX - f.x, dy = t.clientY - f.y;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5 || e.timeStamp - f.at > 600) return;
+    const tabs = links(), i = tabs.indexOf(current.hash), j = i + (dx < 0 ? 1 : -1);
+    if (i >= 0 && tabs[j]) go(tabs[j], { nav: 'tab' });
+  }, { passive: true });
 }
 // a tab's own address (a link in the tab bar or side bar), not a screen pushed over one
 const isTab = h => [...doc.querySelectorAll(routes.tabs.split(',').map(t => t.trim() + ' a[href^="#/"]').join(','))]
