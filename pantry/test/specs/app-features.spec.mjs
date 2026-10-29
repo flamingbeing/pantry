@@ -158,12 +158,12 @@ test('Leftovers: a name, the fridge, three days, never on the list', async ({ ph
   const left = sheetOpen(page);
   await expect(left.locator('.pa-sheet-title')).toHaveText('Leftovers');
   await expect(left.locator('[name="location"]'), 'Leftovers: the fridge already chosen').toHaveValue('Fridge');
-  await left.locator('.pa-sheet-foot .ui-primary').click();
+  await left.locator('.pa-sheet-foot .ui-fill').click();
   await expect(page.locator('#pa-left-err'), 'a name is needed').toBeVisible();
   await page.fill('#pa-left-name', 'Chicken curry');
   await axe(page, 'leftovers sheet');
   await shot(page, 'n07-leftovers');
-  await left.locator('.pa-sheet-foot .ui-primary').click();
+  await left.locator('.pa-sheet-foot .ui-fill').click();
   await until(async () => { const c = await itemNamed(page, 'Chicken curry'); return !!c && c.category === 'Leftovers' && c.location === 'Fridge' && !!c.noRestock && c.batches[0].expiry === ymdPlus(3); }, 'in the fridge, use within 3 days, never on the list');
   await expect(sectionOf(page, 'h-use-soon').locator('.ui-row', { hasText: 'Chicken curry' }), 'under Use soon').toHaveCount(1);
 });

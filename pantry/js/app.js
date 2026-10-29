@@ -527,10 +527,10 @@ function viewHome() {
       <span class="ui-empty-icon">${icon('box')}</span>
       <p class="ui-empty-title">Nothing here yet</p>
       <p class="ui-empty-text">Add what’s in the fridge and cupboards. The pantry then shows what to use first and what to buy.</p>
-      <button type="button" class="pa-btn ui-primary" data-act="start">Pick what you have</button>
-      <button type="button" class="pa-btn pa-btn--secondary" data-act="go-add">Add one item</button>
-      <button type="button" class="pa-btn pa-btn--plain" data-act="sample">Try it with sample items</button>
-      <a class="pa-btn pa-btn--plain" href="#/guide">How to use the pantry</a>
+      <button type="button" class="ui-fill" data-act="start">Pick what you have</button>
+      <button type="button" class="ui-tint" data-act="go-add">Add one item</button>
+      <button type="button" class="ui-plain" data-act="sample">Try it with sample items</button>
+      <a class="ui-plain" href="#/guide">How to use the pantry</a>
     </div>`;
   }
   const t = today();
@@ -540,7 +540,7 @@ function viewHome() {
   const listed = new Set(exp.map(x => x.item.id));
   const opened = all.filter(it => !listed.has(it.id) && (it.batches || []).some(b => b.openedAt && b.qty > 0));
   const m = L.monthStats(liveEvents(), t.slice(0, 7));
-  h += `<div class="pa-btn-row pa-quickrow"><button type="button" class="pa-btn pa-btn--secondary pa-btn--compact" data-act="leftovers">${icon('bowl')}Leftovers</button><button type="button" class="pa-btn pa-btn--secondary pa-btn--compact" data-act="scan-many">${icon('barcode')}Scan many</button></div>`;
+  h += `<div class="pa-btn-row pa-quickrow"><button type="button" class="ui-tint" data-act="leftovers">${icon('bowl')}Leftovers</button><button type="button" class="ui-tint" data-act="scan-many">${icon('barcode')}Scan many</button></div>`;
   h += `<div class="ui-stats" aria-label="Summary">
     <div class="ui-stat"><span class="ui-stat-value">${expired.length}</span><span class="ui-stat-label">Expired</span></div>
     <div class="ui-stat"><span class="ui-stat-value">${soon.length}</span><span class="ui-stat-label">Use soon</span></div>
@@ -550,7 +550,7 @@ function viewHome() {
   h += section('Use soon', soon.length ? `<ul class="ui-list">${soon.map(x => itemRow(x.item)).join('')}</ul>` : '', { count: soon.length || '', footer: soon.length ? `Within the next ${soonText()}.` : `Nothing runs out of date in the next ${soonText()}.` });
   const week = soon.filter(x => L.daysBetween(t, x.date) <= 7);
   if (week.length) {
-    h += `<p class="pa-share-line"><a class="pa-btn pa-btn--secondary pa-btn--compact" id="pa-wa-week" href="${esc(L.waLink(L.useWeekText(week, fmt)))}" target="_blank" rel="noopener">${icon('share')}Send “use this week” on WhatsApp<span class="pa-sr"> (opens WhatsApp)</span></a></p>`;
+    h += `<p class="pa-share-line"><a class="ui-tint" id="pa-wa-week" href="${esc(L.waLink(L.useWeekText(week, fmt)))}" target="_blank" rel="noopener">${icon('share')}Send “use this week” on WhatsApp<span class="pa-sr"> (opens WhatsApp)</span></a></p>`;
   }
   if (opened.length) h += section('Opened', `<ul class="ui-list">${opened.map(it => itemRow(it)).join('')}</ul>`, { count: opened.length });
   if (buy.length) {
@@ -572,7 +572,7 @@ function viewLost() {
   if (!S.lost) return '';
   return `<div class="pa-panel pa-alert pa-lost" id="pa-lost" role="status">${icon('alert')}<span><strong>Your pantry changed.</strong> The family pantry you were using is gone, or this account isn’t in it any more.
     ${S.lost.failed ? 'There’s no signal to check right now.' : 'This phone is showing its own pantry for now.'}
-    <button type="button" class="pa-btn pa-btn--small" data-act="hh-check">Try again</button></span></div>`;
+    <button type="button" class="ui-tint" data-size="small" data-act="hh-check">Try again</button></span></div>`;
 }
 
 // This phone's change landed on an item another phone had removed: it is kept, hidden, and Recently removed has it.
@@ -593,7 +593,7 @@ function viewSince() {
   if (!list.length) return '';
   const row = x => `<li><div class="ui-row"><span class="ui-row-lead" data-tone="grey">${icon('user')}</span><span class="ui-row-main"><span class="pa-row-title">${esc(nameOf(x.by))} ${esc(L.sinceText(x))}</span><span class="ui-row-sub">${esc(L.agoText(x.at))}</span></span></div></li>`;
   return section('Since you last looked', `<ul class="ui-list pa-since">${list.slice(0, 5).map(row).join('')}</ul>`,
-    { id: 'since', count: list.length, footer: `${list.length > 5 ? `And ${list.length - 5} more. ` : ''}<button type="button" class="pa-btn pa-btn--plain pa-btn--compact pa-since-ok" data-act="since-ok">Got it</button>` });
+    { id: 'since', count: list.length, footer: `${list.length > 5 ? `And ${list.length - 5} more. ` : ''}<button type="button" class="ui-plain pa-since-ok" data-act="since-ok">Got it</button>` });
 }
 // This phone looked: remember when (per phone), so the next open shows only what happened after.
 function looked() { S.since = new Date().toISOString(); prefs.set('lastSeen', S.since); }
@@ -613,15 +613,15 @@ function viewTour() {
   if (done === list.length) {
     return section('Getting started', `<div class="ui-card pa-tour-done"><p class="ui-card-title">All set</p>
       <p class="ui-card-text">You know your way around. The guide in Settings has the rest.</p>
-      <button type="button" class="pa-btn pa-btn--secondary" data-act="tour-hide">Hide this</button></div>`, { id: 'tour' });
+      <button type="button" class="ui-tint" data-act="tour-hide">Hide this</button></div>`, { id: 'tour' });
   }
   const row = t => `<li><div class="ui-row pa-tour-row${t.done ? ' is-done' : ''}">
       <span class="pa-tour-mark" aria-hidden="true">${t.done ? icon('check') : ''}</span>
       <span class="ui-row-main"><span class="pa-row-title">${esc(t.title)}<span class="pa-sr">${t.done ? ', done' : ', to do'}</span></span><span class="ui-row-sub">${esc(t.sub)}</span></span>
-      ${t.done ? '' : `<span class="ui-row-trail"><button type="button" class="pa-btn pa-btn--small" data-act="tour-show" data-task="${t.id}" aria-label="Show me: ${esc(t.title)}">Show me</button></span>`}
+      ${t.done ? '' : `<span class="ui-row-trail"><button type="button" class="ui-tint" data-size="small" data-act="tour-show" data-task="${t.id}" aria-label="Show me: ${esc(t.title)}">Show me</button></span>`}
     </div></li>`;
   return section('Getting started', `<ul class="ui-list pa-tour">${list.map(row).join('')}</ul>
-    <p class="pa-tour-foot"><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-act="tour-hide">Hide this list</button></p>`,
+    <p class="pa-tour-foot"><button type="button" class="ui-plain" data-act="tour-hide">Hide this list</button></p>`,
     { id: 'tour', count: `${done} of ${list.length}` });
 }
 // Point at a button on the screen just drawn: scroll it into view, ring it for a few seconds, focus it.
@@ -674,7 +674,7 @@ function openStarter() {
       ${groups.map((g, i) => `<section class="ui-section" aria-labelledby="pa-sg-${i}"><h3 class="ui-section-head" id="pa-sg-${i}">${esc(g)}</h3>
         <div class="ui-chips pa-start-chips" data-wrap="on" role="group" aria-labelledby="pa-sg-${i}">${choices.filter(c => c.group === g).map(chip).join('')}</div></section>`).join('')}
       <p class="ui-section-foot">Not here? Add it afterwards with + or the microphone.</p>`,
-    footer: `<button type="button" class="pa-btn ui-primary pa-btn--block" id="pa-start-go" disabled>Add items</button>`,
+    footer: `<button type="button" class="ui-fill ui-wide" id="pa-start-go" disabled>Add items</button>`,
     onClose: afterSheet,
   });
   const go = $('#pa-start-go', s.el);
@@ -776,7 +776,7 @@ function itemsList() {
   if (!list.length) {
     return all.length
       ? `<div class="ui-empty"><span class="ui-empty-icon">${icon('search')}</span><p class="ui-empty-title">Nothing found</p><p class="ui-empty-text">No items match. Try another word or place.</p></div>`
-      : `<div class="ui-card ui-empty"><span class="ui-empty-icon">${icon('box')}</span><p class="ui-empty-title">No items yet</p><p class="ui-empty-text">Add what’s at home to start.</p><button type="button" class="pa-btn ui-primary" data-act="go-add">Add an item</button></div>`;
+      : `<div class="ui-card ui-empty"><span class="ui-empty-icon">${icon('box')}</span><p class="ui-empty-title">No items yet</p><p class="ui-empty-text">Add what’s at home to start.</p><button type="button" class="ui-fill" data-act="go-add">Add an item</button></div>`;
   }
   const groups = itemGroups(list);
   if (!groups) return section(plural(list.length, 'item'), `<ul class="ui-list">${list.map(i => itemRow(i, { select: S.sel.on, grip: true })).join('')}</ul>`, { id: 'items' });
@@ -811,10 +811,10 @@ function exitSelect({ pop = true } = {}) {
 // The selected items that still exist, in the list's order.
 const selectedItems = () => SEL.chosen(S.sel, items());
 function selBarHTML() {
-  const btn = (act, label, cls = '') => `<button type="button" class="pa-btn pa-btn--compact ${cls}" data-act="${act}">${label}</button>`;
+  const btn = (act, label, cls = '') => `<button type="button" class="${cls}" data-act="${act}">${label}</button>`;
   return `<div class="pa-selbar-inner"><div class="pa-selbar-row"><span class="pa-selcount" id="pa-selcount" role="status" aria-live="polite"></span>
-      <span class="pa-selbar-links"><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-act="sel-all">Select all</button><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-act="sel-none">Select none</button><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-act="sel-done">Done</button></span></div>
-    <div class="pa-selbar-acts" role="group" aria-label="What to do with the selected items">${btn('sel-move', 'Move to…', 'pa-btn--secondary')}${btn('sel-list', 'Shopping list', 'pa-btn--secondary')}${btn('sel-delete', 'Delete', 'ui-danger')}</div></div>`;
+      <span class="pa-selbar-links"><button type="button" class="ui-plain" data-act="sel-all">Select all</button><button type="button" class="ui-plain" data-act="sel-none">Select none</button><button type="button" class="ui-plain" data-act="sel-done">Done</button></span></div>
+    <div class="pa-selbar-acts" role="group" aria-label="What to do with the selected items">${btn('sel-move', 'Move to…', 'ui-tint')}${btn('sel-list', 'Shopping list', 'ui-tint')}${btn('sel-delete', 'Delete', 'ui-tint ui-danger')}</div></div>`;
 }
 // The bar exists only while selecting on Items. Its buttons keep their place while the numbers change (updateSelUI).
 function drawSelBar() {
@@ -929,7 +929,7 @@ function openMoveTo(list) {
   const s = sheet({
     title: `Move ${plural(list.length, 'item')}`, closeLabel: 'Cancel', grey: true,
     body: `<fieldset class="pa-moveto"><legend class="pa-sr">Move to which place?</legend><ul class="ui-list">${all.map(row).join('')}</ul></fieldset>`,
-    footer: `<button type="button" class="pa-btn ui-primary pa-btn--block" id="pa-moveto-go" aria-disabled="true">Choose a place</button>`,
+    footer: `<button type="button" class="ui-fill ui-wide" id="pa-moveto-go" aria-disabled="true">Choose a place</button>`,
     onClose: afterSheet,
   });
   const go = $('#pa-moveto-go', s.el);
@@ -1076,19 +1076,19 @@ function bulkList() {
 }
 function bulkChanges() {
   const ch = bulkState().ch, { listed, unlisted } = placeChoices();
-  const sel = (id, label, value, opts, extra = '') => `<div class="pa-bk-field"><label class="pa-field"><span class="pa-field-label">${label}</span><select class="pa-select" id="pa-bk-${id}" data-bk="${id}">${opts.map(([v, t]) => `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>${extra}</div>`;
+  const sel = (id, label, value, opts, extra = '') => `<div class="pa-bk-field"><label class="pa-field"><span class="pa-field-label">${label}</span><select id="pa-bk-${id}" data-bk="${id}">${opts.map(([v, t]) => `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>${extra}</div>`;
   const placeOpts = [['', 'Choose a place…'], ...[...listed, ...unlisted].map(p => [p, p])];
   const catOpts = [['', 'Choose a category…'], ...CATEGORIES.map(c => [c, c])];
   const x = ch.expiry;
   return `${sel('place', 'Place', ch.place ? 'set' : '', [['', 'Unchanged'], ['set', 'Move to…']],
-      ch.place ? `<label class="pa-field"><span class="pa-field-label">Move to</span><select class="pa-select" id="pa-bk-place-to" data-bk="place-to">${placeOpts.map(([v, t]) => `<option value="${esc(v)}"${v === ch.place.to ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>` : '')}
+      ch.place ? `<label class="pa-field"><span class="pa-field-label">Move to</span><select id="pa-bk-place-to" data-bk="place-to">${placeOpts.map(([v, t]) => `<option value="${esc(v)}"${v === ch.place.to ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>` : '')}
     ${sel('category', 'Category', ch.category ? 'set' : '', [['', 'Unchanged'], ['set', 'Change to…']],
-      ch.category ? `<label class="pa-field"><span class="pa-field-label">Change to</span><select class="pa-select" id="pa-bk-category-to" data-bk="category-to">${catOpts.map(([v, t]) => `<option value="${esc(v)}"${v === ch.category.to ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>` : '')}
+      ch.category ? `<label class="pa-field"><span class="pa-field-label">Change to</span><select id="pa-bk-category-to" data-bk="category-to">${catOpts.map(([v, t]) => `<option value="${esc(v)}"${v === ch.category.to ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></label>` : '')}
     ${sel('mode', 'Kept track of', ch.mode || '', [['', 'Unchanged'], ['count', 'Counting'], ['level', 'Plenty, low, out']])}
     ${sel('expiry', 'Best-before', x ? x.kind : '', [['', 'Unchanged'], ['shift', 'Move every date by…'], ['set', 'Set one date…']],
-      x?.kind === 'shift' ? `<div class="pa-bk-shift"><label class="pa-field"><span class="pa-field-label">Days</span><input class="pa-input" id="pa-bk-days" data-bk="days" type="number" inputmode="numeric" min="1" max="3650" value="${esc(x.days ?? '')}"></label>
-          <label class="pa-field"><span class="pa-field-label">Which way</span><select class="pa-select" id="pa-bk-dir" data-bk="dir"><option value="later"${x.dir !== 'earlier' ? ' selected' : ''}>Later</option><option value="earlier"${x.dir === 'earlier' ? ' selected' : ''}>Earlier</option></select></label></div>`
-      : x?.kind === 'set' ? `<label class="pa-field"><span class="pa-field-label">Date</span><input class="pa-input" id="pa-bk-date" data-bk="date" type="date" value="${esc(x.date || '')}"></label>` : '')}
+      x?.kind === 'shift' ? `<div class="pa-bk-shift"><label class="pa-field"><span class="pa-field-label">Days</span><input id="pa-bk-days" data-bk="days" type="number" inputmode="numeric" min="1" max="3650" value="${esc(x.days ?? '')}"></label>
+          <label class="pa-field"><span class="pa-field-label">Which way</span><select id="pa-bk-dir" data-bk="dir"><option value="later"${x.dir !== 'earlier' ? ' selected' : ''}>Later</option><option value="earlier"${x.dir === 'earlier' ? ' selected' : ''}>Earlier</option></select></label></div>`
+      : x?.kind === 'set' ? `<label class="pa-field"><span class="pa-field-label">Date</span><input id="pa-bk-date" data-bk="date" type="date" value="${esc(x.date || '')}"></label>` : '')}
     ${sel('list', 'Shopping list', ch.list ? 'add' : '', [['', 'Unchanged'], ['add', 'Add to the shopping list']])}
     ${sel('bin', 'Delete', ch.bin ? 'del' : '', [['', 'Unchanged'], ['del', 'Delete these items']], ch.bin ? '<p class="pa-field-hint">Delete is done on its own: any other change you chose is ignored. The items stay in Recently removed for 30 days.</p>' : '')}`;
 }
@@ -1106,12 +1106,12 @@ function viewBulk() {
         <input type="search" id="pa-bq" placeholder="Search the pantry" aria-label="Search the pantry" autocomplete="off" value="${esc(b.q)}">
         <button type="button" class="pa-search-clear" data-act="bk-q-clear" aria-label="Clear search">${icon('close')}</button></div>
       <div class="ui-chips" role="group" aria-label="Where it’s kept">${chip('', 'All', all.length)}${places.map(p => chip(p, p, all.filter(i => i.location === p).length)).join('')}</div>
-      <label class="pa-field pa-bk-cat"><span class="pa-field-label">Category</span><select class="pa-select" id="pa-bk-cat" data-bk="cat"><option value="">All categories</option>${cats.map(c => `<option value="${esc(c)}"${b.cat === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+      <label class="pa-field pa-bk-cat"><span class="pa-field-label">Category</span><select id="pa-bk-cat" data-bk="cat"><option value="">All categories</option>${cats.map(c => `<option value="${esc(c)}"${b.cat === c ? ' selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
       <div class="pa-bk-bar"><span class="pa-selcount" id="pa-bcount" role="status" aria-live="polite"></span>
-        <span class="pa-selbar-links"><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-act="bk-all">Select all matching</button><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-act="bk-none">Select none</button></span></div>
+        <span class="pa-selbar-links"><button type="button" class="ui-plain" data-act="bk-all">Select all matching</button><button type="button" class="ui-plain" data-act="bk-none">Select none</button></span></div>
       <div id="pa-bulk-list">${bulkList()}</div>`, { id: 'bk-items' })}
     ${section('What to change', `<div class="ui-card pa-bk-changes" id="pa-bulk-changes">${bulkChanges()}</div>
-      <button type="button" class="pa-btn ui-primary pa-btn--block" data-act="bk-review">Review changes</button>`, { id: 'bk-change', footer: 'Every field stays as it is until you choose. Names are changed one item at a time, on the item.' })}`;
+      <button type="button" class="ui-fill ui-wide" data-act="bk-review">Review changes</button>`, { id: 'bk-change', footer: 'Every field stays as it is until you choose. Names are changed one item at a time, on the item.' })}`;
 }
 function updateBulkUI() {
   const b = S.bulk; if (!b) return;
@@ -1160,8 +1160,8 @@ function viewBulkReview() {
     <ul class="ui-list">${lines.map(t => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title pa-break">${esc(t)}</span></span></div></li>`).join('')}</ul>
     ${notes.map(n => `<p class="pa-panel ${n.kind === 'warn' ? 'pa-warn' : ''}" role="note">${n.kind === 'warn' ? icon('alert') : ''}<span>${esc(n.text)}</span></p>`).join('')}
     ${section(p.pairs.length > 3 ? 'For example' : 'Before and after', `<ul class="ui-list">${samples}</ul>`, { id: 'bk-samples' })}
-    <div class="pa-btn-stack"><button type="button" class="pa-btn ${p.deleting ? 'ui-danger' : 'ui-primary'} pa-btn--block" data-act="bk-save">${p.deleting ? `Delete ${plural(p.changing, 'item')}` : big ? `Change ${plural(p.changing, 'item')}` : 'Save'}</button>
-      <button type="button" class="pa-btn pa-btn--plain pa-btn--block" data-act="bk-back">Back</button></div>`;
+    <div class="ui-buttons"><button type="button" class="${p.deleting ? 'ui-tint ui-danger' : 'ui-fill'} ui-wide" data-act="bk-save">${p.deleting ? `Delete ${plural(p.changing, 'item')}` : big ? `Change ${plural(p.changing, 'item')}` : 'Save'}</button>
+      <button type="button" class="ui-plain ui-wide" data-act="bk-back">Back</button></div>`;
 }
 // Save: ONE batch for the items, one for the shopping lines, ONE toast with Undo for both.
 function bulkSave() {
@@ -1208,12 +1208,12 @@ function viewItem(it) {
       <span class="ui-row-main"><span class="pa-row-title">${esc(what)}</span><span class="ui-row-sub">${esc(sub.charAt(0).toUpperCase() + sub.slice(1))}</span></span>
       <span class="ui-row-trail">${badge(d)}</span>
       <span class="pa-batch-acts">
-        ${!b.openedAt && it.openDays && !frozen ? `<button type="button" class="pa-btn pa-btn--small" data-act="open" data-b="${esc(b.id)}" aria-label="Open 1, ${esc(desc)}">Open</button>` : ''}
-        ${L.canUnfreeze(b) ? `<button type="button" class="pa-btn pa-btn--small pa-btn--quiet" data-act="unfreeze" data-b="${esc(b.id)}" aria-label="Not frozen: back to the packaging date, ${esc(b.packExpiry ? fmt(b.packExpiry) : 'no date')}">Not frozen</button>` : ''}
-        ${frozen ? `<button type="button" class="pa-btn pa-btn--small" data-act="thaw" data-b="${esc(b.id)}" aria-label="Thaw ${esc(plural(b.qty, 'unit'))}, ${esc(desc)}">${icon('droplet')}Thaw</button>`
-          : freezable(it) ? `<button type="button" class="pa-btn pa-btn--small" data-act="freeze" data-b="${esc(b.id)}" aria-label="Freeze ${esc(plural(b.qty, 'unit'))}, ${esc(desc)}">${icon('snowflake')}Freeze</button>` : ''}
-        <button type="button" class="pa-btn pa-btn--small" data-act="use" data-b="${esc(b.id)}" aria-label="Used 1, ${esc(desc)}">Used 1</button>
-        <button type="button" class="pa-btn pa-btn--small pa-btn--quiet" data-act="toss" data-b="${esc(b.id)}" aria-label="Bin 1, ${esc(desc)}">Bin 1</button>
+        ${!b.openedAt && it.openDays && !frozen ? `<button type="button" class="ui-tint" data-size="small" data-act="open" data-b="${esc(b.id)}" aria-label="Open 1, ${esc(desc)}">Open</button>` : ''}
+        ${L.canUnfreeze(b) ? `<button type="button" class="ui-plain pa-quiet" data-size="small" data-act="unfreeze" data-b="${esc(b.id)}" aria-label="Not frozen: back to the packaging date, ${esc(b.packExpiry ? fmt(b.packExpiry) : 'no date')}">Not frozen</button>` : ''}
+        ${frozen ? `<button type="button" class="ui-tint" data-size="small" data-act="thaw" data-b="${esc(b.id)}" aria-label="Thaw ${esc(plural(b.qty, 'unit'))}, ${esc(desc)}">${icon('droplet')}Thaw</button>`
+          : freezable(it) ? `<button type="button" class="ui-tint" data-size="small" data-act="freeze" data-b="${esc(b.id)}" aria-label="Freeze ${esc(plural(b.qty, 'unit'))}, ${esc(desc)}">${icon('snowflake')}Freeze</button>` : ''}
+        <button type="button" class="ui-tint" data-size="small" data-act="use" data-b="${esc(b.id)}" aria-label="Used 1, ${esc(desc)}">Used 1</button>
+        <button type="button" class="ui-plain pa-quiet" data-size="small" data-act="toss" data-b="${esc(b.id)}" aria-label="Bin 1, ${esc(desc)}">Bin 1</button>
       </span></div></li>`;
   };
   if (L.isStaple(it)) {
@@ -1225,9 +1225,9 @@ function viewItem(it) {
     h += section('In stock', `<ul class="ui-list">${batches.length ? batches.map(batchRow).join('') : `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">None left</span><span class="ui-row-sub">Bought more? Add it below.</span></span></div></li>`}</ul>`,
       { count: q, id: 'stock', footer: it.openDays ? `Keeps about ${plural(it.openDays, 'day')} once opened (the label wins).` : '' });
   }
-  h += `<div class="pa-btn-stack pa-actions">
-    ${L.isStaple(it) ? '' : `<button type="button" class="pa-btn ui-primary pa-btn--block" data-act="bought">${icon('plus')}Bought more</button>`}
-    <button type="button" class="pa-btn pa-btn--secondary pa-btn--block" data-act="to-list"${onList(it.id) ? ' aria-disabled="true"' : ''}>${icon('cart')}${onList(it.id) ? 'On the shopping list' : 'Add to shopping list'}</button>
+  h += `<div class="ui-buttons pa-actions">
+    ${L.isStaple(it) ? '' : `<button type="button" class="ui-fill ui-wide" data-act="bought">${icon('plus')}Bought more</button>`}
+    <button type="button" class="ui-tint ui-wide" data-act="to-list"${onList(it.id) ? ' aria-disabled="true"' : ''}>${icon('cart')}${onList(it.id) ? 'On the shopping list' : 'Add to shopping list'}</button>
   </div>`;
 
   // how fast the family uses it
@@ -1277,7 +1277,7 @@ function viewForm(id) {
   }
   const d = S.draft;
   const opt = (list, v) => list.map(x => `<option${x === v ? ' selected' : ''}>${esc(x)}</option>`).join('');
-  const field = (name, label, attrs = '', hint = '') => `<label class="pa-field"><span class="pa-field-label">${label}</span><input class="pa-input" name="${name}" value="${esc(d[name])}" ${attrs}>${hint ? `<span class="pa-field-hint">${hint}</span>` : ''}</label>`;
+  const field = (name, label, attrs = '', hint = '') => `<label class="pa-field"><span class="pa-field-label">${label}</span><input name="${name}" value="${esc(d[name])}" ${attrs}>${hint ? `<span class="pa-field-hint">${hint}</span>` : ''}</label>`;
   let h = `<h1 class="ui-large-title">${editing ? 'Edit item' : 'Add an item'}</h1>`;
   if (!editing) {
     h += `<section class="ui-section pa-finder" aria-label="Find a product">
@@ -1285,7 +1285,7 @@ function viewForm(id) {
         <input type="search" id="pa-find" placeholder="Soy sauce, Milo, Dynamo…" aria-label="Find a product" autocomplete="off" enterkeyhint="search">
         <button type="button" class="pa-search-clear" data-act="find-clear" aria-label="Clear">${icon('close')}</button></div>
       <ul class="ui-list" id="pa-sugg" hidden></ul>
-      <div class="pa-btn-row"><button type="button" class="pa-btn pa-btn--secondary" data-act="scan">${icon('barcode')}Scan barcode</button><button type="button" class="pa-btn pa-btn--secondary" data-act="quick">${icon('mic')}Say or type a list</button><button type="button" class="pa-btn pa-btn--secondary" data-act="leftovers">${icon('bowl')}Leftovers</button></div>
+      <div class="pa-btn-row"><button type="button" class="ui-tint" data-act="scan">${icon('barcode')}Scan barcode</button><button type="button" class="ui-tint" data-act="quick">${icon('mic')}Say or type a list</button><button type="button" class="ui-tint" data-act="leftovers">${icon('bowl')}Leftovers</button></div>
       <p class="ui-section-foot" id="pa-find-foot">Pick a common Singapore supermarket product, scan its barcode, or say what you bought, to fill in the details.</p>
     </section>`;
   }
@@ -1295,15 +1295,15 @@ function viewForm(id) {
         <label class="pa-photo">${d.pic ? `<img src="${esc(d.pic)}" alt="">` : icon('camera')}<span>${d.pic ? 'Change photo' : 'Add photo'}</span>
           <input type="file" accept="image/*" capture="environment" class="pa-file" id="pa-photo-file"></label>
         <div class="pa-photo-fields">
-          <label class="pa-field"><span class="pa-field-label">Name</span><input class="pa-input" name="name" value="${esc(d.name)}" required autocomplete="off" placeholder="Light soy sauce" aria-describedby="pa-name-err"></label>
+          <label class="pa-field"><span class="pa-field-label">Name</span><input name="name" value="${esc(d.name)}" required autocomplete="off" placeholder="Light soy sauce" aria-describedby="pa-name-err"></label>
           <p class="pa-field-error" id="pa-name-err" hidden>${icon('alert')}Give it a name</p>
         </div>
       </div>
-      ${d.pic ? `<p class="pa-photo-del"><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-act="photo-del">Remove photo</button></p>` : ''}
+      ${d.pic ? `<p class="pa-photo-del"><button type="button" class="ui-plain" data-act="photo-del">Remove photo</button></p>` : ''}
       <div class="pa-two">${field('brand', 'Brand', 'autocomplete="off" placeholder="Kikkoman"')}${field('size', 'Size', 'autocomplete="off" placeholder="500 ml"')}</div>
       <div class="pa-two">
-        <label class="pa-field"><span class="pa-field-label">Category</span><select class="pa-select" name="category">${opt(CATEGORIES, d.category)}</select></label>
-        <label class="pa-field"><span class="pa-field-label">Kept in</span><select class="pa-select" name="location">${placeOptions(d.location)}</select></label>
+        <label class="pa-field"><span class="pa-field-label">Category</span><select name="category">${opt(CATEGORIES, d.category)}</select></label>
+        <label class="pa-field"><span class="pa-field-label">Kept in</span><select name="location">${placeOptions(d.location)}</select></label>
       </div>
     </section>`;
   const track = `<fieldset class="ui-segmented pa-track"><legend>Keep track by</legend>
@@ -1316,7 +1316,7 @@ function viewForm(id) {
     h += `<section class="ui-section" aria-labelledby="h-f-stock"><h2 class="ui-section-head" id="h-f-stock">Stock</h2>${track}
       <ul class="ui-list"><li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title" id="pa-qty-l">How many</span></span>
         ${stepperHtml({ id: 'pa-qty', labelledby: 'pa-qty-l', value: Number(d.qty) || 0, min: 0, max: 99 })}</div></li></ul>
-      <label class="pa-field pa-gap"><span class="pa-field-label">Best before or use by</span><input class="pa-input" type="date" name="expiry" value="${esc(d.expiry)}"></label>
+      <label class="pa-field pa-gap"><span class="pa-field-label">Best before or use by</span><input type="date" name="expiry" value="${esc(d.expiry)}"></label>
       ${dateChips('expiry', d.expiry, d._guess)}
     </section>`;
   }
@@ -1465,7 +1465,7 @@ async function openScan() {
     title: 'Scan a barcode', closeLabel: 'Cancel',
     body: `<div class="pa-scan"><video muted playsinline aria-label="Camera view"></video></div>
       <p class="pa-text pa-scan-msg" id="pa-scan-msg" role="status">Point the camera at the barcode.</p>
-      <label class="pa-btn pa-btn--secondary pa-btn--block pa-file-btn">${icon('camera')}Use a photo instead<input type="file" accept="image/*" class="pa-file" id="pa-scan-file"></label>`,
+      <label class="ui-tint ui-wide pa-file-btn">${icon('camera')}Use a photo instead<input type="file" accept="image/*" class="pa-file" id="pa-scan-file"></label>`,
     onClose: () => { scanning?.cancel(); scanning = null; afterSheet(); },
   });
   const msg = $('#pa-scan-msg', s.el);
@@ -1588,8 +1588,8 @@ function openScanMany(mode = 'add') {
       <p class="pa-text pa-scan-msg" id="pa-sm-msg" role="status">Point the camera at each barcode in turn. Each counts once.</p>
       <section class="ui-section" aria-labelledby="pa-sm-h"><h3 class="ui-section-head" id="pa-sm-h"><span>Scanned</span><span class="pa-num" id="pa-sm-n">0</span></h3>
         <ul class="ui-list" id="pa-sm-tally"><li><div class="ui-row"><span class="ui-row-main"><span class="ui-row-sub">Nothing yet.</span></span></div></li></ul></section>
-      <label class="pa-btn pa-btn--secondary pa-btn--block pa-file-btn">${icon('camera')}Use a photo instead<input type="file" accept="image/*" class="pa-file" id="pa-sm-file"></label>`,
-    footer: `<button type="button" class="pa-btn ui-primary pa-btn--block" data-pa-close>Done</button>`,
+      <label class="ui-tint ui-wide pa-file-btn">${icon('camera')}Use a photo instead<input type="file" accept="image/*" class="pa-file" id="pa-sm-file"></label>`,
+    footer: `<button type="button" class="ui-fill ui-wide" data-pa-close>Done</button>`,
     onClose: () => {
       run?.cancel(); run = null;
       afterSheet(); redraw();
@@ -1604,7 +1604,7 @@ function openScanMany(mode = 'add') {
   const draw = () => {
     $('#pa-sm-n', el).textContent = [...tally.values()].reduce((n, t) => n + t.n, 0) + unknown.size;
     ul.innerHTML = [...tally.values()].reverse().map(t => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">${esc(t.name)}</span><span class="ui-row-sub">${esc(SCAN_MODES[t.mode])}</span></span><span class="ui-row-value">× ${t.n}</span></div></li>`).join('')
-      + [...unknown].map(c => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">New barcode</span><span class="ui-row-sub pa-unk-code">${esc(c)}</span></span><span class="ui-row-trail"><button type="button" class="pa-btn pa-btn--small" data-sm-new="${esc(c)}">Add it</button></span></div></li>`).join('')
+      + [...unknown].map(c => `<li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title">New barcode</span><span class="ui-row-sub pa-unk-code">${esc(c)}</span></span><span class="ui-row-trail"><button type="button" class="ui-tint" data-size="small" data-sm-new="${esc(c)}">Add it</button></span></div></li>`).join('')
       || `<li><div class="ui-row"><span class="ui-row-main"><span class="ui-row-sub">Nothing yet.</span></span></div></li>`;
   };
   const got = code => {
@@ -1668,10 +1668,10 @@ function openBought(it, { shopId = null } = {}) {
       <ul class="ui-list"><li><div class="ui-row">${thumb(it)}<span class="ui-row-main"><span class="pa-row-title">${esc(it.name)}</span>${subOf(it) ? `<span class="ui-row-sub">${subOf(it)}</span>` : ''}</span></div></li>
         <li><div class="ui-row"><span class="ui-row-main"><span class="pa-row-title" id="pa-b-qty-l">How many</span></span>
           ${stepperHtml({ id: 'pa-b-qty', labelledby: 'pa-b-qty-l', value: 1, min: 1, max: 99 })}</div></li></ul>
-      <label class="pa-field pa-gap"><span class="pa-field-label">Best before or use by</span><input class="pa-input" type="date" name="expiry" value="${esc(g?.date || '')}"></label>
+      <label class="pa-field pa-gap"><span class="pa-field-label">Best before or use by</span><input type="date" name="expiry" value="${esc(g?.date || '')}"></label>
       ${dateChips('expiry', g?.date || '', g)}
     </form>`,
-    footer: `<button type="submit" form="pa-bought" class="pa-btn ui-primary pa-btn--block">Add to stock</button>`,
+    footer: `<button type="submit" form="pa-bought" class="ui-fill ui-wide">Add to stock</button>`,
     onClose: afterSheet,
   });
   const qty = stepper($('#pa-b-qty', s.el), { min: 1, max: 99 });
@@ -1721,7 +1721,7 @@ function openCold(it, batchId, kind) {
         ${stepperHtml({ id: 'pa-cold-qty', labelledby: 'pa-cold-l', value: b.qty, min: 1, max: b.qty })}</div></li></ul>` : ''}
       ${places.length > 1 ? `<fieldset class="pa-moveto" id="pa-cold-where"><legend class="ui-section-head">${kind === 'freezer' ? 'Which freezer' : 'Which fridge'}</legend><ul class="ui-list">${places.map(row).join('')}</ul></fieldset>` : ''}
       <p class="ui-section-foot" id="pa-cold-note" role="status"></p>`,
-    footer: `<button type="button" class="pa-btn ui-primary pa-btn--block" id="pa-cold-go">${verb}</button>`,
+    footer: `<button type="button" class="ui-fill ui-wide" id="pa-cold-go">${verb}</button>`,
     onClose: afterSheet,
   });
   const go = $('#pa-cold-go', s.el), where = $('#pa-cold-where', s.el), note = $('#pa-cold-note', s.el);
@@ -1748,12 +1748,12 @@ function openLeftovers() {
   const s = sheet({
     title: 'Leftovers', closeLabel: 'Cancel', grey: true,
     body: `<form id="pa-left" novalidate>
-      <label class="pa-field"><span class="pa-field-label">What is it?</span><input class="pa-input" name="name" id="pa-left-name" autocomplete="off" placeholder="Chicken curry, fried rice…" required aria-describedby="pa-left-err pa-left-when"></label>
+      <label class="pa-field"><span class="pa-field-label">What is it?</span><input name="name" id="pa-left-name" autocomplete="off" placeholder="Chicken curry, fried rice…" required aria-describedby="pa-left-err pa-left-when"></label>
       <p class="pa-field-error" id="pa-left-err" hidden>${icon('alert')}Say what it is</p>
-      <label class="pa-field pa-gap"><span class="pa-field-label">Kept in</span><select class="pa-select" name="location">${placeOptions(fridge)}</select></label>
+      <label class="pa-field pa-gap"><span class="pa-field-label">Kept in</span><select name="location">${placeOptions(fridge)}</select></label>
       <p class="ui-section-foot" id="pa-left-when">Use within ${plural(LEFTOVER_DAYS, 'day')}, by ${esc(fmt(by))}. It shows under Use soon, and never goes on the shopping list.</p>
     </form>`,
-    footer: `<button type="submit" form="pa-left" class="pa-btn ui-primary pa-btn--block">Add leftovers</button>`,
+    footer: `<button type="submit" form="pa-left" class="ui-fill ui-wide">Add leftovers</button>`,
     onClose: afterSheet,
   });
   const f = $('#pa-left', s.el), name = $('#pa-left-name', s.el);
@@ -1783,12 +1783,12 @@ async function openQuick() {
     title: 'Say or type', closeLabel: 'Cancel', grey: true,
     body: `<form id="pa-quick" novalidate>
       <label class="pa-field"><span class="pa-field-label">What did you buy?</span>
-        <textarea class="pa-input pa-quick-text" id="pa-quick-text" autocomplete="off" placeholder="2 Meiji milk in the fridge expires 25 Oct, eggs and 3 tins of sardines"></textarea></label>
-      ${Q.canListen() ? `<div class="pa-btn-row"><button type="button" class="pa-btn pa-btn--secondary pa-mic" id="pa-mic" aria-pressed="false">${icon('mic')}<span>Speak</span></button></div>` : ''}
+        <textarea class="pa-quick-text" id="pa-quick-text" autocomplete="off" placeholder="2 Meiji milk in the fridge expires 25 Oct, eggs and 3 tins of sardines"></textarea></label>
+      ${Q.canListen() ? `<div class="pa-btn-row"><button type="button" class="ui-tint pa-mic" id="pa-mic" aria-pressed="false">${icon('mic')}<span>Speak</span></button></div>` : ''}
       <p class="ui-section-foot" id="pa-quick-hint">${Q.canListen() ? 'Tap Speak, or type.' : 'Type, or tap the microphone on your keyboard.'} Say how many, where it’s kept and the date; separate things with “and” or commas.</p>
       <ul class="ui-list" id="pa-quick-list" aria-live="polite"></ul>
     </form>`,
-    footer: `<button type="submit" form="pa-quick" class="pa-btn ui-primary pa-btn--block" id="pa-quick-go" disabled>Add items</button>`,
+    footer: `<button type="submit" form="pa-quick" class="ui-fill ui-wide" id="pa-quick-go" disabled>Add items</button>`,
     onClose: () => { mic?.stop(); afterSheet(); },
   });
   const ta = $('#pa-quick-text', s.el), ul = $('#pa-quick-list', s.el), go = $('#pa-quick-go', s.el);
@@ -1898,9 +1898,9 @@ function viewShop() {
   const todo = manual.filter(m => !m.done), done = manual.filter(m => m.done);
   let h = `<h1 class="ui-large-title">Shopping</h1>
     <form class="pa-addline" id="pa-shop-add"><label class="pa-sr" for="pa-shop-text">Add something to buy</label>
-      <input class="pa-input" id="pa-shop-text" placeholder="Add something to buy" autocomplete="off" enterkeyhint="done">
-      ${canSpeak() ? `<button type="button" class="pa-btn pa-btn--secondary pa-btn--icon pa-mic" id="pa-shop-mic" data-act="shop-mic" aria-pressed="false" aria-label="Say what to buy">${icon('mic')}</button>` : ''}
-      <button class="pa-btn pa-btn--compact" type="submit">Add</button></form>`;
+      <input id="pa-shop-text" placeholder="Add something to buy" autocomplete="off" enterkeyhint="done">
+      ${canSpeak() ? `<button type="button" class="ui-tint pa-round pa-mic" id="pa-shop-mic" data-act="shop-mic" aria-pressed="false" aria-label="Say what to buy">${icon('mic')}</button>` : ''}
+      <button class="ui-tint" type="submit">Add</button></form>`;
   const again = buyAgain(suggested);
   if (again.length) {
     h += section('Buy again', `<div class="ui-chips pa-again" data-wrap="on" role="group" aria-labelledby="h-again">${again.map(it =>
@@ -1909,7 +1909,7 @@ function viewShop() {
   const line = m => `<li><label class="ui-row${m.done ? ' is-done' : ''}">
       <input type="checkbox" data-shop="${esc(m.id)}"${m.done ? ' checked' : ''}>
       <span class="ui-row-main"><span class="pa-row-title">${esc(m.name)}</span>${m.by ? `<span class="ui-row-sub">Added by ${esc(nameOf(m.by))}</span>` : ''}</span>
-      <button type="button" class="pa-btn pa-btn--quiet pa-btn--icon" data-act="shop-del" data-id="${esc(m.id)}" aria-label="Remove ${esc(m.name)}">${icon('trash')}</button></label></li>`;
+      <button type="button" class="ui-plain pa-quiet pa-round" data-act="shop-del" data-id="${esc(m.id)}" aria-label="Remove ${esc(m.name)}">${icon('trash')}</button></label></li>`;
   // the lines to buy, by aisle (the catalogue's category order), so the shop is walked once
   const groups = new Map();
   for (const m of todo) { const a = aisleOf(m); if (!groups.has(a)) groups.set(a, []); groups.get(a).push(m); }
@@ -1923,15 +1923,15 @@ function viewShop() {
       : 'Pantry items come here by themselves when none are left, when they’re down to their “on the list when down to” number, or when they’ll run out within a week at your usual pace. Type anything else above.' });
   if (done.length) {
     h += section('In the trolley', `<ul class="ui-list" id="pa-shop-done">${done.map(line).join('')}</ul>
-      <div class="pa-btn-stack pa-putaway-btn"><button type="button" class="pa-btn ui-primary pa-btn--block" data-act="put-away">${icon('box')}Put away ${esc(plural(done.length, 'thing'))}</button></div>`,
+      <div class="ui-buttons pa-putaway-btn"><button type="button" class="ui-fill ui-wide" data-act="put-away">${icon('box')}Put away ${esc(plural(done.length, 'thing'))}</button></div>`,
     { id: 'trolley', action: `<button type="button" data-act="shop-clear">Clear ticked</button>`, footer: 'Home again? Put away adds them to the pantry, each with its place and date, in one go.' });
   }
   h += section('Suggested from the pantry', suggested.length
     ? `<ul class="ui-list">${suggested.map(b => `<li><div class="ui-row">${thumb(b.item)}<span class="ui-row-main"><span class="pa-row-title">${esc(b.item.name)}</span><span class="ui-row-sub">${esc(L.whyText(b, today()))}</span></span>
-        <span class="ui-row-trail"><button type="button" class="pa-btn pa-btn--small" data-act="to-list" data-id="${esc(b.item.id)}" aria-label="Add ${esc(b.item.name)} to the list">Add</button></span></div></li>`).join('')}</ul>`
+        <span class="ui-row-trail"><button type="button" class="ui-tint" data-size="small" data-act="to-list" data-id="${esc(b.item.id)}" aria-label="Add ${esc(b.item.name)} to the list">Add</button></span></div></li>`).join('')}</ul>`
     : '', { id: 'suggested', footer: suggested.length ? 'Out of stock, running low, or due to run out within a week at your usual pace.' : 'Nothing is running low.' });
   if (todo.length || suggested.length) {
-    h += `<p class="pa-share-line pa-going"><a class="pa-btn pa-btn--secondary pa-btn--block" id="pa-wa-going" href="${esc(L.waLink(goingText()))}" target="_blank" rel="noopener">${icon('share')}Going shopping now<span class="pa-sr"> (opens WhatsApp)</span></a></p>
+    h += `<p class="pa-share-line pa-going"><a class="ui-tint ui-wide" id="pa-wa-going" href="${esc(L.waLink(goingText()))}" target="_blank" rel="noopener">${icon('share')}Going shopping now<span class="pa-sr"> (opens WhatsApp)</span></a></p>
       <p class="ui-section-foot pa-going-foot">Tells the family on WhatsApp, with the list, so they can add anything before you’re back.</p>`;
   }
   return h;
@@ -1996,16 +1996,16 @@ function openPutAway() {
     return `<li class="pa-pa"><label class="ui-row"><input type="checkbox" data-pa="${i}" checked>
         <span class="ui-row-main"><span class="pa-row-title" id="pa-pa-t${i}">${esc(r.it ? r.it.name : r.m.name)}</span><span class="ui-row-sub">${r.it ? staple ? 'Back to plenty' : 'Adds to the one at home' : r.c ? `New item · ${esc(r.c.category)}` : 'New item'}</span></span></label>
       <div class="pa-pa-fields">
-        <label class="pa-field"><span class="pa-field-label">Kept in</span><select class="pa-select" name="place" data-i="${i}">${placeOptions(r.place)}</select></label>
-        ${staple ? '' : `<label class="pa-field"><span class="pa-field-label">Best before</span><input class="pa-input" type="date" name="expiry" data-i="${i}" value="${esc(r.g?.date || '')}"></label>
-        <label class="pa-field pa-pa-qty"><span class="pa-field-label">How many</span><input class="pa-input" type="number" inputmode="numeric" min="1" max="99" name="qty" data-i="${i}" value="1"></label>`}
+        <label class="pa-field"><span class="pa-field-label">Kept in</span><select name="place" data-i="${i}">${placeOptions(r.place)}</select></label>
+        ${staple ? '' : `<label class="pa-field"><span class="pa-field-label">Best before</span><input type="date" name="expiry" data-i="${i}" value="${esc(r.g?.date || '')}"></label>
+        <label class="pa-field pa-pa-qty"><span class="pa-field-label">How many</span><input type="number" inputmode="numeric" min="1" max="99" name="qty" data-i="${i}" value="1"></label>`}
       </div>${r.g ? `<p class="pa-field-hint">${esc(r.g.label)}: a guess. Change it to the date on the pack.</p>` : ''}</li>`;
   };
   const s = sheet({
     title: 'Put away', closeLabel: 'Cancel', grey: true, detent: 'large',
     body: `<p class="pa-text pa-pa-intro">Check where each goes and its date, then save them all at once. Untick anything that isn’t for the pantry.</p>
       <ul class="ui-list pa-pa-list">${rows.map(row).join('')}</ul>`,
-    footer: `<button type="button" class="pa-btn ui-primary pa-btn--block" id="pa-pa-go">Put away ${esc(plural(rows.length, 'thing'))}</button>`,
+    footer: `<button type="button" class="ui-fill ui-wide" id="pa-pa-go">Put away ${esc(plural(rows.length, 'thing'))}</button>`,
     onClose: afterSheet,
   });
   const go = $('#pa-pa-go', s.el);
@@ -2063,7 +2063,7 @@ function viewRemoved() {
     const by = x.removedBy ? `Removed by ${nameOf(x.removedBy)}` : 'Removed';
     const sub = [kind === 'items' ? x.location : kind === 'places' ? 'Place' : 'Shopping list', by, L.daysLeftText(L.daysLeft(x)), landed.has(x.id) ? 'Your change is kept' : ''].filter(Boolean).join(' · ');
     return `<li><div class="ui-row pa-removed"><span class="ui-row-main"><span class="pa-row-title pa-break">${esc(x.name)}</span><span class="ui-row-sub pa-break">${esc(sub)}</span></span>
-      <span class="ui-row-trail"><button type="button" class="pa-btn pa-btn--small" data-act="restore" data-kind="${kind}" data-id="${esc(x.id)}" aria-label="Restore ${esc(x.name)}">Restore</button></span></div></li>`;
+      <span class="ui-row-trail"><button type="button" class="ui-tint" data-size="small" data-act="restore" data-kind="${kind}" data-id="${esc(x.id)}" aria-label="Restore ${esc(x.name)}">Restore</button></span></div></li>`;
   };
   let h = `<h1 class="ui-large-title">Recently removed</h1><p class="pa-large-sub">Kept for ${L.REMOVED_DAYS} days</p>`;
   if (!its.length && !lines.length && !pls.length) {
@@ -2147,8 +2147,8 @@ function viewPlaces() {
       { id: 'places-other', footer: 'Items are still kept here. Tap one to add it to your list or move its items.' });
   }
   h += section('Add a place', `<form class="pa-addline pa-place-add" id="pa-place-add" novalidate><label class="pa-sr" for="pa-place-name">Name of the new place</label>
-      <input class="pa-input" id="pa-place-name" maxlength="${P.MAX_NAME}" placeholder="Level 2 fridge" autocomplete="off" aria-describedby="pa-place-err">
-      <button class="pa-btn pa-btn--compact" type="submit">Add</button></form>
+      <input id="pa-place-name" maxlength="${P.MAX_NAME}" placeholder="Level 2 fridge" autocomplete="off" aria-describedby="pa-place-err">
+      <button class="ui-tint" type="submit">Add</button></form>
     <p class="pa-field-error pa-place-err" id="pa-place-err" aria-live="polite" hidden></p>`,
   { id: 'places-add', footer: `Up to ${P.MAX_NAME} letters, like Level 2 fridge or Mum’s room.` });
   return h;
@@ -2190,17 +2190,17 @@ function openPlace(name) {
   const s = sheet({
     title: name, closeLabel: 'Done', grey: true,
     body: `<form id="pa-pl-form" novalidate>
-        <label class="pa-field"><span class="pa-field-label">Name</span><input class="pa-input" name="name" id="pa-pl-name" value="${esc(name)}" maxlength="${P.MAX_NAME}" autocomplete="off" aria-describedby="pa-pl-err"></label>
+        <label class="pa-field"><span class="pa-field-label">Name</span><input name="name" id="pa-pl-name" value="${esc(name)}" maxlength="${P.MAX_NAME}" autocomplete="off" aria-describedby="pa-pl-err"></label>
         <p class="pa-field-error" id="pa-pl-err" aria-live="polite" hidden></p>
-        <button type="submit" class="pa-btn pa-btn--secondary pa-btn--block">Rename</button>
+        <button type="submit" class="ui-tint ui-wide">Rename</button>
       </form>
       <p class="pa-text pa-pl-count">${n ? `${esc(plural(n, 'item'))} kept here. Renaming moves ${n === 1 ? 'it' : 'them'} too.` : 'No items kept here.'}</p>
       ${listed() ? placeKindSection(name) : ''}
       ${listed()
         ? `<section class="ui-section" aria-labelledby="pa-pl-order"><h3 class="ui-section-head" id="pa-pl-order">Order</h3>
-          <div class="pa-btn-row pa-pl-move"><button type="button" class="pa-btn pa-btn--secondary" data-pl="up" aria-label="Move up, ${esc(name)}">${icon('chevron-left', { cls: 'pa-up' })}Move up</button><button type="button" class="pa-btn pa-btn--secondary" data-pl="down" aria-label="Move down, ${esc(name)}">${icon('chevron-left', { cls: 'pa-down' })}Move down</button></div>
+          <div class="pa-btn-row pa-pl-move"><button type="button" class="ui-tint" data-pl="up" aria-label="Move up, ${esc(name)}">${icon('chevron-left', { cls: 'pa-up' })}Move up</button><button type="button" class="ui-tint" data-pl="down" aria-label="Move down, ${esc(name)}">${icon('chevron-left', { cls: 'pa-down' })}Move down</button></div>
           <p class="ui-section-foot" id="pa-pl-pos" role="status">${esc(pos())}</p></section>`
-        : `<div class="pa-btn-stack pa-pl-add"><button type="button" class="pa-btn pa-btn--secondary pa-btn--block" data-pl="list">${icon('plus')}Add to your list</button></div>`}
+        : `<div class="ui-buttons pa-pl-add"><button type="button" class="ui-tint ui-wide" data-pl="list">${icon('plus')}Add to your list</button></div>`}
       <ul class="ui-list pa-pl-del"><li><button type="button" class="ui-row" data-tone="danger" data-align="center" data-pl="remove"${only ? ' aria-disabled="true" aria-describedby="pa-pl-only"' : ''}><span class="ui-row-main"><span class="pa-row-title">${listed() ? 'Remove place' : 'Move its items'}</span></span></button></li></ul>
       ${only ? '<p class="ui-section-foot" id="pa-pl-only">Keep at least one place.</p>' : ''}`,
     onClose: afterSheet,
@@ -2292,8 +2292,8 @@ function openMovePlace(name) {
   const s = sheet({
     title: listed ? `Remove ${name}` : `Move items from ${name}`, closeLabel: 'Cancel', grey: true,
     body: `<p class="pa-text pa-mv-text">${esc(plural(n, 'item'))} ${n === 1 ? 'is' : 'are'} kept in ${esc(name)}. Choose where ${n === 1 ? 'it goes' : 'they go'}${listed ? ' before the place is removed' : ''}.</p>
-      <label class="pa-field"><span class="pa-field-label">Move ${n === 1 ? 'it' : 'them'} to</span><select class="pa-select" id="pa-mv-to">${others.map(p => `<option>${esc(p)}</option>`).join('')}</select></label>`,
-    footer: `<button type="button" class="pa-btn ui-primary pa-btn--block" id="pa-mv-go">${listed ? 'Move and remove' : `Move ${esc(plural(n, 'item'))}`}</button>`,
+      <label class="pa-field"><span class="pa-field-label">Move ${n === 1 ? 'it' : 'them'} to</span><select id="pa-mv-to">${others.map(p => `<option>${esc(p)}</option>`).join('')}</select></label>`,
+    footer: `<button type="button" class="ui-fill ui-wide" id="pa-mv-go">${listed ? 'Move and remove' : `Move ${esc(plural(n, 'item'))}`}</button>`,
     onClose: afterSheet,
   });
   $('#pa-mv-go', s.el).addEventListener('click', async () => {
@@ -2328,8 +2328,8 @@ function familyList(h, { demo = false, extra = '' } = {}) {
       <li><div class="ui-row"><span class="ui-row-lead">${icon('cloud')}</span><span class="ui-row-main"><span class="pa-row-title">${esc(h.name)}</span><span class="ui-row-sub pa-break">${demo ? 'Demo family' : `Signed in as ${esc(me())}`}</span></span></div></li>
       ${h.members.map(person).join('')}${extra}</ul>
     <form class="pa-addline pa-member" id="pa-member-add"><label class="pa-sr" for="pa-member-email">Family member’s email</label>
-      <input class="pa-input" id="pa-member-email" type="email" placeholder="Family member’s email" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <button class="pa-btn pa-btn--compact" type="submit">Add</button></form>`;
+      <input id="pa-member-email" type="email" placeholder="Family member’s email" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <button class="ui-tint" type="submit">Add</button></form>`;
 }
 // Adding or removing someone: the family pantry's members (in the demo, only in memory).
 async function setMembers(list) {
@@ -2366,9 +2366,9 @@ function openPerson(email) {
         <span class="ui-row-sub">${email === h.owner ? 'Started the family pantry' : 'Google account'}${email === me() ? ' · you' : ''}</span></span></div></li></ul>
       <form id="pa-person" class="pa-person-form" novalidate>
         <label class="pa-field"><span class="pa-field-label">${email === me() ? 'Your name' : 'Name'}</span>
-          <input class="pa-input" name="name" id="pa-person-name" value="${esc(names()[email] || '')}" maxlength="${PP.NAME_MAX}" autocomplete="off" placeholder="For example, Mum or Ah Mei" aria-describedby="pa-person-hint"></label>
+          <input name="name" id="pa-person-name" value="${esc(names()[email] || '')}" maxlength="${PP.NAME_MAX}" autocomplete="off" placeholder="For example, Mum or Ah Mei" aria-describedby="pa-person-hint"></label>
         <p class="ui-section-foot" id="pa-person-hint">Everyone in the family sees this name instead of the email, in history and on the shopping list. Leave it empty to show the email.</p>
-        <button type="submit" class="pa-btn ui-primary pa-btn--block">Save</button>
+        <button type="submit" class="ui-fill ui-wide">Save</button>
       </form>
       <ul class="ui-list pa-person-acts">
         ${email !== me() ? `<li><a class="ui-row" data-tone="action" href="${esc(inviteHref(email))}"><span class="ui-row-lead">${icon('mail')}</span><span class="ui-row-main"><span class="pa-row-title">Email an invite</span><span class="ui-row-sub">From your own mail app, with the link</span></span></a></li>` : ''}
@@ -2442,7 +2442,7 @@ function viewSettings() {
     famFoot = 'The link proves the email is yours. Look in Junk or Spam if it doesn’t arrive in a minute or two.';
   } else if (!S.user) {
     fam = `<ul class="ui-list">${btnRow('signin', 'Continue with Google', { iconName: 'user' })}</ul>
-      <p class="pa-quiet"><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-act="email-open">Use email instead</button></p>`;
+      <p class="pa-quiet"><button type="button" class="ui-plain" data-act="email-open">Use email instead</button></p>`;
     famFoot = 'Sign in to share one pantry with the family: everyone sees the same items and shopping list. Only the people added can see it.';
   } else if (!S.household && S.lost) {
     fam = `<ul class="ui-list">${row(`<span class="ui-row-lead">${icon('alert')}</span><span class="ui-row-main"><span class="pa-row-title">Your pantry changed</span><span class="ui-row-sub pa-break">${S.lost.failed ? 'No signal to check right now.' : 'Your family pantry is gone, or this account isn’t in it any more.'}</span></span>`)}
@@ -2479,7 +2479,7 @@ function viewSettings() {
       ${tourOn() ? '' : btnRow('tour-on', 'Show the getting-started list', { iconName: 'list' })}
     </ul>`, { id: 'help' })}
     ${S.mode === 'cloud' ? '' : section('You', `<ul class="ui-list"><li><label class="ui-row"><span class="ui-row-main"><span class="pa-row-title">Your name</span></span>
-      <input class="pa-input pa-input--inline" id="pa-name" value="${esc(prefs.get('name') || '')}" placeholder="${esc(S.user?.name?.split(' ')[0] || 'For example, Mum')}" autocomplete="off"></label></li></ul>`,
+      <input class="ui-row-input" id="pa-name" value="${esc(prefs.get('name') || '')}" placeholder="${esc(S.user?.name?.split(' ')[0] || 'For example, Mum')}" autocomplete="off"></label></li></ul>`,
       { id: 'you', footer: 'Shows in each item’s history and on the shopping list. Kept on this phone. In a family pantry, your name is set on your own row under Family sharing, and the family sees it too.' })}
     ${section('Your data', `<ul class="ui-list">
       ${btnRow('csv', 'Export as CSV', { iconName: 'download', sub: 'A spreadsheet of what’s in stock' })}
@@ -3097,7 +3097,7 @@ async function openMerge() {
       <ul class="ui-list" role="radiogroup" aria-label="Pantry to keep">${rows}</ul>
       ${why ? `<p class="pa-field-error" role="alert">${icon('alert')}<span>${esc(why)}</span></p>` : ''}
       <p class="ui-section-foot" id="pa-merge-msg" role="status"></p>
-      <button type="button" class="pa-btn ui-primary pa-btn--block" data-pm="go"${p.canMerge ? '' : ' disabled'}>Merge into this one</button>`;
+      <button type="button" class="ui-fill ui-wide" data-pm="go"${p.canMerge ? '' : ' disabled'}>Merge into this one</button>`;
   };
   draw();
   let busy = false;
@@ -3168,30 +3168,30 @@ function openEmailSheet({ confirm = false, onSubmit = null } = {}) {
   const s = sheet({ title: confirm ? 'Finish signing in' : 'Sign in with email', closeLabel: 'Cancel', grey: true, body: '', onClose: afterSheet });
   const body = $('.ui-sheet-body', s.el);
   const emailField = (hint = '') => `<label class="pa-field"><span class="pa-field-label">Email</span>
-      <input class="pa-input" id="pa-em-email" name="email" type="email" value="${esc(mail)}" autocomplete="email" autocapitalize="off" spellcheck="false" inputmode="email" placeholder="you@example.com"${hint ? ' aria-describedby="pa-em-hint"' : ''}></label>${hint ? `<p class="ui-section-foot pa-em-hint" id="pa-em-hint">${hint}</p>` : ''}`;
+      <input id="pa-em-email" name="email" type="email" value="${esc(mail)}" autocomplete="email" autocapitalize="off" spellcheck="false" inputmode="email" placeholder="you@example.com"${hint ? ' aria-describedby="pa-em-hint"' : ''}></label>${hint ? `<p class="ui-section-foot pa-em-hint" id="pa-em-hint">${hint}</p>` : ''}`;
   const errBox = () => `<p class="pa-field-error" id="pa-em-err" role="alert"${err ? '' : ' hidden'}>${icon('alert')}<span>${esc(err)}</span></p>`;
   const views = {
     email: () => `<form id="pa-em-form" novalidate>${emailField('Use the email the family added. No password needed: we email you a link that signs you in.')}${errBox()}
-        <button type="submit" class="pa-btn ui-primary pa-btn--block" data-pe="link">Email me a sign-in link</button>
-        <button type="button" class="pa-btn pa-btn--block pa-em-second" data-pe="pw">Use a password</button></form>`,
+        <button type="submit" class="ui-fill ui-wide" data-pe="link">Email me a sign-in link</button>
+        <button type="button" class="ui-tint ui-wide pa-em-second" data-pe="pw">Use a password</button></form>`,
     password: () => `<form id="pa-em-form" novalidate>${emailField()}
         <label class="pa-field"><span class="pa-field-label">Password</span>
-          <input class="pa-input" id="pa-em-pass" name="password" type="password" autocomplete="current-password" minlength="${C.MIN_PASSWORD}" aria-describedby="pa-em-phint"></label>
+          <input id="pa-em-pass" name="password" type="password" autocomplete="current-password" minlength="${C.MIN_PASSWORD}" aria-describedby="pa-em-phint"></label>
         <p class="ui-section-foot pa-em-hint" id="pa-em-phint">New here? Choose at least ${C.MIN_PASSWORD} characters, then tap Create account. We email a link to check the address.</p>${errBox()}
-        <button type="submit" class="pa-btn ui-primary pa-btn--block" data-pe="signin">Sign in</button>
-        <button type="button" class="pa-btn pa-btn--block pa-em-second" data-pe="create">Create account</button>
-        <div class="pa-em-links"><button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-pe="forgot">Forgot password?</button>
-          <button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-pe="back">Email me a link instead</button></div></form>`,
+        <button type="submit" class="ui-fill ui-wide" data-pe="signin">Sign in</button>
+        <button type="button" class="ui-tint ui-wide pa-em-second" data-pe="create">Create account</button>
+        <div class="pa-em-links"><button type="button" class="ui-plain" data-pe="forgot">Forgot password?</button>
+          <button type="button" class="ui-plain" data-pe="back">Email me a link instead</button></div></form>`,
     sent: () => `<div class="pa-em-note"><span class="ui-row-lead">${icon('mail')}</span><div><p class="pa-em-title">Check your email</p>
         <p>We sent a sign-in link to <strong class="pa-break">${esc(mail)}</strong>. Tap it on this phone and you’re in.</p>
         <p>On an iPhone the link may open in Safari instead of the home-screen app. That’s fine: you’ll be signed in there. In the home-screen app, use a password instead, or ask for the link from inside the home-screen app.</p></div></div>${errBox()}
-      <button type="button" class="pa-btn ui-primary pa-btn--block" data-pe="link">Send it again</button>
-      <button type="button" class="pa-btn pa-btn--block pa-em-second" data-pe="pw">Use a password instead</button>`,
+      <button type="button" class="ui-fill ui-wide" data-pe="link">Send it again</button>
+      <button type="button" class="ui-tint ui-wide pa-em-second" data-pe="pw">Use a password instead</button>`,
     reset: () => `<div class="pa-em-note"><span class="ui-row-lead">${icon('mail')}</span><div><p class="pa-em-title">Check your email</p>
         <p>We sent a link to <strong class="pa-break">${esc(mail)}</strong>. Open it, choose a new password, then come back and sign in.</p></div></div>
-      <button type="button" class="pa-btn ui-primary pa-btn--block" data-pe="pw">Back to sign in</button>`,
+      <button type="button" class="ui-fill ui-wide" data-pe="pw">Back to sign in</button>`,
     confirm: () => `<form id="pa-em-form" novalidate><p class="pa-em-lead">You opened a sign-in link. Type the email it was sent to, to finish.</p>${emailField()}${errBox()}
-        <button type="submit" class="pa-btn ui-primary pa-btn--block" data-pe="finish">Sign in</button></form>`,
+        <button type="submit" class="ui-fill ui-wide" data-pe="finish">Sign in</button></form>`,
   };
   const draw = (focus = true) => {
     body.innerHTML = views[step]();

@@ -12,7 +12,7 @@
 }
 
 /* ---- parts of the old home kit pantry still uses, as its own ---- */
-.pa-btn,.pa-bar-btn,.pa-noselect{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+button,.pa-bar-btn,.pa-noselect{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 .pa-sr{position:absolute!important;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .pa-skip{position:fixed;left:8px;top:calc(env(safe-area-inset-top, 0px) + 8px);z-index:100;padding:12px 16px;border-radius:var(--home-r-md); background:var(--accent);color:var(--on-accent)!important;text-decoration:none!important;transform:translateY(-200%)}
 .pa-skip:focus{transform:none}
@@ -42,40 +42,19 @@
 .ui-row input[type=checkbox]{flex:none;width:22px;height:22px;margin:0;accent-color:var(--accent)}
 .ui-row.is-done .pa-row-title{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line)}
 .pa-card-kicker{margin:0 0 2px;color:var(--muted);font-size:var(--home-t-label);font-weight:600;letter-spacing:.05em;text-transform:uppercase}
-.pa-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--home-s2);min-height:50px;padding:var(--home-s2) var(--home-s5); border:0;border-radius:var(--home-r-md);background:var(--pa-accent-soft);color:var(--accent); font-size:var(--home-t-body);font-weight:600;line-height:1.2;text-align:center;text-decoration:none!important;cursor:pointer; transition:transform var(--home-d-fast) var(--home-ease),background-color var(--home-d-fast) linear,opacity var(--home-d-fast) linear}
-.pa-btn:active,.pa-btn.is-pressed{transform:scale(.97);transition-duration:var(--home-d-press)}
-.pa-btn .ui-icon{width:20px;height:20px}
-.pa-btn--secondary:active,.pa-btn--secondary.is-pressed,.pa-btn:not([class*="pa-btn--"]):active{background:var(--pa-accent-soft-press)}
-.pa-btn--outline{background:var(--surface);color:var(--text);box-shadow:inset 0 0 0 1px var(--line)}
-.pa-btn--outline:active{background:var(--press)}
-.pa-btn--plain{background:transparent;padding-inline:var(--home-s3)}
-.pa-btn--plain:active,.pa-btn--plain.is-pressed{background:var(--press)}
-.pa-btn--quiet{background:transparent;color:var(--muted)}
-.pa-btn--quiet:active{background:var(--press)}
-.pa-btn--block{display:flex;width:100%}
-.pa-btn--compact{min-height:44px;padding-inline:var(--home-s4);font-size:var(--home-t-small)}
-.pa-btn--small{position:relative;min-height:36px;padding:0 var(--home-s3);border-radius:var(--home-r-full);font-size:var(--home-t-small)}
-.pa-btn--small::after{content:"";position:absolute;inset:-4px 0}
-.pa-btn--icon{width:44px;min-width:44px;min-height:44px;padding:0;border-radius:50%}
-.pa-btn[disabled],.pa-btn[aria-disabled="true"]{opacity:.45;cursor:default;transform:none}
 .pa-btn-row{display:flex;gap:var(--home-s2);margin:var(--home-s3) 0}
 .pa-btn-row>*{flex:1;min-width:0}
-.pa-btn-stack{display:grid;gap:var(--home-s2);margin:var(--home-s3) 0}
 .pa-field{display:block;margin:0 0 var(--home-s4)}
 .pa-field-label{display:block;margin:0 0 6px;padding:0 var(--home-s1);color:var(--muted);font-size:var(--home-t-small);font-weight:500}
-.pa-input,.pa-select{display:block;width:100%;min-height:50px;padding:12px 14px;border:0;border-radius:var(--home-r-md);background:var(--surface); box-shadow:inset 0 0 0 1px var(--line);color:var(--text);font-size:max(16px,var(--home-t-body));line-height:1.35;-webkit-appearance:none;appearance:none}
-.pa-input::placeholder{color:var(--muted);opacity:1}
-.pa-input:focus-visible,.pa-select:focus-visible{outline:none;box-shadow:inset 0 0 0 2px var(--focus)}
-.pa-input[aria-invalid="true"]{box-shadow:inset 0 0 0 2px var(--danger)}
-textarea.pa-input{min-height:110px;resize:vertical}
-input[type=date].pa-input{min-width:0;text-align:left}
-input[type=date].pa-input::-webkit-date-and-time-value{text-align:left}
-.pa-select{padding-right:40px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23636368' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E"); background-repeat:no-repeat;background-position:right 12px center;background-size:20px}
+.pa-field :is(input,select,textarea){display:block;width:100%;font-size:max(16px,1em)}
+:is(input,textarea)::placeholder{color:var(--muted);opacity:1}
+:is(input,select,textarea)[aria-invalid="true"]{border-color:var(--danger);box-shadow:inset 0 0 0 1px var(--danger)}
+.pa-field textarea{min-height:110px;padding-block:12px;resize:vertical}
+input[type=date]{min-width:0;text-align:left}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
 .pa-field-hint{margin:6px 0 0;padding:0 var(--home-s1);color:var(--muted);font-size:var(--home-t-small)}
 .pa-field-error{display:flex;align-items:center;gap:6px;margin:6px 0 0;padding:0 var(--home-s1);color:var(--danger);font-size:var(--home-t-small)}
 .pa-field-error .ui-icon{width:18px;height:18px}
-.ui-row .pa-input--inline{width:auto;min-height:44px;max-width:55%;padding:0;background:none;box-shadow:none;text-align:right;color:var(--muted)}
-.ui-row .pa-input--inline:focus-visible{outline:2px solid var(--focus);outline-offset:2px;border-radius:4px}
 .pa-progress{display:block;width:100%;height:6px;margin:0;border:0;border-radius:var(--home-r-full);background:var(--pa-fill);color:var(--accent);overflow:hidden;-webkit-appearance:none;appearance:none}
 .pa-progress::-webkit-progress-bar{background:var(--pa-fill);border-radius:var(--home-r-full)}
 .pa-progress::-webkit-progress-value{background:var(--accent);border-radius:var(--home-r-full);transition:width var(--home-d-med) var(--home-ease)}
@@ -106,9 +85,7 @@ input[type=date].pa-input::-webkit-date-and-time-value{text-align:left}
 .pa-version-msg{margin:0}
 .pa-version-msg:empty{display:none}
 @media (hover:hover) and (pointer:fine){
-  .pa-btn:not([class*="pa-btn--"]):hover,.pa-btn--secondary:hover{background:var(--pa-accent-soft-press)}
-  .pa-btn--outline:hover,.pa-btn--quiet:hover{background:var(--press)}
-  .pa-btn--plain:hover,.pa-bar-btn:hover{background:var(--press)}
+  .pa-bar-btn:hover{background:var(--press)}
 }
 @keyframes pa-grow{from{transform:scaleX(0)}}
 @keyframes pa-rise{from{transform:scaleY(0)}}
@@ -119,7 +96,7 @@ input[type=date].pa-input::-webkit-date-and-time-value{text-align:left}
 /* a problem worth seeing (sync failed) */
 .pa-alert{display:flex;gap:var(--home-s2);align-items:flex-start;margin:0 0 var(--home-s4);background:var(--pa-bad-bg);color:var(--danger)}
 .pa-alert .ui-icon{flex:none;width:20px;height:20px}
-.pa-alert .pa-btn{background:var(--surface);color:var(--link)}  /* on the tinted ground: the card colour, so the text keeps its contrast */
+.pa-alert :is(.ui-tint,.ui-plain){background:var(--surface);color:var(--link)}  /* on the tinted ground: the card colour, so the text keeps its contrast */
 
 /* a plain heads-up (a change of yours landed on an item another phone removed) */
 .pa-note{display:flex;gap:var(--home-s2);align-items:flex-start;margin:0 0 var(--home-s4);background:var(--pa-fill);color:var(--muted);text-decoration:none}
@@ -130,7 +107,7 @@ input[type=date].pa-input::-webkit-date-and-time-value{text-align:left}
 .pa-hero{display:block;width:100%;max-height:240px;margin:0 0 var(--home-s5);border-radius:var(--home-r-lg);object-fit:cover;background:var(--pa-fill)}
 .pa-batch{flex-wrap:wrap;row-gap:var(--home-s2)}
 .pa-batch-acts{flex:1 0 100%;display:flex;flex-wrap:wrap;gap:var(--home-s2);margin:2px 0 4px}
-.pa-batch-acts .pa-btn--quiet{background:var(--pa-fill);color:var(--muted)}
+.pa-batch-acts .pa-quiet{background:var(--pa-fill);color:var(--muted)}
 .pa-actions{margin:calc(-1 * var(--home-s2)) 0 var(--home-s6)}
 .pa-cols-label{margin:var(--home-s4) 0 var(--home-s2);color:var(--muted);font-size:var(--home-t-small)}
 .pa-cols{height:120px}
@@ -140,7 +117,7 @@ input[type=date].pa-input::-webkit-date-and-time-value{text-align:left}
 .pa-finder .ui-search{margin-bottom:var(--home-s2)}
 .pa-finder #pa-sugg{margin:0 0 var(--home-s2)}
 .pa-finder .pa-btn-row{margin:var(--home-s2) 0 0}
-.pa-finder .pa-btn-row>.pa-btn{flex:0 1 auto}
+.pa-finder button-row>button{flex:0 1 auto}
 .pa-photo-row{display:flex;gap:var(--home-s3);align-items:flex-start}
 .pa-photo-fields{flex:1;min-width:0}
 .pa-photo{position:relative;flex:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;width:88px;height:88px;
@@ -159,8 +136,8 @@ label.ui-row:focus-within:has(.pa-file){outline:2px solid var(--focus);outline-o
 
 /* a one-line form: shopping list, family member */
 .pa-addline{display:flex;gap:var(--home-s2);align-items:center;margin:0 0 var(--home-s5)}
-.pa-addline .pa-input{flex:1;min-width:0;min-height:44px;padding-block:8px}
-.pa-addline .pa-btn{flex:none}
+.pa-addline input{flex:1;min-width:0;min-height:44px;padding-block:8px}
+.pa-addline button{flex:none}
 .pa-member{margin:var(--home-s3) 0 0}
 
 /* the barcode scanner sheet */
@@ -215,7 +192,7 @@ label.ui-row:focus-within:has(.pa-file){outline:2px solid var(--focus);outline-o
 .pa-place-err{margin:0 0 var(--home-s2)}
 .pa-pl-count{margin:var(--home-s4) 0;color:var(--muted)}
 .pa-pl-move{flex-wrap:wrap}
-.pa-pl-move>.pa-btn{flex:1 1 9em;min-height:44px}
+.pa-pl-move>button{flex:1 1 9em;min-height:44px}
 .pa-up{transform:rotate(90deg)}
 .pa-down{transform:rotate(-90deg)}
 .pa-pl-add{margin:0 0 var(--home-s5)}
@@ -231,7 +208,7 @@ label.ui-row:focus-within:has(.pa-file){outline:2px solid var(--focus);outline-o
 .pa-guess-hint{margin:var(--home-s2) 0 0}
 .pa-finder .pa-btn-row{flex-wrap:wrap}
 .pa-quickrow{flex-wrap:wrap;margin:0 0 var(--home-s4)}
-.pa-quickrow>.pa-btn{flex:1 1 9em}
+.pa-quickrow>button{flex:1 1 9em}
 /* Since you last looked, and the WhatsApp line under Use soon */
 .pa-since-ok{margin-left:calc(-1 * var(--home-s3))}
 .pa-share-line{margin:calc(-1 * var(--home-s3)) 0 var(--home-s6)}
@@ -248,7 +225,7 @@ label.ui-row:focus-within:has(.pa-file){outline:2px solid var(--focus);outline-o
 .pa-pa-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8.5em),1fr));gap:0 var(--home-s3);padding:0 var(--home-s4)}
 .pa-pa-fields .pa-field{margin:0}
 .pa-pa>.pa-field-hint{padding:0 var(--home-s4)}
-.pa-pa-qty .pa-input{max-width:6em}
+.pa-pa-qty input{max-width:6em}
 /* scan many: the mode on top, a shorter camera, the tally under it */
 .pa-sm-mode{margin:0 0 var(--home-s3)}
 .pa-sm-video{aspect-ratio:16/9}
@@ -265,7 +242,7 @@ label.ui-row:focus-within:has(.pa-file){outline:2px solid var(--focus);outline-o
 #pa-em-form .pa-field-error{margin:0 0 var(--home-s3)}
 
 /* your family pantry went away */
-.pa-lost .pa-btn{display:flex;margin-top:var(--home-s2)}
+.pa-lost button{display:flex;margin-top:var(--home-s2)}
 
 /* Items: selecting (press and hold, checkboxes, the bar above the tab bar), place headings that fold */
 .pa-item{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
@@ -285,9 +262,9 @@ label.ui-row:focus-within:has(.pa-file){outline:2px solid var(--focus);outline-o
 .pa-selbar-row{display:flex;align-items:center;justify-content:space-between;gap:var(--home-s2);flex-wrap:wrap}
 .pa-selcount{font-weight:600;font-size:var(--home-t-small)}
 .pa-selbar-links{display:flex;gap:0;margin-right:calc(-1 * var(--home-s3))}
-.pa-selbar-links .pa-btn{padding-inline:var(--home-s3)}
+.pa-selbar-links button{padding-inline:var(--home-s3)}
 .pa-selbar-acts{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--home-s2)}
-.pa-selbar-acts .pa-btn{min-width:0;padding-inline:var(--home-s1);line-height:1.15}
+.pa-selbar-acts button{min-width:0;padding-inline:var(--home-s1);line-height:1.15}
 .pa-selecting .ui-screens{padding-bottom:calc(var(--ui-tabbar-room, 0px) + 150px)}
 @media (min-width:600px){.pa-selbar{left:var(--shell-side, 11rem);bottom:0}.pa-selecting .ui-screens{padding-bottom:180px}}
 .pa-moveto{margin:0;padding:0;border:0}
@@ -383,10 +360,12 @@ html[data-look="a"] .ui-row-sub { font-size: 16px; line-height: 1.4; }
   html[data-look="a"] .ui-shell > .ui-bar { padding-block: 0 3px; min-height: 48px; }
   html[data-look="a"] #main.ui-screen { padding-top: 0; }
 }
-html[data-look="a"] .pa-batch-acts .pa-btn--quiet { color: light-dark(var(--home-ink-2, #3c3c43), var(--muted)); }
-/* the filled main button (the old kit's ha-btn--primary); .pa-btn's tint otherwise wins over the kit's .ui-primary */
-.pa-btn.ui-primary,.pa-btn.ui-primary:hover{background:var(--accent);color:var(--on-accent)}
-.pa-btn.ui-primary:active,.pa-btn.ui-primary.is-pressed{background:color-mix(in srgb,var(--accent) 85%,#000)}
+html[data-look="a"] .pa-batch-acts .pa-quiet { color: light-dark(var(--home-ink-2, #3c3c43), var(--muted)); }
+/* buttons are the kit's (button, .ui-tint, .ui-fill, .ui-plain, .ui-wide, data-size="small"); pantry adds a muted plain one, a round icon one and a red tinted one */
+.pa-quiet,button.pa-quiet{color:var(--muted)}
+.pa-round{width:44px;min-width:44px;padding:0;border-radius:50%}
+.ui-tint.ui-danger{color:var(--danger)}
+.ui-buttons{margin-inline:0}
 html[data-look="a"] .pa-again .ui-chip { padding: 0 14px; background: transparent; font-size: 16px; }
 /* a count inside a chip (place filters, "at home"): inline, muted (the kit's .ui-chip-badge is the sync icon's corner badge) */
 .ui-chip > .ui-chip-badge{position:static;min-width:0;padding:0;border-radius:0;background:none;-webkit-text-fill-color:currentColor;color:var(--muted);font-size:inherit;line-height:inherit;font-weight:500;font-variant-numeric:tabular-nums}
