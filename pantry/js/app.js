@@ -797,7 +797,7 @@ function drawItemsList() {
 function enterSelect(id = '') {
   if (S.sel.on || screen() !== 'items') return;
   SEL.startSel(S.sel, id);
-  history.pushState({ ...(history.state || {}), paSelect: true }, '', location.href);
+  history.pushState({ ...(history.state || {}), paSelect: true, uiTransient: 1 }, '', location.href);
   redraw();
   announce(`Selecting. ${S.sel.ids.size} selected. Tap items to select them.`);
   (id && document.getElementById('pa-sel-' + id) || $('.pa-sel'))?.focus({ preventScroll: true });

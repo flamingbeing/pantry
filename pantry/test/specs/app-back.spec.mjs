@@ -22,6 +22,12 @@ async function openAfterAnother(phone, name) {
   await expect(page.locator('.ui-large-title').first()).toBeVisible();
   return page;
 }
+// Back on the first tab: one Back shows "Press Back again to close" and stays, a second within 2 s leaves
+const leave = async page => {
+  await page.goBack();
+  await expect(page.locator('.toast')).toContainText('Press Back again to close');
+  await page.goBack();
+};
 const len = page => page.evaluate(() => history.length);
 
 test('tabs add at most one Back step; Back goes to the first tab, then leaves', async ({ phone }) => {
@@ -32,7 +38,7 @@ test('tabs add at most one Back step; Back goes to the first tab, then leaves', 
   expect(await len(page), 'one entry for all the tab changes').toBeLessThanOrEqual(start + 1);
   await back(page, '#/');
   await expect(page.locator('.ui-tabbar a[href="#/"]')).toHaveAttribute('aria-current', 'page');
-  await page.goBack();
+  await leave(page);
   await expect.poll(() => new URL(page.url()).pathname, 'Back on the first tab leaves').toBe(BASE + 'icons/icon.svg');
 });
 
@@ -52,6 +58,6 @@ test('a tap on the first tab takes the tab entry away; a pushed screen still clo
   await expect.poll(() => hash(page)).toBe('#/item/' + id);
   await tab(page, '#/settings');
   await back(page, '#/');
-  await page.goBack();
+  await leave(page);
   await expect.poll(() => new URL(page.url()).pathname).toBe(BASE + 'icons/icon.svg');
 });

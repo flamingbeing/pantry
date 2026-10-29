@@ -61,7 +61,8 @@ export const go = async (page, h) => {
   await expect(page.locator('#main')).toBeVisible();
   await quiet(page);
 };
-export const toast = page => page.locator('.toasts .toast');
+// (not the "Press Back again to close" guard: a test that sets location.hash fires a popstate the guard reads as Back)
+export const toast = page => page.locator('.toasts .toast').filter({ hasNotText: 'Press Back again to close' });
 export const undo = async page => { await toast(page).locator('.toast-action').click(); };
 export const sheetOpen = page => page.locator('dialog.ui-sheet[open]');
 export const ymdPlus = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toLocaleDateString('sv-SE'); };
