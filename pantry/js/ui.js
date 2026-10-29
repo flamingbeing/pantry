@@ -3,9 +3,9 @@
 // Every screen and every sheet is a history entry, so the iPhone edge swipe and Android back always do the expected
 // thing. Icons come from the brand kit's sprite (design.flamingbeing.com/v1/icons.svg, the same shapes as before).
 import {
-  detentSheet, sheetsSettled, tabBarRoom, confirmModal, toaster, tabBack, stepper as kitStepper, haptic as kitHaptic, largeTitle as kitLargeTitle,
-} from 'https://core.anawj.com/ui/1.0.0-rc.42/ui/index.js';
-import { applyTheme, themeSwitch } from 'https://core.anawj.com/ui/1.0.0-rc.42/theme/index.js';
+  detentSheet, sheetsSettled, tabBarRoom, confirmModal, toaster, tabBack, CLOSE_MS, LABELS, stepper as kitStepper, haptic as kitHaptic, largeTitle as kitLargeTitle,
+} from 'https://core.anawj.com/ui/1.0.0-rc.51/ui/index.js';
+import { applyTheme, themeSwitch } from 'https://core.anawj.com/ui/1.0.0-rc.51/theme/index.js';
 
 const doc = document;
 
@@ -145,7 +145,7 @@ export function confirm({ title, text = '', ok = 'OK', cancel = 'Cancel', danger
 // names the tab for a pushed screen. go('#/item/3') pushes a screen; back('#/') goes back, or to the fallback.
 // Tabs are Back as on Android (the kit's tabBack): going to a tab first takes away the screens pushed over it, then
 // leaving the first tab ('#/') adds one entry and the other tabs only change its address, so Back on any other tab
-// is the first tab and Back on the first tab leaves the app.
+// is the first tab and Back on the first tab asks "Press Back again to close", and a second Back within 2 s leaves the app.
 let routes = null, current = null, title = null, tabTrail = null, unwinding = false;
 const FIRST = '#/';
 const depth = () => history.state?.paDepth || 0;
@@ -194,7 +194,12 @@ export function router({ render, tabs = '.ui-tabbar, .ui-sidebar', tabOf } = {})
     e.preventDefault();
     go(a.getAttribute('href'), { nav: a.closest(tabs) ? 'tab' : 'push' });
   });
-  tabTrail = tabBack({ history, events: window, onFirst: () => { if (!unwinding) paint('pop'); } });
+  // Back on the first tab asks once more before leaving ("Press Back again to close"); `first`: whether the page starts there
+  tabTrail = tabBack({
+    history, events: window, first: start === FIRST,
+    onFirst: () => { if (!unwinding) paint('pop'); },
+    onClose: () => { toasts ??= toaster(doc.body); toasts.show(LABELS.backAgain, { ms: CLOSE_MS }); },
+  });
   paint('none');
   return { get route() { return current; }, refresh: () => { current = null; paint('none'); } };
 }

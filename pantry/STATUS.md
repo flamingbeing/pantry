@@ -3,6 +3,7 @@
 Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner's plans are in the owner's private notes.
 
 ## Now
+- app-ui rc.51 (29 Oct 2026): Back on Pantry now shows "Press Back again to close" and a second Back within 2 s leaves (tabBack `onClose`). The kit's sync button is not used: Pantry's own chip carries the refused-save states and the "See what" link, and the bar has no fixed slot for it; a design choice for later.
 - Back with tabs (29 Oct 2026, app-ui rc.42's `tabBack`): tab changes add at most one Back step; Back on another tab goes to
   Pantry, Back on Pantry leaves the app; pushed screens and sheets still close first. Test: `app-back.spec.mjs`.
 - Centre + back (28 Oct 2026): on a phone, Add is the tab bar's raised round + again (app-ui rc.31's `.ui-tab-action`); the top bar keeps Add only from 600 px, where the side bar replaces the tab bar.
