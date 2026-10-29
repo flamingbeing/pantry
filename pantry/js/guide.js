@@ -94,9 +94,9 @@ export function openWelcome({ invited = false, signedIn = false, save = true, on
   let at = 0;
   const s = sheet({
     title: 'Getting started', closeLabel: 'Skip', grey: true, detent: 'large',
-    lead: `<button type="button" class="pa-btn pa-btn--plain pa-btn--compact" data-pa-w="prev" hidden>Back</button>`,
+    lead: `<button type="button" class="ui-plain" data-pa-w="prev" hidden>Back</button>`,
     body: `<div class="pa-welcome" id="pa-welcome"></div>`,
-    footer: `<div class="pa-dots" aria-hidden="true">${ids.map(() => '<span class="pa-dot"></span>').join('')}</div><div class="pa-btn-stack pa-wbtns" id="pa-wbtns"></div>`,
+    footer: `<div class="pa-dots" aria-hidden="true">${ids.map(() => '<span class="pa-dot"></span>').join('')}</div><div class="ui-buttons pa-wbtns" id="pa-wbtns"></div>`,
     onClose: v => { if (save) markWelcomed(); onDone?.(v); },
   });
   const el = s.el;
@@ -113,12 +113,12 @@ export function openWelcome({ invited = false, signedIn = false, save = true, on
     prev.hidden = at === 0;
     skip.textContent = last ? 'Close' : 'Skip';
     btns.innerHTML = !last
-      ? `<button type="button" class="pa-btn ui-primary pa-btn--block" data-pa-w="next">Next</button>`
+      ? `<button type="button" class="ui-fill ui-wide" data-pa-w="next">Next</button>`
       : invited
-        ? `<button type="button" class="pa-btn ui-primary pa-btn--block" data-pa-w="signin">Go to sign in</button>
-           <button type="button" class="pa-btn pa-btn--plain pa-btn--block" data-pa-w="done">Look around first</button>`
-        : `<button type="button" class="pa-btn ui-primary pa-btn--block" data-pa-w="start">Pick what you have</button>
-           <button type="button" class="pa-btn pa-btn--plain pa-btn--block" data-pa-w="done">Look around first</button>`;
+        ? `<button type="button" class="ui-fill ui-wide" data-pa-w="signin">Go to sign in</button>
+           <button type="button" class="ui-plain ui-wide" data-pa-w="done">Look around first</button>`
+        : `<button type="button" class="ui-fill ui-wide" data-pa-w="start">Pick what you have</button>
+           <button type="button" class="ui-plain ui-wide" data-pa-w="done">Look around first</button>`;
     el.querySelector('.ui-sheet-body').scrollTop = 0;
     if (focus) { el.querySelector('.pa-wtitle').focus({ preventScroll: true }); }
   };
