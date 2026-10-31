@@ -21,7 +21,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: flamingbeing/app-devkit/setup-node@v1.1.0
+      - uses: flamingbeing/app-devkit/setup-node@v1.13.7
         with:
           install: 'false'   # no npm ci here: these tests need no packages
       - run: node pantry/test/logic.test.mjs
@@ -46,11 +46,11 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: flamingbeing/app-devkit/setup-node@v1.1.0   # npm ci (package-lock.json)
-      - uses: flamingbeing/app-devkit/setup-browser@v1.1.0
+      - uses: flamingbeing/app-devkit/setup-node@v1.13.7   # npm ci (package-lock.json)
+      - uses: flamingbeing/app-devkit/setup-browser@v1.13.7
         with:
           devkit-dir: ''   # the project's own Playwright (npx playwright)
-      - uses: flamingbeing/app-devkit/setup-emulators@v1.2.0
+      - uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
         with:
           firebase-tools-version: '13.29.1'   # same as playwright.config.mjs
           emulators: firestore
@@ -67,16 +67,16 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - uses: flamingbeing/app-devkit/setup-node@v1.1.0
+      - uses: flamingbeing/app-devkit/setup-node@v1.13.7
         with:
           install: 'false'   # no npm ci here: these tests need no packages
       - name: Install Playwright and axe-core
         run: npm install --no-save playwright@1.56.1 axe-core
-      - uses: flamingbeing/app-devkit/setup-browser@v1.1.0
+      - uses: flamingbeing/app-devkit/setup-browser@v1.13.7
         with:
           playwright-version: '1.56.1'
           devkit-dir: ''
-      - uses: flamingbeing/app-devkit/setup-emulators@v1.2.0
+      - uses: flamingbeing/app-devkit/setup-emulators@v1.13.7
         with:
           firebase-tools-version: '13.29.1'   # same as pantry/test/run-sync.sh
           emulators: firestore
