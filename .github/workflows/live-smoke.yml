@@ -14,7 +14,7 @@ permissions:
 jobs:
   smoke:
     if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
-    uses: flamingbeing/app-devkit/.github/workflows/live-smoke.yml@v1.10.1
+    uses: flamingbeing/app-devkit/.github/workflows/live-smoke.yml@v1.13.7
     with:
       site-url: https://pantry.flamingbeing.com
       spec-path: pantry/test/live-smoke
