@@ -9,7 +9,9 @@ The welcome, the guide screen, hints and the hands-on first steps. Index: [../NO
   `localStorage 'pantry:welcomed'` (through `prefs`, so wrapped in try/catch), set however the sheet closes. Never in
   `?demo` (or the emulator tests) unless `?welcome` is added; `?welcome` forces it anywhere. Someone already using the
   app on that phone (items, a family pantry or a name saved) never sees it: the flag is set quietly. The invite email's
-  link ends `#/settings`; opening it gives a short version ending "Go to sign in" (Settings, Sign in focused). The
+  link ends `#/settings`; opening it gives a short version (who added them, the home screen) whose "Sign in" opens the
+  **sign-in screen** `#/signin` over Settings: the kit's `signInScreen` (icon, name, one line; Continue with Google, Use
+  email instead, Not now). Signing in, or waiting for the emailed link, goes back to Settings. The
   **guide** is the screen `#/guide` ("How to use the pantry"), linked from Settings (Help: the guide and "Show the
   welcome again") and the empty Home. **Hints** stay quiet text: the empty shopping list says how things get there, the
   item explains the pace before two "Used 1"s, Settings signed out says why to sign in. Note: an iPhone home-screen app

@@ -3,6 +3,10 @@
 Code facts: [NOTES.md](NOTES.md) and [docs/](docs/). The dated log and the owner's plans are in the owner's private notes.
 
 ## Now
+- Sign-in screen (4 Nov 2026, app-ui rc.90's `signInScreen`): an invite's welcome is two cards (who added them, the home
+  screen) and its Sign in opens `#/signin`, the kit's full-screen sign-in page (icon, name, one line; Continue with Google,
+  Use email instead, Not now) over Settings; signing in goes back to Settings. Settings keeps its own Continue with Google
+  row (signing in stays optional). Kit rc.60 → rc.90 (SHELL re-listed). Test: `app-welcome.spec.mjs`.
 - Carried over from Notes (30 Oct 2026): app-sync 1.5.5 (four sync fixes, two that could lose a save) and app-ui rc.60
   (the update prompt reloads once on a slow start); Back after a redirect sign-in reloads instead of showing the old
   signed-out page; the install file's colours are the dark ground, so Android's system bar is dark.

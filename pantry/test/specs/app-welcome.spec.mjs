@@ -42,19 +42,28 @@ test('installed (opened from the home screen): no home-screen card', async ({ ph
   await card(page, 'Fill it in a minute');   // installed: straight to filling it in
 });
 
-test('opened from an invite (the link ends #/settings): short, ends at Sign in, on the Settings screen', async ({ phone, axe }) => {
+test('opened from an invite (the link ends #/settings): short, its Sign in opens the sign-in screen over Settings', async ({ phone, axe }) => {
   const page = await open(phone, 'invite', BASE + '?demo&welcome#/settings');
   await expect(welcomeSheet(page)).toBeVisible();
   await card(page, 'Welcome to the family pantry');   // invite: says they were added
-  await expect(welcomeSheet(page).locator('.pa-dot'), 'invite: three cards').toHaveCount(3);
+  await expect(welcomeSheet(page).locator('.pa-dot'), 'invite: two cards').toHaveCount(2);
   await nextCard(page);
-  await nextCard(page);
-  await card(page, 'Sign in to join');
+  await card(page, 'Put it on your home screen');
   await axe(page, 'welcome invite');
-  await shot(page, 'w5-invite-signin');
   await welcomeSheet(page).locator('[data-pa-w="signin"]').click();
-  await expect(welcomeSheet(page), 'Go to sign in closes it').toHaveCount(0);
-  expect(hash(page), 'and leaves them on Settings').toBe('#/settings');
+  await expect(welcomeSheet(page), 'Sign in closes it').toHaveCount(0);
+  await expect.poll(() => hash(page), 'and opens the sign-in screen').toBe('#/signin');
+  const screen = page.locator('.ui-signin');
+  await expect(screen.locator('.ui-signin-name')).toHaveText('Pantry');
+  await expect(screen.locator('.ui-signin-icon')).toHaveJSProperty('complete', true);
+  expect(await screen.locator('.ui-signin-icon').evaluate(i => i.naturalWidth), 'the app icon loads').toBeGreaterThan(0);
+  await expect(screen.locator('#sign-in'), 'the demo: no Google button').toHaveCount(0);
+  await expect(screen.locator('#forget'), 'nothing to forget').toBeHidden();
+  await axe(page, 'sign-in screen');
+  await shot(page, 'w5-invite-signin');
+  await screen.locator('#pa-signin-later').click();
+  await expect.poll(() => hash(page), 'Not now leaves them on Settings').toBe('#/settings');
+  await expect(page.locator('.ui-signin')).toHaveCount(0);
 });
 
 for (const [w, h] of [[390, 844], [360, 780], [320, 640]]) {
