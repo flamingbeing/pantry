@@ -3,7 +3,7 @@
 //    it in a minute", which opens the quick start in tour.js); the home screen and family sharing are steps in the
 //    Home checklist instead (tour.js). Shown once per phone (localStorage 'pantry:welcomed'). Never in ?demo unless ?welcome is added;
 //    never for someone who already uses the app (items, a family pantry or a name on this phone). Someone opening an
-//    invite (the link ends #/settings) gets a shorter version that ends at Sign in. Skip, back, Escape or dragging
+//    invite (the link ends #/settings) gets a shorter version whose Sign in opens the sign-in screen. Skip, back, Escape or dragging
 //    the sheet down all close it, and it never comes back on its own ("Show the welcome again" in Settings).
 // 2. The guide screen (#/guide, "How to use the pantry"): short grouped sections, linked from Settings and from the
 //    empty Home screen.
@@ -71,23 +71,16 @@ const CARDS = {
       row('list', 'Then a short checklist', 'Home shows a few first steps, each with a Show me button.'),
     ]),
   },
-  signin: {
-    icon: 'user', title: 'Sign in to join',
-    text: 'Sign in once and the family pantry appears on this phone.',
-    body: list([
-      row('user', 'Tap Continue with Google', 'On the Settings screen, under Family sharing. No Google? Tap Use email instead: an emailed link, or a password.'),
-      row('mail', 'Use the email they added', 'The address the invite was sent to. Another account sees an empty pantry.'),
-    ]),
-  },
 };
 
-// Which cards: invited people get a short version ending at Sign in; someone signed in already skips sharing.
+// Which cards: invited people get a short version whose Sign in opens the sign-in screen (app.js, #/signin); someone
+// signed in already skips sharing.
 export function welcomeCards({ invited = false, signedIn = false, isInstalled = installed() } = {}) {
-  const ids = invited ? ['invited', 'install', 'signin'] : ['intro', 'first'];
+  const ids = invited ? ['invited', 'install'] : ['intro', 'first'];
   return ids.filter(id => id !== 'install' || !isInstalled);
 }
 
-// Open the welcome sheet. onDone(choice) runs after it closes: 'start' (Pick what you have), 'signin' (Go to sign in) or
+// Open the welcome sheet. onDone(choice) runs after it closes: 'start' (Pick what you have), 'signin' (Sign in: the sign-in screen) or
 // undefined (skipped or Look around first). The flag is set however it closes (unless save is false: the demo).
 export function openWelcome({ invited = false, signedIn = false, save = true, onDone } = {}) {
   const ids = welcomeCards({ invited, signedIn });
@@ -115,7 +108,7 @@ export function openWelcome({ invited = false, signedIn = false, save = true, on
     btns.innerHTML = !last
       ? `<button type="button" class="ui-fill ui-wide" data-pa-w="next">Next</button>`
       : invited
-        ? `<button type="button" class="ui-fill ui-wide" data-pa-w="signin">Go to sign in</button>
+        ? `<button type="button" class="ui-fill ui-wide" data-pa-w="signin">Sign in</button>
            <button type="button" class="ui-plain ui-wide" data-pa-w="done">Look around first</button>`
         : `<button type="button" class="ui-fill ui-wide" data-pa-w="start">Pick what you have</button>
            <button type="button" class="ui-plain ui-wide" data-pa-w="done">Look around first</button>`;

@@ -21,7 +21,7 @@ import { starterChoices, tourTasks } from './tour.js';
 import { firebaseConfig } from '../config.js';
 import {
   router, go as goTo, back as goBack, sheet, closeSheet, sheetOpen, confirm, toast, hideToast, stepper, stepperHtml, version,
-  haptic, icon as kitIcon, esc, announce, largeTitle, deviceSwitch, sheetsSettled, syncButton, refusedList,
+  haptic, icon as kitIcon, esc, announce, largeTitle, deviceSwitch, sheetsSettled, syncButton, refusedList, signInScreen,
 } from './ui.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -2522,7 +2522,8 @@ function draw(r, { keep = false } = {}) {
       return;
     }
   }
-  if (!['home', 'items', 'item', 'add', 'edit', 'shop', 'settings', 'guide', 'places', 'removed', 'bulk'].includes(name)) name = 'home';
+  if (!['home', 'items', 'item', 'add', 'edit', 'shop', 'settings', 'guide', 'places', 'removed', 'bulk', 'signin'].includes(name)) name = 'home';
+  stopSignIn?.(); stopSignIn = null;
   if (name !== 'bulk') S.bulk = null;   // (leaving Bulk edit drops what was chosen there)
   if (name !== 'items' && S.sel.on) SEL.endSel(S.sel);   // (a sheet-like history entry: the new screen replaced it)
   if (TOP[name]) { S.originTab = name === 'home' ? '#/' : '#/' + name; S.backLabel = TOP[name]; }
@@ -2547,6 +2548,7 @@ function draw(r, { keep = false } = {}) {
   } else if (name === 'shop') { flag('shopped'); main.innerHTML = viewShop(); setBar({ title, trail: iconBtn('share', 'Share the list', 'share') }); }
   else if (name === 'removed') { title = 'Recently removed'; main.innerHTML = viewRemoved(); setBar({ title, lead: backBtn(S.backLabel) }); noteSeen(); }
   else if (name === 'places') { title = 'Places'; main.innerHTML = viewPlaces(); setBar({ title, lead: backBtn(S.backLabel) }); }
+  else if (name === 'signin') { title = 'Sign in'; main.innerHTML = ''; setBar({ title: '' }); drawSignIn(main); }
   else if (name === 'guide') { title = GUIDE; main.innerHTML = viewGuide(); setBar({ title: 'How to use it', lead: backBtn(S.backLabel) }); }
   else if (name === 'settings') {
     main.innerHTML = viewSettings(); setBar({ title });
@@ -2565,7 +2567,7 @@ function draw(r, { keep = false } = {}) {
 // in or a sheet is open: then it waits (a family member's change must never wipe what someone is typing).
 function redraw() {
   if (!R) return;
-  if (sheetOpen() || S.dragging || ['add', 'edit'].includes(screen())) { S.pendingRender = true; drawBadge(); return; }
+  if (sheetOpen() || S.dragging || ['add', 'edit', 'signin'].includes(screen())) { S.pendingRender = true; drawBadge(); return; }
   // someone is typing (a family member's email, a shopping line): draw once they leave the field
   const a = document.activeElement;
   if (a?.matches?.('#main input:not([type=checkbox]):not([type=radio]):not([type=search]), #main textarea') && a.value) {
@@ -3152,6 +3154,7 @@ async function handleUser(u) {
 async function whoIs(u) {
   S.pending = u && !u.verified ? u : null;
   S.user = u && u.verified ? u : null;
+  if (u && screen() === 'signin') goBack('#/settings');   // (in: Settings shows the family, or Check your email)
   if (!S.user) { if (S.mode !== 'local') await useLocal(); else redraw(); return; }
   // the family pantry this account had open last on this phone opens at once from the phone's copy (as notes does with its
   // space); the server lookup below then confirms it, moves to the right one, or finds it gone
@@ -3329,7 +3332,7 @@ async function start() {
   addEventListener('offline', () => { drawSync(); redraw(); });
   R = router({
     render: r => draw(r),
-    tabOf: r => ['item', 'edit', 'add', 'guide', 'places', 'removed', 'bulk'].includes(r.parts[0]) ? S.originTab : r.hash,
+    tabOf: r => ['item', 'edit', 'add', 'guide', 'places', 'removed', 'bulk', 'signin'].includes(r.parts[0]) ? S.originTab : r.hash,
   });
   // family sharing, only when a Firebase project is set up (config.js) or in the emulator tests
   if (!DEMO && (firebaseConfig || EMULATOR)) {
@@ -3390,6 +3393,36 @@ const testActions = {
   renumber: category => { const g = items().filter(x => catOf(x) === category); const sets = O.renumber(O.sortByOrder(g)); patchMany(sets.map(x => ({ id: x.id, ops: { set: { order: x.order }, inc: {}, del: [] } })), { stamp: false }); return sets.length; },
 };
 
+// ---- the sign-in screen (#/signin, the kit's signInScreen): where an invite's welcome ends ---------------------------
+// The whole page: the icon, the name and one line on a glow of the icon's blue; Continue with Google, Use email instead
+// (the email sheet, over it) and Not now (back to Settings). Signing in, or waiting for the emailed link, goes back to
+// Settings (whoIs). Without family sharing (the demo, no config.js) there is no Google button, only Not now. Signing out
+// wipes this phone's family copy, so there is never a copy to forget here.
+let stopSignIn = null;
+function drawSignIn(main) {
+  const live = !!S.cloud?.configured && S.mode !== 'demo';
+  stopSignIn = signInScreen(main, {
+    name: 'Pantry', tagline: 'What’s at home, what to use first and what to buy.', icon: 'icons/icon.svg', accent: '#3a6390',
+    auth: live ? signInAuth() : null,
+    more: [
+      ...(live ? [{ label: 'Use email instead', id: 'pa-signin-email', onTap: () => openEmailSheet() }] : []),
+      { label: 'Not now', id: 'pa-signin-later', onTap: () => goBack('#/settings') },
+    ],
+    note: live ? 'Use the email the invite was sent to. Another account sees an empty pantry.' : 'Family sharing is off here: this pantry stays on this phone.',
+    holdsCopy: () => false,
+  });
+}
+// app-sync's sign-in for the kit's screen (a redirect sign-in leaves this page marked, as the Settings row does)
+const signInAuth = () => ({
+  signIn: async () => { S.leftToSignIn = true; try { return await S.cloud.signIn(); } finally { S.leftToSignIn = false; } },
+  forget: async () => ({ ok: false, reason: '' }),   // (never shown: holdsCopy is false)
+  onUser: cb => {
+    let off = null, gone = false;
+    S.cloud.onUser(cb).then(f => { if (gone) f?.(); else off = f; }, () => {});
+    return () => { gone = true; off?.(); };
+  },
+});
+
 // ---- the welcome, once per phone (guide.js) -------------------------------------------------------------------------
 
 // Someone opening an invite: the email's link ends #/settings, where Sign in is.
@@ -3413,7 +3446,8 @@ function showWelcome({ invited = false, save = true } = {}) {
       if (v === 'add') goTo('#/add');
       else if (v === 'start') openStarter();
       else if (v === 'signin') {
-        (screen() !== 'settings' ? goTo('#/settings') : Promise.resolve()).then(() => requestAnimationFrame(() => $('[data-act="signin"]')?.focus()));
+        // the sign-in screen, over Settings (Back or Not now leaves them there)
+        (screen() !== 'settings' ? goTo('#/settings') : Promise.resolve()).then(() => goTo('#/signin'));
       }
     },
   });

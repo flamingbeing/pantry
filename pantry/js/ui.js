@@ -4,9 +4,9 @@
 // thing. Icons come from the brand kit's sprite (design.flamingbeing.com/v1/icons.svg, the same shapes as before).
 import {
   detentSheet, sheetsSettled, tabBarRoom, confirmModal, toaster, tabBack, CLOSE_MS, LABELS, stepper as kitStepper, haptic as kitHaptic, largeTitle as kitLargeTitle,
-  pressFeedback, bounce, watchKeyboard, toggleTicks, syncButton, refusedList,
-} from 'https://core.anawj.com/ui/1.0.0-rc.60/ui/index.js';
-import { applyTheme, themeSwitch } from 'https://core.anawj.com/ui/1.0.0-rc.60/theme/index.js';
+  pressFeedback, bounce, watchKeyboard, toggleTicks, syncButton, refusedList, signInScreen,
+} from 'https://core.anawj.com/ui/1.0.0-rc.89/ui/index.js';
+import { applyTheme, themeSwitch } from 'https://core.anawj.com/ui/1.0.0-rc.89/theme/index.js';
 
 const doc = document;
 
@@ -84,6 +84,8 @@ const open = [];   // { d, ctl, value, resolve, onClose }
 export const sheetOpen = () => open.length > 0;
 // once a closed sheet's history entry has popped (the address is the page's own again): the kit's
 export { sheetsSettled };
+// the kit's full-screen sign-in page (where an invite's welcome ends: app.js, the #/signin screen)
+export { signInScreen };
 export function sheet(o = {}) {
   const id = 'pa-sheet-' + (++sheetSeq);
   const d = doc.createElement('dialog');
