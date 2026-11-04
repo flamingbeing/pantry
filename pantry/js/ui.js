@@ -5,8 +5,8 @@
 import {
   detentSheet, sheetsSettled, tabBarRoom, confirmModal, toaster, tabBack, CLOSE_MS, LABELS, stepper as kitStepper, haptic as kitHaptic, largeTitle as kitLargeTitle,
   pressFeedback, bounce, watchKeyboard, toggleTicks, syncButton, refusedList, signInScreen,
-} from 'https://core.anawj.com/ui/1.0.0-rc.89/ui/index.js';
-import { applyTheme, themeSwitch } from 'https://core.anawj.com/ui/1.0.0-rc.89/theme/index.js';
+} from 'https://core.anawj.com/ui/1.0.0-rc.90/ui/index.js';
+import { applyTheme, themeSwitch } from 'https://core.anawj.com/ui/1.0.0-rc.90/theme/index.js';
 
 const doc = document;
 
