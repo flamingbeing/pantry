@@ -20,7 +20,7 @@ Where the app is served, how sign-in works, config, the service worker, rules de
   `node pantry/tools/set-config.mjs '<config>'` writes `config.js` and `auth/firebase/init.json` with
   `authDomain: 'pantry.flamingbeing.com'`. These are public client IDs, not secrets.
 
-- **Service worker** (`sw.js`, on the shared update module app-update 0.2.0 from `core.anawj.com/update/`):
+- **Service worker** (`sw.js`, on the shared update module app-update (app-ui rc.108) from `core.anawj.com/ui/1.0.0-rc.108/update/`):
   `VERSION = 'pantry-v<N>'` and `MANIFEST = {}`, both stamped only at deploy (`tools/stamp-versions.mjs`); never by
   hand. Install is all or nothing (every SHELL file, kit files included; only files whose hash changed are fetched). A new
   version takes over at once and the open page reloads once (owner's choice, 24 Oct 2026: updates are rare and deployed

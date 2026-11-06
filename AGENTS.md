@@ -22,7 +22,7 @@ pointers like "ask the owner" are fine).
 - **Apps stay unlisted:** every page has `<meta name="robots" content="noindex, nofollow">`; never link the app publicly.
 - **Service workers:** `sw.js` has `const VERSION = 'pantry-v<N>'`; never stamp it by hand (the deploy runs
   `tools/stamp-versions.mjs`, which also fills `MANIFEST`). Change `<N>` only when the worker's own logic changes. The
-  logic lives in the shared update module (`importScripts` of one exact `core.anawj.com/update/<x.y.z>/` version; the
+  logic lives in the shared update module (`importScripts` of one exact `core.anawj.com/ui/<tag>/update/` version; the
   page's `js/app-update.js` loads the same version); never copy it here. Delete only `pantry-` caches.
   The kits' files are in its `SHELL` list by full address (re-list the core kit's files at each bump), so the app
   works offline.
