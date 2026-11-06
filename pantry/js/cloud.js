@@ -416,7 +416,7 @@ function sync() {
     // nothing-lost report (app-sync report.js): counts only (saves waiting over an hour, refused, in conflict, sync
     // errors by code) and versions, at most once an hour and when the page is hidden; never an item, a household or an id
     let appVersion = 'unknown';
-    import('https://core.anawj.com/update/0.2.0/register.js').then(m => m.version()).then(v => { if (v) appVersion = v; }).catch(() => {});
+    import('https://core.anawj.com/ui/1.0.0-rc.108/update/register.js').then(m => m.version()).then(v => { if (v) appVersion = v; }).catch(() => {});
     const report = AS.createReport({ app: 'pantry', version: () => appVersion, storage: (() => { try { return localStorage; } catch { return null; } })() });
     report.start();
     const app = createApp({ config: { name: 'pantry', sdk: async () => ({ ...await sdk(), emulator: usingEmulator }) }, modules: [

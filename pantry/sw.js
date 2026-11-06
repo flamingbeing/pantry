@@ -1,4 +1,4 @@
-// Pantry offline support, on the shared update module (app-update 0.2.0, core.anawj.com/update/): it installs every
+// Pantry offline support, on the shared update module (app-update from app-ui rc.108, core.anawj.com/ui/1.0.0-rc.108/update/): it installs every
 // SHELL file or nothing, takes over at once and the page reloads once (js/app-update.js). The deploy stamps VERSION
 // and MANIFEST (tools/stamp-versions.mjs: 'pantry-v1' becomes 'pantry-<date>-<hash>' from every file the app serves,
 // MANIFEST a hash per SHELL file so an update fetches only changed files); never change them by hand. Change the v<N>
@@ -165,12 +165,12 @@ const SHELL = [
   'https://core.anawj.com/sync/1.5.5/src/cache.js',
   'https://core.anawj.com/sync/1.5.5/src/report.js',
   // the page half of the update module (register.js), one exact version: the page starts it offline too
-  'https://core.anawj.com/update/0.2.0/register.js',
+  'https://core.anawj.com/ui/1.0.0-rc.108/update/register.js',
 ];
 
 const MANIFEST = {};
 
-importScripts('https://core.anawj.com/update/0.2.0/sw-core.js');
+importScripts('https://core.anawj.com/ui/1.0.0-rc.108/update/sw-core.js');
 AppUpdate.init({
   app: 'pantry', version: VERSION, shell: SHELL, manifest: MANIFEST,
   // "Get the latest version" checks for signal by fetching sw.js: always the network
@@ -179,7 +179,7 @@ AppUpdate.init({
     // the kit's /v1/ changes compatibly: answer from the cache, refresh in the background
     { name: 'kit', match: 'https://design.flamingbeing.com/v1/', strategy: 'stale-while-revalidate', max: 40 },
     // exact versions (the address carries it): never change
-    { name: 'pinned', match: /^https:\/\/core\.anawj\.com\/(sync|update)\/\d+\.\d+\.\d+\//, strategy: 'cache-first', max: 40 },
+    { name: 'pinned', match: /^https:\/\/core\.anawj\.com\/(sync|update|ui)\/\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?\//, strategy: 'cache-first', max: 40 },
     { name: 'cdn', match: /^https:\/\/(cdn|fastly)\.jsdelivr\.net\/npm\/[^/]+@\d/, strategy: 'cache-first', max: 20 },
     // anything else of the app's own (a file not in SHELL) is kept after its first use
     { name: 'files', match: url => url.origin === self.location.origin && /\.(m?js|css|json|png|svg|jpe?g|webp|gif|ico|woff2?|ttf|webmanifest|txt|wasm)$/i.test(url.pathname), strategy: 'stale-while-revalidate', max: 60 },
